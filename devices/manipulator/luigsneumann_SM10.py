@@ -3,6 +3,8 @@ Manipulator class for the Luigs and Neumann SM-10 manipulator controller.
 
 Adapted from Michael Graupner's LandNSM5 class.
 
+Not all commands are implemented.
+
 TODO: group commands
 """
 from ..serialdevice import SerialDevice
@@ -40,6 +42,11 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         self.port.timeout=1. #None # blocking
 
         self.port.open()
+
+        # Initialize ramp length of all axes at 210 ms
+        for axis in range(1,10):
+            self.set_ramp_length(axis,3)
+            time.sleep(.05)
 
     def send_command(self, ID, data, nbytes_answer):
         '''

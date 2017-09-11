@@ -2,6 +2,8 @@
 Manipulator class for the Luigs and Neumann SM-5 manipulator controller.
 
 Adapted from Michael Graupner's LandNSM5 class.
+
+Not all commands are implemented.
 """
 from ..serialdevice import SerialDevice
 from manipulator import Manipulator
@@ -31,6 +33,11 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         self.port.open()
         self.established_time = time.time()
         self.establish_connection()
+
+        # Initialize ramp length of all axes to 210 ms
+        for axis in range(1,10):
+            self.set_ramp_length(axis,3)
+            time.sleep(.05)
 
     def send_command(self, ID, data, nbytes_answer, ack_ID=''):
         '''

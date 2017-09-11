@@ -106,10 +106,9 @@ class ManipulatorUnit(Manipulator):
             self.dev.stop(self.axes[axis])
 
 
-'''
-The following 4 methods are specific to Luigs & Neumann manipulators.
-'''
-
+    '''
+    The following 3 methods are specific to Luigs & Neumann manipulators.
+    '''
     def single_step(self, axis, step):
         '''
         Moves by a single step.
@@ -157,18 +156,6 @@ The following 4 methods are specific to Luigs & Neumann manipulators.
             if last_step:
                 self.set_single_step_distance(axis, last_step)
                 self.single_step(axis, sign(distance))
-
-    def set_ramp_length(self, axis, length):
-        '''
-        Sets the length of the ramp.
-        Note: this is quite L&N specific.
-        '''
-        if isinstance(axis, list):
-            for i in axis:
-                self.set_ramp_length(i, length)
-        else:
-            self.dev.set_ramp_length(self.axes[axis], length)
-        sleep(.05)
 
     def wait_until_still(self, axes):
         """
