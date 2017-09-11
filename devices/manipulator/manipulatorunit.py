@@ -1,5 +1,6 @@
 """
-A class for access to a particular unit managed by a device
+A class for access to a particular unit managed by a device.
+It is essentially a subset of a Manipulator
 
 TODO:
 * Some of these methods are specific to L&N (steps)
