@@ -108,6 +108,8 @@ class ManipulatorUnit(Manipulator):
 
     '''
     The following 3 methods are specific to Luigs & Neumann manipulators.
+    This is used in calibration.
+    Maybe have a keyword failsafe = True in relative_move?
     '''
     def single_step(self, axis, step):
         '''
