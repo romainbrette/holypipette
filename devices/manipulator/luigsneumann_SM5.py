@@ -4,6 +4,7 @@ Manipulator class for the Luigs and Neumann SM-5 manipulator controller.
 Adapted from Michael Graupner's LandNSM5 class.
 """
 from ..serialdevice import SerialDevice
+from manipulator import Manipulator
 import serial
 import binascii
 import time
@@ -14,10 +15,11 @@ __all__ = ['LuigsNeumann_SM5']
 
 verbose = True
 
-class LuigsNeumann_SM5(SerialDevice):
+class LuigsNeumann_SM5(SerialDevice,Manipulator):
     def __init__(self, name=None):
         # Note that the port name is arbitrary, it should be set or found out
         SerialDevice.__init__(self, name)
+        Manipulator.__init__(self)
 
         # Open the serial port; 1 second time out
         self.port.baudrate = 38400

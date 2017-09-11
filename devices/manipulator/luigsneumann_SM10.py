@@ -6,6 +6,7 @@ Adapted from Michael Graupner's LandNSM5 class.
 TODO: group commands
 """
 from ..serialdevice import SerialDevice
+from manipulator import Manipulator
 import serial
 import binascii
 import time
@@ -25,10 +26,11 @@ def group_address(axes):
     return struct.unpack('9B', address)
 
 
-class LuigsNeumann_SM10(SerialDevice):
+class LuigsNeumann_SM10(SerialDevice,Manipulator):
     def __init__(self, name = None):
         # Note that the port name is arbitrary, it should be set or found out
         SerialDevice.__init__(self, name)
+        Manipulator.__init__(self)
 
         # Open the serial port; 1 second time out
         self.port.baudrate = 115200
