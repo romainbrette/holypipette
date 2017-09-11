@@ -8,7 +8,7 @@ from manipulator import Manipulator
 from numpy import ndarray, sign
 from time import sleep
 
-__all__ = ['XYZUnit']
+__all__ = ['ManipulatorUnit']
 
 
 class ManipulatorUnit(Manipulator):
