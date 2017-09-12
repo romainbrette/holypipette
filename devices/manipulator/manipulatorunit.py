@@ -6,7 +6,7 @@ TODO:
 * Some of these methods are specific to L&N (steps)
 """
 from manipulator import Manipulator
-from numpy import ndarray, sign
+from numpy import ndarray, sign, ones
 from time import sleep
 
 __all__ = ['ManipulatorUnit']
@@ -23,6 +23,9 @@ class ManipulatorUnit(Manipulator):
         Manipulator.__init__(self)
         self.dev = dev
         self.axes = axes
+        # Motor ranges in um
+        self.min = None
+        self.max = None
 
     def position(self, axis = None):
         '''
@@ -106,6 +109,17 @@ class ManipulatorUnit(Manipulator):
         else:
             self.dev.stop(self.axes[axis])
 
+    def motor_ranges(self):
+        """
+        Runs the motors to calculate ranges of the motors.
+        """
+        dx = ones(len(self.axes)) * 1000000. # (1 meter; should more than any platform)
+        self.relative_move(-dx)
+        self.wait_until_still()
+        self.min = self.position()
+        self.relative_move(dx)
+        self.wait_until_still()
+        self.max = self.position()
 
     '''
     The following 3 methods are specific to Luigs & Neumann manipulators.
@@ -164,9 +178,11 @@ class ManipulatorUnit(Manipulator):
         """
         Waits for the motors to stop.
         """
-        if isinstance(axes, list):
+        if axes is None: # all axes
+            axes = self.axes
+        if isinstance(axes, list): # is that useful?
             for i in axes:
                 self.wait_until_still(i)
         else:
-            self.dev.wait_motor_stop([self.axes[axes]])
+            self.dev.wait_until_still([self.axes[axes]])
         sleep(.05)
