@@ -143,7 +143,7 @@ class FixedStage(CalibratedUnit):
     A stage that cannot move. This is used to simplify the code.
     '''
     def __init__(self):
-        self.position = array([0.,0.,0.)
+        self.position = array([0.,0.,0.])
 
     def reference_position(self):
         return self.position
