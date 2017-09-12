@@ -5,13 +5,23 @@ It contains methods to calibrate the unit.
 Should these run in a thread?
 Should messages be issued?
 Also ranges should be taken into account
+
+Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot
 from numpy.linalg import inv
 from ..camera import Camera # actually not necessary to import it (just duck typing)
 
-__all__ = ['CalibratedUnit']
+__all__ = ['CalibratedUnit','CalibrationError']
+
+class CalibrationError(Exception):
+    def __init__(self, message = 'Device is not calibrated'):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
 
 class Objective(object):
     '''
@@ -25,17 +35,19 @@ class Objective(object):
         self.offset = offset
 
 class CalibratedUnit(ManipulatorUnit):
-    def __init__(self, unit, stage, microscope):
+    def __init__(self, unit, stage, microscope, camera = None, horizontal = False):
         '''
         A manipulator unit calibrated to a fixed reference coordinate system.
         The stage refers to a platform on which the unit is mounted, which can
-        be None. The platform must be calibrated too (if it exists).
+        be None.
 
         Parameters
         ----------
         unit : ManipulatorUnit for the (XYZ) unit
         stage : CalibratedUnit for the stage
-        microscope: ManipulatorUnit for the microscope (single axis)
+        microscope : ManipulatorUnit for the microscope (single axis)
+        camera : a camera, ie, object with a snap() method (optional, for visual calibration)
+        horizontal: if True, the stage is assumed to be parallel to the focal plane (no autofocus needed)
         '''
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         if stage is None: # In this case we assume the unit is on a fixed element.
@@ -43,6 +55,10 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             self.stage = stage
         self.microscope = microscope # in fact not useful
+        self.camera = camera
+        self.horizontal = horizontal
+
+        self.calibrated = False
 
         # Matrices for passing to the camera/microscope system
         self.M = array((3,len(unit.axes))) # unit to camera
@@ -60,6 +76,8 @@ class CalibratedUnit(ManipulatorUnit):
         -------
         The current position in um as an XYZ vector.
         '''
+        if not self.calibrated:
+            raise CalibrationError
         x = self.position()
         return dot(self.M, x) + self.y0 + self.stage.reference_position()
 
@@ -71,6 +89,8 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         y : XYZ position vector in um
         '''
+        if not self.calibrated:
+            raise CalibrationError
         x = dot(self.Minv, y-self.stage.reference_position()-self.y0)
         self.absolute_move(x)
 
@@ -85,6 +105,8 @@ class CalibratedUnit(ManipulatorUnit):
         y : target position in um, an (X,Y,Z) vector
         withdraw : in um; if not 0, the pipette is withdrawn by this value from the target position x
         '''
+        if not self.calibrated:
+            raise CalibrationError
         # First, we determine the intersection between the line going through x
         # with direction corresponding to the manipulator first axis.
         #n = array([0,0,1.]) # vector normal the focal plane (we are in stage coordinates)
@@ -104,23 +126,17 @@ class CalibratedUnit(ManipulatorUnit):
         # Final move
         self.reference_move(y - withdraw * u) # Or relative move in manipulator coordinates, first axis (faster)
 
-    def calibrate(self, camera, horizontal = False):
+    def calibrate(self):
         '''
         Automatic calibration of the manipulator using the camera.
         It is assumed that the pipette or some element attached to the unit is in the center of the image.
-
-        Parameters
-        ----------
-        camera: a camera with a snap() method, returning the current image
-        horizontal: if True, the stage is assumed to be parallel to the focal plane (no autofocus)
         '''
-        # Simple case (horizontal):
-        # 1) Move each axis by a small displacement
-        # 2) Compute the matrix from unit to camera (pixels)
-        # 3) Move to three corners using the computed matrix
-        # 4) Recompute the matrix
-        # 5) Calculate conversion factor.
-        # 6) Offset is considered null.
+        if not self.stage.calibrated:
+            self.stage.calibrate()
+
+        if self.horizontal: # no autofocus necessary
+            self.horizontal_calibration()
+            return
 
         # Complex case (not horizontal, no attached stage):
         # 1) Take a stack of photos on different focal planes
@@ -136,7 +152,31 @@ class CalibratedUnit(ManipulatorUnit):
         # Same as above except:
         # * move the stage after unit movement to recenter
         # * stop when position is unreachable
-        pass
+        # So: general algorithm is move the stage to recenter when you can
+
+        self.calibrated = True
+
+    def horizontal_calibration(self):
+        '''
+        Automatic calibration for a horizontal XY stage
+        '''
+        # It should be an XY stage, ie, two axes
+        if len(self.axes) != 2:
+            raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
+
+        # Simple case (horizontal):
+        # 1) Move each axis by a small displacement (50 um)
+        dx = 50. # in um
+        for axis in self.axes:  # normally just two axes
+            self.relative_move(dx, axis)
+
+        # 2) Compute the matrix from unit to camera (pixels)
+        # 3) Move to three corners using the computed matrix
+        # 4) Recompute the matrix
+        # 5) Calculate conversion factor.
+        # 6) Offset is considered null.
+
+        self.calibrated = True
 
 class FixedStage(CalibratedUnit):
     '''
