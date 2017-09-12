@@ -122,10 +122,20 @@ class CalibratedUnit(ManipulatorUnit):
         # 5) Calculate conversion factor.
         # 6) Offset is considered null.
 
-        # Complex case (not horizontal):
+        # Complex case (not horizontal, no attached stage):
         # 1) Take a stack of photos on different focal planes
+        # 2) Move axis by a small displacement
+        # 3) Move focal plane by estimated amount (initially 0)
+        # 4) Estimate focal plane and position
+        # 5) Estimate matrix column
+        # 6) Multiply displacement by 2, and back to 2
+        # 7) Stop when predicted move is out of screen
+        # 8) Calculate conversion factor and offset.
 
-        # Attached stage
+        # Attached stage and Z axis
+        # Same as above except:
+        # * move the stage after unit movement to recenter
+        # * stop when position is unreachable
         pass
 
 class FixedStage(CalibratedUnit):
