@@ -7,7 +7,7 @@ from numpy import zeros
 
 __all__ = ['FakeManipulator']
 
-class FakeDevice(Manipulator):
+class FakeManipulator(Manipulator):
     def __init__(self):
         Manipulator.__init__(self)
         self.x = zeros(9) # Position of all axes

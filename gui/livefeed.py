@@ -54,7 +54,6 @@ class LiveFeed(Thread):
         cv2.namedWindow(self.title, flags=cv2.WINDOW_NORMAL) # in init() maybe?
         if self.mouse_callback is not None:
             cv2.setMouseCallback(self.title, self.mouse_callback)
-        print "let's go"
         self.start()
 
     def run(self):

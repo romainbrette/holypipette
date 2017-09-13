@@ -15,6 +15,11 @@ def callback(event, x, y, flags, param):
 camera = OpenCVCamera()
 livefeed = LiveFeed(camera, mouse_callback=callback)
 
+controller = FakeManipulator() #LuigsNeumann_SM10()
+stage = ManipulatorUnit(controller,[7,8])
+microscope = ManipulatorUnit(controller,[9])
+calibrated_stage = CalibratedUnit(stage, None, microscope, camera=camera, horizontal=True)
+
 cv2.waitKey(0)
 
 livefeed.stop()
