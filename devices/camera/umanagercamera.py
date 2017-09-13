@@ -12,7 +12,6 @@ sys.path.append('C:\\Program Files\\Micro-Manager-1.4')
 try:
     import MMCorePy
 except ImportError:
-    # Micromanager not installed
     warnings.warn('Micromanager is not installed.')
 
 __all__ = ['uManagerCamera']

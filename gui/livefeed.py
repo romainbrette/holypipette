@@ -24,7 +24,7 @@ class LiveFeed(Thread):
     A live camera feed.
     """
 
-    def __init__(self, camera, mouse_callback = None, editing = lambda img:insert_cross, title='Camera'):
+    def __init__(self, camera, mouse_callback = None, editing = insert_cross, title='Camera'):
         '''
         Live camera feed
 
@@ -59,13 +59,14 @@ class LiveFeed(Thread):
         Thread run, display camera frames
         """
         cv2.namedWindow(self.title, flags=cv2.WINDOW_NORMAL) # in init() maybe?
-        cv2.setMouseCallback(self.title, self.mouse_callback)
+        if self.mouse_callback is not None:
+            cv2.setMouseCallback(self.title, self.mouse_callback)
 
         while self.show: # is that necessary?
             if self.cam.new_frame():
                 # Get image and convert
                 frame = self.cam.snap()
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+                #frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                 # Convert to 8 bit gray scale # why? and shouldn't be done on Camera level?
                 if frame.dtype == 'uint16':
                     self.frame = cv2.convertScaleAbs(frame, alpha=2**-2)
