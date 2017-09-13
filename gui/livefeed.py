@@ -6,7 +6,17 @@ Requires OpenCV
 from threading import Thread
 import cv2
 
-__all__ = ['LiveFeed']
+__all__ = ['LiveFeed','insert_cross']
+
+def insert_cross(img):
+    """
+    Plots a red cross at the center of the image.
+    """
+    img = img.copy()
+    height, width = img.shape[:2]
+    cv2.line(img, (width / 2 + 10, height / 2), (width / 2 - 10, height / 2), (0, 0, 255))
+    cv2.line(img, (width / 2, height / 2 + 10), (width / 2, height / 2 - 10), (0, 0, 255))
+    return img
 
 
 class LiveFeed(Thread):
@@ -14,7 +24,7 @@ class LiveFeed(Thread):
     A live camera feed.
     """
 
-    def __init__(self, camera, mouse_callback = None, editing = lambda img:img, title='Camera'):
+    def __init__(self, camera, mouse_callback = None, editing = lambda img:insert_cross, title='Camera'):
         '''
         Live camera feed
 
