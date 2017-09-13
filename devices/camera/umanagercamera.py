@@ -33,8 +33,14 @@ class uManagerCamera(Camera):
         self.cam.stopSequenceAcquisition()
         self.cam.unloadDevice('Camera')
 
+    def new_frame(self):
+        '''
+        Returns True if a new frame is available
+        '''
+        return (self.cam.getRemainingImageCount() > 0)
+
     def snap(self):
-        return self.cam.getLastImage()
+        return self.cam.getLastImage() # What happens if there is no new frame?
 
 class Hamamatsu(Camera):
     def __init__(self):
