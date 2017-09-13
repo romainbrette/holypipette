@@ -183,7 +183,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         axes4[:len(axes)] = axes
         ret = struct.unpack('4b4f', self.send_command('A101', [0xA0] + axes4, 20))
         assert all(r == a for r, a in zip(ret[:3], axes))
-        return np.array([ret[4:7]])
+        return np.array(ret[4:4+len(axes)])
 
     def absolute_move_group(self, x, axes, fast=True):
         '''

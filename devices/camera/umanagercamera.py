@@ -14,7 +14,7 @@ try:
 except ImportError:
     warnings.warn('Micromanager is not installed.')
 
-__all__ = ['uManagerCamera']
+__all__ = ['uManagerCamera', 'Hamamatsu', 'Lumenera']
 
 class uManagerCamera(Camera):
     def __init__(self, brand, name, exposure):
@@ -41,10 +41,10 @@ class uManagerCamera(Camera):
     def snap(self):
         return self.cam.getLastImage() # What happens if there is no new frame?
 
-class Hamamatsu(Camera):
+class Hamamatsu(uManagerCamera):
     def __init__(self):
         uManagerCamera.__init__(self, 'HamamatsuHam', 'HamamatsuHam_DCAM', 60)
 
-class Lumenera(Camera):
+class Lumenera(uManagerCamera):
     def __init__(self):
         uManagerCamera.__init__(self, 'Lumenera', 'LuCam', 30)
