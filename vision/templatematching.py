@@ -29,8 +29,9 @@ def templatematching(img, template):
 
     Returns
     -------
-    maxloc: location (x,y) in the image of maxval
-    maxval: maximum value corresponding to the best matching ratio
+    x : x coordinate of the template in the image
+    y : y coordinate
+    maxval : maximum value corresponding to the best matching ratio
     """
 
     # Searching for a template match using cv2.TM_COEFF_NORMED detection
@@ -45,7 +46,7 @@ def templatematching(img, template):
     if maxval >= threshold:
         raise MatchingError(maxval)
 
-    return maxloc, maxval
+    return maxloc[0], maxloc[1], maxval
 
 
 if __name__ == '__main__':

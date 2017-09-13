@@ -12,6 +12,7 @@ from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot
 from numpy.linalg import inv
 from ..camera import Camera # actually not necessary to import it (just duck typing)
+from vision.templatematching import templatematching
 
 __all__ = ['CalibratedUnit','CalibrationError']
 
@@ -63,7 +64,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Matrices for passing to the camera/microscope system
         self.M = array((3,len(unit.axes))) # unit to camera
         self.Minv = array((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
-        self.y0 = zeros(3) # Offset in camera system
+        self.r0 = zeros(3) # Offset in reference system
 
         # Dictionary of objectives and conditions (immersed/non immersed)
         self.objective = dict()
@@ -78,23 +79,23 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         if not self.calibrated:
             raise CalibrationError
-        x = self.position()
-        return dot(self.M, x) + self.y0 + self.stage.reference_position()
+        u = self.position() # position vector in manipulator unit system
+        return dot(self.M, u) + self.r0 + self.stage.reference_position()
 
-    def reference_move(self, y):
+    def reference_move(self, r):
         '''
-        Moves the unit to position y in reference camera system, without moving the stage.
+        Moves the unit to position r in reference camera system, without moving the stage.
 
         Parameters
         ----------
-        y : XYZ position vector in um
+        r : XYZ position vector in um
         '''
         if not self.calibrated:
             raise CalibrationError
-        x = dot(self.Minv, y-self.stage.reference_position()-self.y0)
-        self.absolute_move(x)
+        u = dot(self.Minv, r-self.stage.reference_position()-self.r0)
+        self.absolute_move(u)
 
-    def safe_move(self, y, withdraw = 0.):
+    def safe_move(self, r, withdraw = 0.):
         '''
         Moves the device to position x (an XYZ vector) in a way that minimizes
         interaction with tissue. The manipulator is first moved horizontally,
@@ -102,7 +103,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         Parameters
         ----------
-        y : target position in um, an (X,Y,Z) vector
+        r : target position in um, an (X,Y,Z) vector
         withdraw : in um; if not 0, the pipette is withdrawn by this value from the target position x
         '''
         if not self.calibrated:
@@ -110,21 +111,21 @@ class CalibratedUnit(ManipulatorUnit):
         # First, we determine the intersection between the line going through x
         # with direction corresponding to the manipulator first axis.
         #n = array([0,0,1.]) # vector normal the focal plane (we are in stage coordinates)
-        #u = dot(self.M, array([1.,0.,0.]))
-        u = self.M[:,0] # this is the vector for the first manipulator axis
-        xprime = self.position()
-        #alpha = dot(n,xprime-x)/dot(n,u)
-        #alpha = (self.position()-x)[2] / u[2]
+        #p = dot(self.M, array([1.,0.,0.]))
+        p = self.M[:,0] # this is the vector for the first manipulator axis
+        uprime = self.position()
+        #alpha = dot(n,uprime-u)/dot(n,p)
+        #alpha = (self.position()-u)[2] / p[2]
 
-        alpha = (xprime - y)[2] / self.M[2,0]
+        alpha = (uprime - r)[2] / self.M[2,0]
         # TODO: check whether the intermediate move is accessible
 
         # Intermediate move
-        self.reference_move(y + alpha * u)
+        self.reference_move(r + alpha * p)
         # We need to wait here!
         self.wait_until_still()
         # Final move
-        self.reference_move(y - withdraw * u) # Or relative move in manipulator coordinates, first axis (faster)
+        self.reference_move(r - withdraw * p) # Or relative move in manipulator coordinates, first axis (faster)
 
     def calibrate(self):
         '''
@@ -160,30 +161,55 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         Automatic calibration for a horizontal XY stage
         '''
+        if not self.horizontal:
+            raise CalibrationError('The stage should be horizontal, initialize with horizontal = True.')
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
 
-        # Simple case (horizontal):
-        # 1) Move each axis by a small displacement (50 um)
-        dx = 50. # in um
-        for axis in self.axes:  # normally just two axes
-            self.relative_move(dx, axis)
+        # Take a photo of the pipette or coverslip
+        template = self.camera.snap_center()
 
-        # 2) Compute the matrix from unit to camera (pixels)
+        # Calculate the location of the template in the image
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, template)
+
+        # Store current position
+        u0 = self.camera.position()
+
+        # 1) Move each axis by a small displacement (50 um)
+        distance = 50. # in um
+        for axis in self.axes:  # normally just two axes
+            self.absolute_move(u0[axis]+distance, axis) # there could be a keyword blocking = True
+            self.wait_until_still(axis)
+            image = self.camera.snap()
+            x, y, location , _ = templatematching(image, template) # shouldn't it be y,x actually ?
+            # 2) Compute the matrix from unit to camera (first in pixels)
+            self.M[:,axis] = [x-x0, y-y0, 0]
+
+        # More accurate calibration (optional):
         # 3) Move to three corners using the computed matrix
+
         # 4) Recompute the matrix
+
         # 5) Calculate conversion factor.
-        # 6) Offset is considered null.
+
+        # 6) Offset is such that the initial position is zero in the reference system
+        self.r0 = -dot(self.M, u0)
 
         self.calibrated = True
+
+        # Move back
+        self.absolute_move(u0)
+        self.wait_until_still()
+
 
 class FixedStage(CalibratedUnit):
     '''
     A stage that cannot move. This is used to simplify the code.
     '''
     def __init__(self):
-        self.position = array([0.,0.,0.])
+        self.r = array([0.,0.,0.]) # position in reference system
 
     def reference_position(self):
-        return self.position
+        return self.r
