@@ -51,17 +51,16 @@ class LiveFeed(Thread):
         self.mouse_callback = mouse_callback
         self.editing = editing
 
-        # Shouldn't we create the window here?
+        cv2.namedWindow(self.title, flags=cv2.WINDOW_NORMAL) # in init() maybe?
+        if self.mouse_callback is not None:
+            cv2.setMouseCallback(self.title, self.mouse_callback)
+        print "let's go"
         self.start()
 
     def run(self):
         """
         Thread run, display camera frames
         """
-        cv2.namedWindow(self.title, flags=cv2.WINDOW_NORMAL) # in init() maybe?
-        if self.mouse_callback is not None:
-            cv2.setMouseCallback(self.title, self.mouse_callback)
-
         while self.show: # is that necessary?
             if self.cam.new_frame():
                 # Get image and convert

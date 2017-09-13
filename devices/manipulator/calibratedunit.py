@@ -11,7 +11,6 @@ Should this be in devices/*? Maybe in a separate calibration folder
 from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot
 from numpy.linalg import inv
-from ..camera import Camera # actually not necessary to import it (just duck typing)
 from vision.templatematching import templatematching
 
 __all__ = ['CalibratedUnit','CalibrationError']
@@ -24,16 +23,16 @@ class CalibrationError(Exception):
         return self.message
 
 
-class Objective(object):
-    '''
-    An objective is defined by a magnification factor (4, 20, 40x),
-    an offset for the focal plane, and a conversion factor from um to px
-    (which is camera-dependent).
-    '''
-    def __init__(self, magnification, factor, offset):
-        self.magnification = magnification
-        self.factor = factor
-        self.offset = offset
+# class Objective(object):
+#     '''
+#     An objective is defined by a magnification factor (4, 20, 40x),
+#     an offset for the focal plane, and a conversion factor from um to px
+#     (which is camera-dependent).
+#     '''
+#     def __init__(self, magnification, factor, offset):
+#         self.magnification = magnification
+#         self.factor = factor
+#         self.offset = offset
 
 class CalibratedUnit(ManipulatorUnit):
     def __init__(self, unit, stage, microscope, camera = None, horizontal = False):
@@ -67,7 +66,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.r0 = zeros(3) # Offset in reference system
 
         # Dictionary of objectives and conditions (immersed/non immersed)
-        self.objective = dict()
+        #self.objective = dict()
 
     def reference_position(self):
         '''
