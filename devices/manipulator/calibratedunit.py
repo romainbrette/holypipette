@@ -143,6 +143,8 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Complex case (not horizontal, no attached stage):
         # 1) Take a stack of photos on different focal planes
+
+
         # 2) Move axis by a small displacement
         # 3) Move focal plane by estimated amount (initially 0)
         # 4) Estimate focal plane and position
@@ -192,11 +194,14 @@ class CalibratedUnit(ManipulatorUnit):
             self.M[:,axis] = array([x-x0, y-y0, 0])/distance
             x0, y0 = x, y # this is the position before the next move
 
+        # Compute the (pseudo-)inverse
+        self.Minv = pinv(self.M)
+
         # More accurate calibration (optional):
         # 3) Move to three corners using the computed matrix
 
         # 4) Recompute the matrix and the (pseudo) inverse
-        self.Minv = pinv(self.M)
+        #self.Minv = pinv(self.M)
 
         # 5) Calculate conversion factor.
 
