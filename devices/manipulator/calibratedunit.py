@@ -10,10 +10,12 @@ Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot
-from numpy.linalg import inv
+from numpy.linalg import inv, pinv
 from vision.templatematching import templatematching
 
 __all__ = ['CalibratedUnit','CalibrationError']
+
+verbose = True
 
 class CalibrationError(Exception):
     def __init__(self, message = 'Device is not calibrated'):
@@ -61,8 +63,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.calibrated = False
 
         # Matrices for passing to the camera/microscope system
-        self.M = array((3,len(unit.axes))) # unit to camera
-        self.Minv = array((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
+        self.M = zeros((3,len(unit.axes))) # unit to camera
+        self.Minv = zeros((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
         self.r0 = zeros(3) # Offset in reference system
 
         # Dictionary of objectives and conditions (immersed/non immersed)
@@ -159,6 +161,7 @@ class CalibratedUnit(ManipulatorUnit):
     def horizontal_calibration(self):
         '''
         Automatic calibration for a horizontal XY stage
+        (Could also be a separate class like CalibratedStage)
         '''
         if not self.horizontal:
             raise CalibrationError('The stage should be horizontal, initialize with horizontal = True.')
@@ -174,22 +177,24 @@ class CalibratedUnit(ManipulatorUnit):
         x0, y0, _ = templatematching(image, template)
 
         # Store current position
-        u0 = self.camera.position()
+        u0 = self.position()
 
         # 1) Move each axis by a small displacement (50 um)
         distance = 50. # in um
-        for axis in self.axes:  # normally just two axes
-            self.absolute_move(u0[axis]+distance, axis) # there could be a keyword blocking = True
+        for axis in range(len(self.axes)):  # normally just two axes
+            self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
             image = self.camera.snap()
-            x, y, location , _ = templatematching(image, template) # shouldn't it be y,x actually ?
+            x, y, _ = templatematching(image, template)
             # 2) Compute the matrix from unit to camera (first in pixels)
-            self.M[:,axis] = [x-x0, y-y0, 0]
+            self.M[:,axis] = array([x-x0, y-y0, 0])/distance
+            x0, y0 = x, y # this is the position before the next move
 
         # More accurate calibration (optional):
         # 3) Move to three corners using the computed matrix
 
-        # 4) Recompute the matrix
+        # 4) Recompute the matrix and the (pseudo) inverse
+        self.Minv = pinv(self.M)
 
         # 5) Calculate conversion factor.
 

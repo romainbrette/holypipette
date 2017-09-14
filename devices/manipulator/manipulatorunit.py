@@ -6,7 +6,7 @@ TODO:
 * Some of these methods are specific to L&N (steps)
 """
 from manipulator import Manipulator
-from numpy import ndarray, sign, ones
+from numpy import ndarray, sign, ones, arange
 from time import sleep
 
 __all__ = ['ManipulatorUnit']
@@ -174,12 +174,12 @@ class ManipulatorUnit(Manipulator):
                 self.set_single_step_distance(axis, last_step)
                 self.single_step(axis, sign(distance))
 
-    def wait_until_still(self, axes):
+    def wait_until_still(self, axes = None):
         """
         Waits for the motors to stop.
         """
         if axes is None: # all axes
-            axes = self.axes
+            axes = range(len(self.axes))
         if isinstance(axes, list): # is that useful?
             for i in axes:
                 self.wait_until_still(i)

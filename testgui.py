@@ -8,12 +8,14 @@ from vision import *
 from gui import *
 import cv2
 import time
+from numpy import array
 
 def callback(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
         xs = x-camera.width/2
         ys = y-camera.height/2
         print xs, ys
+        calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
 
 #camera = OpenCVCamera()
 camera = Lumenera()
@@ -26,22 +28,13 @@ calibrated_stage = CalibratedUnit(stage, None, microscope, camera=camera, horizo
 
 print stage.position(), microscope.position()
 
-time.sleep(1)
-stage.relative_move(10, 0)
-stage.wait_until_still(0)
-print stage.position(), microscope.position()
+cv2.waitKey(0)
 
-time.sleep(1)
-microscope.relative_move(-10, 0)
-microscope.wait_until_still(0)
-print stage.position(), microscope.position()
-
-time.sleep(1)
-stage.relative_move(-10, 0)
-microscope.relative_move(10, 0)
-microscope.wait_until_still(0)
-stage.wait_until_still(0)
-print stage.position(), microscope.position()
+t1 = time.time()
+calibrated_stage.horizontal_calibration()
+t2 = time.time()
+print "Calibration took",t2-t1,"s"
+print calibrated_stage.M, calibrated_stage.r0
 
 cv2.waitKey(0)
 

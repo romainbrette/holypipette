@@ -12,12 +12,12 @@ __all__ = ['templatematching','MatchingError']
 
 class MatchingError(Exception):
     def __init__(self, value):
-        self.value # best matching value
+        self.value = value # best matching value
 
     def __str__(self):
         return 'The template was not found'
 
-def templatematching(img, template):
+def templatematching(img, template, threshold = 0):
     """
     Search a template image in an other image
     Not scale nor rotation invariant.
@@ -26,6 +26,7 @@ def templatematching(img, template):
     ----------
     img : image to look in
     template : image to look for
+    threshold : throw an error if match value is below threshold
 
     Returns
     -------
@@ -40,10 +41,7 @@ def templatematching(img, template):
     # Getting maxval and maxloc
     _, maxval, _, maxloc = cv2.minMaxLoc(res)
 
-    # Threshold for maxval to ensure a good template matching
-    threshold = 0.75
-
-    if maxval >= threshold:
+    if maxval < threshold:
         raise MatchingError(maxval)
 
     return maxloc[0], maxloc[1], maxval
