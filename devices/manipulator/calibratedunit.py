@@ -12,6 +12,7 @@ from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot
 from numpy.linalg import inv, pinv
 from vision.templatematching import templatematching
+from time import sleep
 
 __all__ = ['CalibratedUnit','CalibrationError']
 
@@ -184,6 +185,7 @@ class CalibratedUnit(ManipulatorUnit):
         for axis in range(len(self.axes)):  # normally just two axes
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
+            #sleep(0.1) # For the camera thread ** doesn't work!
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             # 2) Compute the matrix from unit to camera (first in pixels)
