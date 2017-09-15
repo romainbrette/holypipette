@@ -40,7 +40,7 @@ class CalibrationError(Exception):
 #         self.offset = offset
 
 class CalibratedUnit(ManipulatorUnit):
-    def __init__(self, unit, stage, microscope, camera = None, horizontal = False):
+    def __init__(self, unit, stage=None, microscope=None, camera = None):
         '''
         A manipulator unit calibrated to a fixed reference coordinate system.
         The stage refers to a platform on which the unit is mounted, which can
@@ -52,16 +52,14 @@ class CalibratedUnit(ManipulatorUnit):
         stage : CalibratedUnit for the stage
         microscope : ManipulatorUnit for the microscope (single axis)
         camera : a camera, ie, object with a snap() method (optional, for visual calibration)
-        horizontal: if True, the stage is assumed to be parallel to the focal plane (no autofocus needed)
         '''
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
         else:
             self.stage = stage
-        self.microscope = microscope # in fact not useful
+        self.microscope = microscope
         self.camera = camera
-        self.horizontal = horizontal
 
         self.calibrated = False
 
@@ -139,10 +137,6 @@ class CalibratedUnit(ManipulatorUnit):
         if not self.stage.calibrated:
             self.stage.calibrate()
 
-        if self.horizontal: # no autofocus necessary
-            self.horizontal_calibration()
-            return
-
         # Complex case (not horizontal, no attached stage):
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(self.camera.snap())
@@ -204,16 +198,33 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.calibrated = True
 
-    def horizontal_calibration(self):
-        '''
-        Automatic calibration for a horizontal XY stage
-        (Could also be a separate class like CalibratedStage)
-        '''
-        if not self.horizontal:
-            raise CalibrationError('The stage should be horizontal, initialize with horizontal = True.')
+
+class CalibratedStage(CalibratedUnit):
+    '''
+    A horizontal stage calibrated to a fixed reference coordinate system.
+    The optional stage refers to a platform on which the unit is mounted, which can
+    be None.
+    The stage is assumed to be parallel to the focal plane (no autofocus needed)
+
+    Parameters
+    ----------
+    unit : ManipulatorUnit for this stage
+    stage : CalibratedUnit for a stage on which this stage might be mounted
+    microscope : ManipulatorUnit for the microscope (single axis)
+    camera : a camera, ie, object with a snap() method (optional, for visual calibration)
+    '''
+    def __init__(self, unit, stage=None, microscope=None, camera = None):
+        CalibratedUnit.__init__(self, unit, stage, microscope, camera)
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
+
+    def calibrate(self):
+        '''
+        Automatic calibration for a horizontal XY stage
+        '''
+        if not self.stage.calibrated:
+            self.stage.calibrate()
 
         # Take a photo of the pipette or coverslip
         template = crop_center[self.camera.snap()]
@@ -256,7 +267,6 @@ class CalibratedUnit(ManipulatorUnit):
         # Move back
         self.absolute_move(u0)
         self.wait_until_still()
-
 
 class FixedStage(CalibratedUnit):
     '''
