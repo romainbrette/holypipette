@@ -30,13 +30,14 @@ class Microscope(ManipulatorUnit,Camera):
     def snap_center(self, ratio = 32):
         return self.camera.snap_center(ratio)
 
-    def stack(self, z):
+    def stack(self, z, preprocessing=lambda img:img):
         '''
         Take a stack of images at the positions given in the z list
 
         Parameters
         ----------
         z : A list of z positions
+        preprocessing : a function that processes the images (optional)
         '''
         position = self.position()
         images = []
@@ -45,6 +46,6 @@ class Microscope(ManipulatorUnit,Camera):
             self.wait_until_still(zi)
             #time.sleep(1) # is this necessary?
             time.sleep(.1)
-            images+= self.snap()
+            images+= preprocessing(self.snap())
         self.absolute_move(position)
         return images

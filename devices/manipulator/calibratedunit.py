@@ -13,6 +13,7 @@ from numpy import array, ones, zeros, eye, dot
 from numpy.linalg import inv, pinv
 from vision.templatematching import templatematching
 from time import sleep
+from vision.crop import *
 
 __all__ = ['CalibratedUnit','CalibrationError']
 
@@ -173,7 +174,7 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
 
         # Take a photo of the pipette or coverslip
-        template = self.camera.snap_center()
+        template = crop_center[self.camera.snap()]
 
         # Calculate the location of the template in the image
         image = self.camera.snap()
