@@ -3,7 +3,7 @@ A Z Unit for a Leica microscope, using MicroManager.
 Communication through serial COM port.
 """
 import warnings
-from .manipulator import *
+from .microscope import *
 import sys
 sys.path.append('C:\\Program Files\\Micro-Manager-1.4') # This is not good!
 try:
@@ -14,14 +14,14 @@ except ImportError: # Micromanager not installed
 __all__ = ['Leica']
 
 
-class Leica(Manipulator):
+class Leica(Microscope):
     def __init__(self, name = 'COM1'):
         '''
         Parameters
         ----------
         name : port name
         '''
-        Manipulator.__init__(self)
+        Microscope.__init__(self)
 
         self.port_name = name
         mmc = MMCorePy.CMMCore()

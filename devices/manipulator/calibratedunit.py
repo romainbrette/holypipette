@@ -9,11 +9,12 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot
+from numpy import array, ones, zeros, eye, dot, arange
 from numpy.linalg import inv, pinv
 from vision.templatematching import templatematching
 from time import sleep
 from vision.crop import *
+from vision.findpipette import *
 
 __all__ = ['CalibratedUnit','CalibrationError']
 
@@ -143,16 +144,57 @@ class CalibratedUnit(ManipulatorUnit):
             return
 
         # Complex case (not horizontal, no attached stage):
-        # 1) Take a stack of photos on different focal planes
+        # 0) Determine pipette cardinal position (N, S, E, W etc)
+        pipette_position = pipette_cardinal(self.camera.snap())
 
+        # 1) Take a stack of photos on different focal planes, spaced by 1 um
+        # Store current position
+        z0 = self.microscope.position()
+        z = z0+arange(-5,6) # +- 5 um around current position
+        stack = self.microscope.stack(z, preprocessing = lambda img:crop_cardinal(img,pipette_position))
+        # Move back
+        self.microscope.absolute_move(z0)
+        self.wait_until_still()
+        # Initial position of template in image
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, stack[5])
 
-        # 2) Move axis by a small displacement
-        # 3) Move focal plane by estimated amount (initially 0)
-        # 4) Estimate focal plane and position
-        # 5) Estimate matrix column
+        # Store current position
+        u0 = self.position()
+
+        distance = 2. # um
+        for axis in range(len(self.axes())):
+            # 2) Move axis by a small displacement
+            self.step_move(distance, axis)
+            self.wait_until_still(axis)
+
+            # 3) Move focal plane by estimated amount (initially 0)
+
+            # 4) Estimate focal plane and position
+            image = self.camera.snap()
+            valmax = -1
+            for i,template in enumerate(stack): # we look for the best matching template
+                xt,yt,val = templatematching(image, template)
+                if val > valmax:
+                    valmax=val
+                    x,y,z = xt,yt,i-5
+
+            # 5) Estimate matrix column; from unit to camera (first in pixels)
+            self.M[:,axis] = array([x-x0, y-y0, z])/distance
+
         # 6) Multiply displacement by 2, and back to 2
         # 7) Stop when predicted move is out of screen
+
+            # Move back
+            self.absolute_move(u0)
+            self.wait_until_still()
+
+        # Compute the (pseudo-)inverse
+        self.Minv = pinv(self.M)
+
         # 8) Calculate conversion factor and offset.
+        #    Offset is such that the initial position is zero in the reference system
+        self.r0 = -dot(self.M, u0)
 
         # Attached stage and Z axis
         # Same as above except:
