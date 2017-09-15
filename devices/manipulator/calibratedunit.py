@@ -156,28 +156,35 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         u0 = self.position()
 
-        distance = 2. # um
         for axis in range(len(self.axes())):
-            # 2) Move axis by a small displacement
-            self.step_move(distance, axis)
-            self.wait_until_still(axis)
+            distance = 2.  # um
+            for k in range(5): # up to 32 um
+                # 2) Move axis by a small displacement
+                #self.step_move(distance, axis)
+                self.absolute_move(u0[axis]+distance, axis)
+                self.wait_until_still(axis)
 
-            # 3) Move focal plane by estimated amount (initially 0)
+                # 3) Move focal plane by estimated amount (initially 0)
+                zestimate = self.M[2,axis] * distance
+                self.microscope.absolute_move(z0+zestimate)
+                self.wait_until_still()
 
-            # 4) Estimate focal plane and position
-            image = self.camera.snap()
-            valmax = -1
-            for i,template in enumerate(stack): # we look for the best matching template
-                xt,yt,val = templatematching(image, template)
-                if val > valmax:
-                    valmax=val
-                    x,y,z = xt,yt,i-5
+                # 4) Estimate focal plane and position
+                image = self.camera.snap()
+                valmax = -1
+                for i,template in enumerate(stack): # we look for the best matching template
+                    xt,yt,val = templatematching(image, template)
+                    if val > valmax:
+                        valmax=val
+                        x,y,z = xt,yt,i-5
 
-            # 5) Estimate matrix column; from unit to camera (first in pixels)
-            self.M[:,axis] = array([x-x0, y-y0, z])/distance
+                # 5) Estimate matrix column; from unit to camera (first in pixels)
+                self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
 
-        # 6) Multiply displacement by 2, and back to 2
-        # 7) Stop when predicted move is out of screen
+            # 6) Multiply displacement by 2, and back to 2
+                distance *=2
+
+            # 7) Stop when predicted move is out of screen
 
             # Move back
             self.absolute_move(u0)
