@@ -141,6 +141,8 @@ class CalibratedUnit(ManipulatorUnit):
         # Complex case (not horizontal, no attached stage):
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(self.camera.snap())
+        if verbose:
+            print pipette_position
 
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store current position
@@ -159,7 +161,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         for axis in range(len(self.axes)):
             distance = 2.  # um
-            for k in range(5): # up to 32 um
+            for k in range(2): # up to 32 um
                 if verbose:
                     print axis, distance, "press key"
                     cv2.waitKey(0)
@@ -170,6 +172,8 @@ class CalibratedUnit(ManipulatorUnit):
 
                 # 3) Move focal plane by estimated amount (initially 0)
                 zestimate = self.M[2,axis] * distance
+                if verbose:
+                    print "zestimate",zestimate
                 self.microscope.absolute_move(z0+zestimate)
                 self.wait_until_still()
 
