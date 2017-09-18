@@ -23,20 +23,23 @@ video = LiveFeed(camera, mouse_callback=callback)
 
 controller = LuigsNeumann_SM10()
 stage = ManipulatorUnit(controller,[7,8])
-microscope = ManipulatorUnit(controller,[9])
-calibrated_stage = CalibratedUnit(stage, None, microscope, camera=camera, horizontal=True)
+microscope = Microscope(controller,9)
+calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
+unit = ManipulatorUnit(controller, [1,2,3])
+calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
 
 print stage.position(), microscope.position()
 
 cv2.waitKey(0)
 
-t1 = time.time()
-calibrated_stage.horizontal_calibration()
-t2 = time.time()
-print "Calibration took",t2-t1,"s"
-print calibrated_stage.M, calibrated_stage.r0
+#t1 = time.time()
+#calibrated_stage.calibrate()
+#t2 = time.time()
+#print "Calibration took",t2-t1,"s"
+#print calibrated_stage.M, calibrated_stage.r0
+
+calibrated_unit.calibrate()
 
 cv2.waitKey(0)
 
 video.stop()
-

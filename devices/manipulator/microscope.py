@@ -66,7 +66,7 @@ class Microscope(Manipulator):
         """
         Waits for the motors to stop.
         """
-        self.dev.wait_until_still(self.axis)
+        self.dev.wait_until_still([self.axis])
 
     def stack(self, camera, z, preprocessing=lambda img:img):
         '''
@@ -80,11 +80,11 @@ class Microscope(Manipulator):
         '''
         position = self.position()
         images = []
-        for zi in range(z):
+        for zi in z:
             self.absolute_move(zi)
-            self.wait_until_still(zi)
+            self.wait_until_still()
             #time.sleep(1) # is this necessary?
             time.sleep(.1)
-            images+= preprocessing(camera.snap())
+            images.append(preprocessing(camera.snap()))
         self.absolute_move(position)
         return images

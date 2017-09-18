@@ -15,8 +15,9 @@ from vision.templatematching import templatematching
 from time import sleep
 from vision.crop import *
 from vision.findpipette import *
+import cv2
 
-__all__ = ['CalibratedUnit','CalibrationError']
+__all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
 verbose = True
 
@@ -145,7 +146,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
-        stack = self.microscope.stack(z, preprocessing = lambda img:crop_cardinal(img,pipette_position))
+        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(img,pipette_position))
         # Move back
         self.microscope.absolute_move(z0)
         self.wait_until_still()
@@ -156,9 +157,12 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         u0 = self.position()
 
-        for axis in range(len(self.axes())):
+        for axis in range(len(self.axes)):
             distance = 2.  # um
             for k in range(5): # up to 32 um
+                if verbose:
+                    print axis, distance, "press key"
+                    cv2.waitKey(0)
                 # 2) Move axis by a small displacement
                 #self.step_move(distance, axis)
                 self.absolute_move(u0[axis]+distance, axis)
@@ -178,8 +182,13 @@ class CalibratedUnit(ManipulatorUnit):
                         valmax=val
                         x,y,z = xt,yt,i-5
 
+                if verbose:
+                    print x-x0,y-y0,z
+
                 # 5) Estimate matrix column; from unit to camera (first in pixels)
                 self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
+                if verbose:
+                    print self.M[:,axis]
 
             # 6) Multiply displacement by 2, and back to 2
                 distance *=2
@@ -281,6 +290,7 @@ class FixedStage(CalibratedUnit):
     '''
     def __init__(self):
         self.r = array([0.,0.,0.]) # position in reference system
+        self.calibrated = True
 
     def reference_position(self):
         return self.r
