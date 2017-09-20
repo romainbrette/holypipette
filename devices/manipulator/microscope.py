@@ -8,6 +8,7 @@ TODO:
 '''
 from devices.manipulator import *
 import time
+import cv2
 
 __all__ = ['Microscope']
 
@@ -68,7 +69,7 @@ class Microscope(Manipulator):
         """
         self.dev.wait_until_still([self.axis])
 
-    def stack(self, camera, z, preprocessing=lambda img:img):
+    def stack(self, camera, z, preprocessing=lambda img:img, save = True):
         '''
         Take a stack of images at the positions given in the z list
 
@@ -77,14 +78,19 @@ class Microscope(Manipulator):
         camera : a camera, eg with a snap() method
         z : A list of z positions
         preprocessing : a function that processes the images (optional)
+        save : saves images to disk if True
         '''
         position = self.position()
         images = []
+        k = 0
         for zi in z:
             self.absolute_move(zi)
             self.wait_until_still()
             #time.sleep(1) # is this necessary?
             time.sleep(.1)
-            images.append(preprocessing(camera.snap()))
+            img = preprocessing(camera.snap())
+            images.append(img)
+            cv2.imwrite('./screenshots/series{}.jpg'.format(k), img)
+            k+=1
         self.absolute_move(position)
         return images
