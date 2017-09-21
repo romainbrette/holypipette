@@ -10,14 +10,12 @@ def pipette_cardinal(image):
     '''
     Determines the cardinal direction of the pipette (N, NW, S, etc) in the image.
     '''
-    cropped_image = dict()
-    xmax = -1
+    xmin = None
     for direction in cardinal_points.iterkeys():
         cropped = crop_cardinal(image, direction)
-        # Search the tip using the number of darkest pixels in the image
-        bin_edge, _ = histogram(cropped.flatten())
-        x = bin_edge.min()
-        if x>xmax:
-            xmax=x
+        # Find the darkest subimage
+        x = cropped.flatten().sum()
+        if (xmin is None) or (x<xmin):
+            xmin=x
             result = direction
     return result

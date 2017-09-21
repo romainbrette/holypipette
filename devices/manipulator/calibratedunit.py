@@ -162,7 +162,7 @@ class CalibratedUnit(ManipulatorUnit):
                 if verbose:
                     print axis,"press key"
                     cv2.waitKey(0)
-                for k in range(2): # up to 32 um
+                for k in range(4): # up to 32 um
                     if verbose:
                         print distance,'um'
                     # 2) Move axis by a small displacement
