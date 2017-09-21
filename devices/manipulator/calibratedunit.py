@@ -156,7 +156,7 @@ class CalibratedUnit(ManipulatorUnit):
         u0 = self.position()
 
         try:
-            for axis in [0]: #range(len(self.axes)):
+            for axis in range(len(self.axes)):
                 distance = 2.  # um
                 u_current = 0 # current position of the axis relative to u0
                 if verbose:
@@ -174,7 +174,7 @@ class CalibratedUnit(ManipulatorUnit):
                     zestimate = self.M[2,axis] * distance
                     if verbose:
                         print "zestimate",zestimate
-                    self.microscope.absolute_move(z0+zestimate)
+                    self.microscope.absolute_move(z0-zestimate)
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
                     #if verbose:
@@ -190,7 +190,7 @@ class CalibratedUnit(ManipulatorUnit):
                         xt,yt,val = templatematching(image, template)
                         if val > valmax:
                             valmax=val
-                            x,y,z = xt,yt,len(stack)/2-i
+                            x,y,z = xt,yt,i-len(stack)/2
 
                     if verbose:
                         print x-x0,y-y0,z
