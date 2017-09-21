@@ -158,65 +158,70 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         u0 = self.position()
 
-        for axis in range(len(self.axes)):
-            distance = 2.  # um
-            u_current = 0 # current position of the axis relative to u0
-            for k in range(2): # up to 32 um
-                if verbose:
-                    print axis, distance, "press key"
-                    cv2.waitKey(0)
-                # 2) Move axis by a small displacement
-                self.step_move(distance-u_current, axis)
-                #self.absolute_move(u0[axis]+distance, axis)
+        try:
+            for axis in range(len(self.axes)):
+                distance = 2.  # um
+                u_current = 0 # current position of the axis relative to u0
+                for k in range(2): # up to 32 um
+                    if verbose:
+                        print axis, distance, "press key"
+                        cv2.waitKey(0)
+                    # 2) Move axis by a small displacement
+                    self.step_move(distance-u_current, axis)
+                    #self.absolute_move(u0[axis]+distance, axis)
 
-                # 3) Move focal plane by estimated amount (initially 0)
-                zestimate = self.M[2,axis] * distance
-                if verbose:
-                    print "zestimate",zestimate
-                self.microscope.absolute_move(z0+zestimate)
-                self.microscope.wait_until_still()
-                self.wait_until_still(axis)
+                    # 3) Move focal plane by estimated amount (initially 0)
+                    zestimate = self.M[2,axis] * distance
+                    if verbose:
+                        print "zestimate",zestimate
+                    self.microscope.absolute_move(z0+zestimate)
+                    self.microscope.wait_until_still()
+                    self.wait_until_still(axis)
 
-                # 4) Estimate focal plane and position
-                image = self.camera.snap()
-                valmax = -1
-                for i,template in enumerate(stack): # we look for the best matching template
-                    xt,yt,val = templatematching(image, template)
-                    if val > valmax:
-                        valmax=val
-                        x,y,z = xt,yt,i-5
+                    # 4) Estimate focal plane and position
+                    image = self.camera.snap()
+                    valmax = -1
+                    for i,template in enumerate(stack): # we look for the best matching template
+                        xt,yt,val = templatematching(image, template)
+                        if val > valmax:
+                            valmax=val
+                            x,y,z = xt,yt,i-5
 
-                if verbose:
-                    print x-x0,y-y0,z
+                    if verbose:
+                        print x-x0,y-y0,z
 
-                # 5) Estimate matrix column; from unit to camera (first in pixels)
-                self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
-                if verbose:
-                    print self.M[:,axis]
+                    # 5) Estimate matrix column; from unit to camera (first in pixels)
+                    self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
+                    if verbose:
+                        print self.M[:,axis]
 
-            # 6) Multiply displacement by 2, and back to 2
-                distance *=2
+                # 6) Multiply displacement by 2, and back to 2
+                    distance *=2
 
-            # 7) Stop when predicted move is out of screen
+                # 7) Stop when predicted move is out of screen
 
-            # Move back (not strictly necessary; at least not if using absolute moves)
+                # Move back (not strictly necessary; at least not if using absolute moves)
+                self.absolute_move(u0)
+                self.wait_until_still()
+
+            # Compute the (pseudo-)inverse
+            self.Minv = pinv(self.M)
+
+            # 8) Calculate conversion factor and offset.
+            #    Offset is such that the initial position is zero in the reference system
+            self.r0 = -dot(self.M, u0)
+
+            # Attached stage and Z axis
+            # Same as above except:
+            # * move the stage after unit movement to recenter
+            # * stop when position is unreachable
+            # So: general algorithm is move the stage to recenter when you can
+
+            self.calibrated = True
+
+        finally: # If something fails, move back to original position
             self.absolute_move(u0)
-            self.wait_until_still()
-
-        # Compute the (pseudo-)inverse
-        self.Minv = pinv(self.M)
-
-        # 8) Calculate conversion factor and offset.
-        #    Offset is such that the initial position is zero in the reference system
-        self.r0 = -dot(self.M, u0)
-
-        # Attached stage and Z axis
-        # Same as above except:
-        # * move the stage after unit movement to recenter
-        # * stop when position is unreachable
-        # So: general algorithm is move the stage to recenter when you can
-
-        self.calibrated = True
+            self.microscope.absolute_move(z0)
 
     def mosaic(self, width = None, height = None):
         '''
