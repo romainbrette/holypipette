@@ -139,7 +139,7 @@ class CalibratedUnit(ManipulatorUnit):
             self.stage.calibrate()
 
         # 0) Determine pipette cardinal position (N, S, E, W etc)
-        pipette_position = pipette_cardinal(self.camera.snap())
+        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
         if verbose:
             print "Pipette position:",pipette_position
 
@@ -147,7 +147,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
-        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(img,pipette_position))
+        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
         # Initial position of template in image
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
@@ -156,7 +156,7 @@ class CalibratedUnit(ManipulatorUnit):
         u0 = self.position()
 
         try:
-            for axis in [2]: #range(len(self.axes)):
+            for axis in [0]: #range(len(self.axes)):
                 distance = 2.  # um
                 u_current = 0 # current position of the axis relative to u0
                 if verbose:
@@ -190,7 +190,7 @@ class CalibratedUnit(ManipulatorUnit):
                         xt,yt,val = templatematching(image, template)
                         if val > valmax:
                             valmax=val
-                            x,y,z = xt,yt,i-5
+                            x,y,z = xt,yt,len(stack)/2-i
 
                     if verbose:
                         print x-x0,y-y0,z

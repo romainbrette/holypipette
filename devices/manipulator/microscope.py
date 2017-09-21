@@ -87,7 +87,7 @@ class Microscope(Manipulator):
             self.absolute_move(zi)
             self.wait_until_still()
             #time.sleep(1) # is this necessary?
-            time.sleep(1)
+            time.sleep(.1) # Just make sure the camera is in sync
             img = preprocessing(camera.snap())
             images.append(img)
             cv2.imwrite('./screenshots/series{}.jpg'.format(k), img)
