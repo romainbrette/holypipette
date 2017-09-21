@@ -218,6 +218,24 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.calibrated = True
 
+    def mosaic(self, width = None, height = None):
+        '''
+        Takes a photo mosaic. Current position corresponds to
+        the top left corner of the collated image.
+        Stops when the unit's position is out of range, unless
+        width and height are specified.
+
+        Parameters
+        ----------
+        width : total width in um (optional)
+        height : total height in um (optional)
+
+        Returns
+        -------
+        A large image of the mosaic.
+        '''
+        pass
+
 
 class CalibratedStage(CalibratedUnit):
     '''
