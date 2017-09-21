@@ -156,7 +156,7 @@ class CalibratedUnit(ManipulatorUnit):
         u0 = self.position()
 
         try:
-            for axis in range(len(self.axes)):
+            for axis in [2]: #range(len(self.axes)):
                 distance = 2.  # um
                 u_current = 0 # current position of the axis relative to u0
                 if verbose:
@@ -164,10 +164,11 @@ class CalibratedUnit(ManipulatorUnit):
                     cv2.waitKey(0)
                 for k in range(4): # up to 32 um
                     if verbose:
-                        print distance,'um'
+                        print distance,'um; moving by',distance-u_current
                     # 2) Move axis by a small displacement
-                    self.step_move(distance-u_current, axis)
-                    #self.absolute_move(u0[axis]+distance, axis)
+                    #self.step_move(distance-u_current, axis)
+                    #u_current=distance
+                    self.absolute_move(u0[axis]+distance, axis)
 
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = self.M[2,axis] * distance
@@ -176,9 +177,14 @@ class CalibratedUnit(ManipulatorUnit):
                     self.microscope.absolute_move(z0+zestimate)
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
+                    #if verbose:
+                    #    print "microscope z-z0:", self.microscope.position()-z0
+                    #    print "unit z-z0:", self.position(axis) - u0[axis]
 
                     # 4) Estimate focal plane and position
+                    sleep(.1)
                     image = self.camera.snap()
+                    cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
                         xt,yt,val = templatematching(image, template)
