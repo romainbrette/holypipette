@@ -141,24 +141,19 @@ class CalibratedUnit(ManipulatorUnit):
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(self.camera.snap())
         if verbose:
-            print pipette_position
+            print "Pipette position:",pipette_position
 
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store current position
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(img,pipette_position))
-        # Move back
-        self.microscope.absolute_move(z0)
-        self.microscope.wait_until_still()
         # Initial position of template in image
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
         # Store current position
         u0 = self.position()
-
-        return
 
         try:
             for axis in range(len(self.axes)):
@@ -169,7 +164,7 @@ class CalibratedUnit(ManipulatorUnit):
                     cv2.waitKey(0)
                 for k in range(2): # up to 32 um
                     if verbose:
-                        print axis, distance
+                        print distance,'um'
                     # 2) Move axis by a small displacement
                     self.step_move(distance-u_current, axis)
                     #self.absolute_move(u0[axis]+distance, axis)
