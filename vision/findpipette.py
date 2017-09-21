@@ -18,6 +18,6 @@ def pipette_cardinal(image):
         bin_edge, _ = histogram(cropped.flatten())
         x = bin_edge.min()
         if x>xmax:
-            x=xmax
+            xmax=x
             result = direction
-    return direction
+    return result

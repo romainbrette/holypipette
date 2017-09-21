@@ -158,14 +158,18 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         u0 = self.position()
 
+        return
+
         try:
             for axis in range(len(self.axes)):
                 distance = 2.  # um
                 u_current = 0 # current position of the axis relative to u0
+                if verbose:
+                    print axis,"press key"
+                    cv2.waitKey(0)
                 for k in range(2): # up to 32 um
                     if verbose:
-                        print axis, distance, "press key"
-                        cv2.waitKey(0)
+                        print axis, distance
                     # 2) Move axis by a small displacement
                     self.step_move(distance-u_current, axis)
                     #self.absolute_move(u0[axis]+distance, axis)

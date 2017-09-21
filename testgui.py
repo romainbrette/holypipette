@@ -29,18 +29,22 @@ calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 unit = ManipulatorUnit(controller, [1,2,3])
 calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
 
-print stage.position(), microscope.position()
+u0 = unit.position()
 
-cv2.waitKey(0)
+try:
 
-#t1 = time.time()
-#calibrated_stage.calibrate()
-#t2 = time.time()
-#print "Calibration took",t2-t1,"s"
-#print calibrated_stage.M, calibrated_stage.r0
+    cv2.waitKey(0)
 
-calibrated_unit.calibrate()
+    #t1 = time.time()
+    #calibrated_stage.calibrate()
+    #t2 = time.time()
+    #print "Calibration took",t2-t1,"s"
+    #print calibrated_stage.M, calibrated_stage.r0
 
-cv2.waitKey(0)
+    calibrated_unit.calibrate()
 
-video.stop()
+    cv2.waitKey(0)
+
+finally:
+    unit.absolute_move(u0)
+    video.stop()
