@@ -31,6 +31,9 @@ calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
 
 u0 = unit.position()
 
+def message(msg):
+    print msg
+
 try:
 
     cv2.waitKey(0)
@@ -41,7 +44,10 @@ try:
     #print "Calibration took",t2-t1,"s"
     #print calibrated_stage.M, calibrated_stage.r0
 
-    calibrated_unit.calibrate()
+    t1= time.time()
+    calibrated_unit.calibrate(message)
+    t2 = time.time()
+    print t2-t1,'s'
 
     cv2.waitKey(0)
 

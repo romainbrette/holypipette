@@ -130,18 +130,21 @@ class CalibratedUnit(ManipulatorUnit):
         # Final move
         self.reference_move(r - withdraw * p) # Or relative move in manipulator coordinates, first axis (faster)
 
-    def calibrate(self):
+    def calibrate(self, message = lambda str: None):
         '''
         Automatic calibration of the manipulator using the camera.
         It is assumed that the pipette or some element attached to the unit is in the center of the image.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
         '''
         if not self.stage.calibrated:
             self.stage.calibrate()
 
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
-        if verbose:
-            print "Pipette position:",pipette_position
+        message("Pipette cardinal position: "+str(pipette_position))
 
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store current position
@@ -159,12 +162,9 @@ class CalibratedUnit(ManipulatorUnit):
             for axis in range(len(self.axes)):
                 distance = 2.  # um
                 u_current = 0 # current position of the axis relative to u0
-                if verbose:
-                    print axis,"press key"
-                    cv2.waitKey(0)
-                for k in range(4): # up to 32 um
-                    if verbose:
-                        print distance,'um; moving by',distance-u_current
+                message('Calibrating axis '+str(axis))
+                for k in range(7): # up to 128 um
+                    message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     #self.step_move(distance-u_current, axis)
                     #u_current=distance
@@ -172,8 +172,6 @@ class CalibratedUnit(ManipulatorUnit):
 
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = self.M[2,axis] * distance
-                    if verbose:
-                        print "zestimate",zestimate
                     self.microscope.absolute_move(z0-zestimate)
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
@@ -184,7 +182,7 @@ class CalibratedUnit(ManipulatorUnit):
                     # 4) Estimate focal plane and position
                     sleep(.1)
                     image = self.camera.snap()
-                    cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
+                    #cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
                         xt,yt,val = templatematching(image, template)
@@ -192,13 +190,11 @@ class CalibratedUnit(ManipulatorUnit):
                             valmax=val
                             x,y,z = xt,yt,i-len(stack)/2
 
-                    if verbose:
-                        print x-x0,y-y0,z
+                    message('Camera x,y,z ='+str(x-x0)+','+str(y-y0)+','+str(z))
 
                     # 5) Estimate matrix column; from unit to camera (first in pixels)
                     self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
-                    if verbose:
-                        print self.M[:,axis]
+                    message('Matrix column:'+str(self.M[:,axis]))
 
                 # 6) Multiply displacement by 2, and back to 2
                     distance *=2
@@ -267,9 +263,13 @@ class CalibratedStage(CalibratedUnit):
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
 
-    def calibrate(self):
+    def calibrate(self, message = lambda str: None):
         '''
         Automatic calibration for a horizontal XY stage
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
         '''
         if not self.stage.calibrated:
             self.stage.calibrate()
