@@ -331,7 +331,11 @@ class FixedStage(CalibratedUnit):
     '''
     def __init__(self):
         self.r = array([0.,0.,0.]) # position in reference system
+        self.u = array([0.,0.]) # position in stage system
         self.calibrated = True
+
+    def position(self):
+        return self.u
 
     def reference_position(self):
         return self.r
