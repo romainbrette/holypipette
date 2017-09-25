@@ -157,21 +157,29 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Store current position
         u0 = self.position()
+        stageu0 = self.stage.position()
 
         try:
             for axis in range(len(self.axes)):
                 distance = 2.  # um
-                u_current = 0 # current position of the axis relative to u0
+                deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 message('Calibrating axis '+str(axis))
                 for k in range(7): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
-                    #self.step_move(distance-u_current, axis)
-                    #u_current=distance
-                    self.absolute_move(u0[axis]+distance, axis)
+                    self.step_move(distance-deltau[axis], axis)
+                    deltau[axis] = distance
+                    #self.absolute_move(u0[axis]+distance, axis)
+
+                    # 2bis) Estimate target position on the camera
+                    estimate = dot(self.M, deltau)
+
+                    # 2ter) Move platform to center the pipette
+                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
+                    #   self.stage.reference_move(stageu0+estimate[:2])
 
                     # 3) Move focal plane by estimated amount (initially 0)
-                    zestimate = self.M[2,axis] * distance
+                    zestimate = estimate[2]
                     self.microscope.absolute_move(z0-zestimate)
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
@@ -287,7 +295,6 @@ class CalibratedStage(CalibratedUnit):
         # 1) Move each axis by a small displacement (50 um)
         distance = 50. # in um
         for axis in range(len(self.axes)):  # normally just two axes
-            # Move the platform
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
             #sleep(0.1) # For the camera thread ** doesn't work!
