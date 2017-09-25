@@ -57,8 +57,10 @@ class CalibratedUnit(ManipulatorUnit):
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
+            self.fixed = True
         else:
             self.stage = stage
+            self.fixed = False
         self.microscope = microscope
         self.camera = camera
 
@@ -97,6 +99,19 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError
         u = dot(self.Minv, r-self.stage.reference_position()-self.r0)
         self.absolute_move(u)
+
+    def reference_relative_move(self, r):
+        '''
+        Moves the unit by vector r in reference camera system, without moving the stage.
+
+        Parameters
+        ----------
+        r : XYZ position vector in um
+        '''
+        if not self.calibrated:
+            raise CalibrationError
+        u = dot(self.Minv, r)
+        self.step_move(u)
 
     def safe_move(self, r, withdraw = 0.):
         '''
@@ -140,7 +155,7 @@ class CalibratedUnit(ManipulatorUnit):
         message : a function to which messages are passed
         '''
         if not self.stage.calibrated:
-            self.stage.calibrate()
+            self.stage.calibrate(message=message)
 
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
@@ -158,34 +173,44 @@ class CalibratedUnit(ManipulatorUnit):
         # Store current position
         u0 = self.position()
         stageu0 = self.stage.position()
+        stager0 = self.stage.reference_position()
 
         try:
+            previous_estimate = zeros(3)
             for axis in range(len(self.axes)):
                 distance = 2.  # um
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 message('Calibrating axis '+str(axis))
-                for k in range(7): # up to 128 um
+                for k in range(6): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
-                    self.step_move(distance-deltau[axis], axis)
+                    #self.step_move(distance-deltau[axis], axis)
                     deltau[axis] = distance
-                    #self.absolute_move(u0[axis]+distance, axis)
+                    self.absolute_move(u0[axis]+distance, axis)
 
                     # 2bis) Estimate target position on the camera
                     estimate = dot(self.M, deltau)
-
-                    # 2ter) Move platform to center the pipette
-                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
-                    #   self.stage.reference_move(stageu0+estimate[:2])
+                    message('Estimated move:'+str(estimate))
 
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = estimate[2]
-                    self.microscope.absolute_move(z0-zestimate)
-                    self.microscope.wait_until_still()
-                    self.wait_until_still(axis)
+                    #self.microscope.step_move(z0+previous_estimate[2]-zestimate)
+                    self.microscope.absolute_move(z0 - zestimate)
                     #if verbose:
                     #    print "microscope z-z0:", self.microscope.position()-z0
                     #    print "unit z-z0:", self.position(axis) - u0[axis]
+                    self.microscope.wait_until_still()
+                    self.wait_until_still(axis)
+
+                    # 3bis) Move platform to center the pipette
+                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
+                    if self.fixed is False:
+                        #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
+                        self.stage.reference_relative_move(stager0+previous_estimate-estimate)
+                        self.stage.wait_until_still()
+                    else:
+                        estimate[:2]=0 # estimate of stage movement is zero
+                    previous_estimate = estimate
 
                     # 4) Estimate focal plane and position
                     sleep(.1)
@@ -201,7 +226,7 @@ class CalibratedUnit(ManipulatorUnit):
                     message('Camera x,y,z ='+str(x-x0)+','+str(y-y0)+','+str(z))
 
                     # 5) Estimate matrix column; from unit to camera (first in pixels)
-                    self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
+                    self.M[:,axis] = (array([x-x0, y-y0, z]) + estimate)/distance
                     message('Matrix column:'+str(self.M[:,axis]))
 
                 # 6) Multiply displacement by 2, and back to 2
@@ -218,7 +243,8 @@ class CalibratedUnit(ManipulatorUnit):
 
             # 8) Calculate conversion factor and offset.
             #    Offset is such that the initial position is zero in the reference system
-            self.r0 = -dot(self.M, u0)
+            #   (Maybe not what should be done)
+            self.r0 = -dot(self.M, u0) - stager0
 
             # Attached stage and Z axis
             # Same as above except:
@@ -230,6 +256,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         finally: # If something fails, move back to original position
             self.absolute_move(u0)
+            self.stage.absolute_move(stageu0)
             self.microscope.absolute_move(z0)
 
     def mosaic(self, width = None, height = None):
@@ -271,6 +298,14 @@ class CalibratedStage(CalibratedUnit):
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
 
+    def reference_move(self, r):
+        if len(r)==2: # Third coordinate is actually not useful
+            r3D = zeros(3)
+            r3D[:2] = r
+        else:
+            r3D = r
+        CalibratedUnit.reference_move(self,r3D) # Third coordinate is ignored
+
     def calibrate(self, message = lambda str: None):
         '''
         Automatic calibration for a horizontal XY stage
@@ -280,10 +315,10 @@ class CalibratedStage(CalibratedUnit):
         message : a function to which messages are passed
         '''
         if not self.stage.calibrated:
-            self.stage.calibrate()
+            self.stage.calibrate(message=message)
 
         # Take a photo of the pipette or coverslip
-        template = crop_center[self.camera.snap()]
+        template = crop_center(self.camera.snap())
 
         # Calculate the location of the template in the image
         image = self.camera.snap()
@@ -300,9 +335,11 @@ class CalibratedStage(CalibratedUnit):
             #sleep(0.1) # For the camera thread ** doesn't work!
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
+            message('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
 
             # 2) Compute the matrix from unit to camera (first in pixels)
             self.M[:,axis] = array([x-x0, y-y0, 0])/distance
+            message('Matrix column:' + str(self.M[:, axis]))
             x0, y0 = x, y # this is the position before the next move
 
         # Compute the (pseudo-)inverse
@@ -342,4 +379,7 @@ class FixedStage(CalibratedUnit):
 
     def reference_move(self, r):
         # The fixed stage cannot move: maybe raise an error?
+        pass
+
+    def absolute_move(self, x, axis = None):
         pass

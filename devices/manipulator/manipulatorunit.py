@@ -157,12 +157,15 @@ class ManipulatorUnit(Manipulator):
             self.dev.set_single_step_distance(self.axes[axis], distance)
         sleep(.05)
 
-    def step_move(self, distance, axis):
+    def step_move(self, distance, axis=None):
         '''
         Relative move using steps of up to 255 um.
         This fixes a bug on L&N controller.
         '''
-        if isinstance(distance, ndarray):
+        if axis is None:
+            for i in range(len(self.axes)):
+                self.step_move(distance[i],i)
+        elif isinstance(distance, ndarray):
             move = []
             for j in range(len(distance)):
                 for i in range(len(distance[j])):
