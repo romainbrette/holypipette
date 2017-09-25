@@ -121,6 +121,15 @@ class ManipulatorUnit(Manipulator):
         self.wait_until_still()
         self.max = self.position()
 
+    def is_accessible(self, x, axis = None):
+        """
+        Checks whether position x is accessible.
+        """
+        if axis is None:
+            return all([self.is_accessible(x[i]) for i in range(self.axes)])
+        else:
+            return (x>=min) and (x<=max)
+
     '''
     The following 3 methods are specific to Luigs & Neumann manipulators.
     This is used in calibration.

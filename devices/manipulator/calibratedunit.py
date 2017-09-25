@@ -287,11 +287,13 @@ class CalibratedStage(CalibratedUnit):
         # 1) Move each axis by a small displacement (50 um)
         distance = 50. # in um
         for axis in range(len(self.axes)):  # normally just two axes
+            # Move the platform
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
             #sleep(0.1) # For the camera thread ** doesn't work!
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
+
             # 2) Compute the matrix from unit to camera (first in pixels)
             self.M[:,axis] = array([x-x0, y-y0, 0])/distance
             x0, y0 = x, y # this is the position before the next move
@@ -326,3 +328,7 @@ class FixedStage(CalibratedUnit):
 
     def reference_position(self):
         return self.r
+
+    def reference_move(self, r):
+        # The fixed stage cannot move: maybe raise an error?
+        pass
