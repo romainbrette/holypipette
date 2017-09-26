@@ -381,24 +381,6 @@ class CalibratedUnit(ManipulatorUnit):
             self.stage.absolute_move(stageu0)
             self.microscope.absolute_move(z0)
 
-    def mosaic(self, width = None, height = None):
-        '''
-        Takes a photo mosaic. Current position corresponds to
-        the top left corner of the collated image.
-        Stops when the unit's position is out of range, unless
-        width and height are specified.
-
-        Parameters
-        ----------
-        width : total width in um (optional)
-        height : total height in um (optional)
-
-        Returns
-        -------
-        A large image of the mosaic.
-        '''
-        pass
-
 
 class CalibratedStage(CalibratedUnit):
     '''
@@ -483,6 +465,25 @@ class CalibratedStage(CalibratedUnit):
         # Move back
         self.absolute_move(u0)
         self.wait_until_still()
+
+    def mosaic(self, width = None, height = None):
+        '''
+        Takes a photo mosaic. Current position corresponds to
+        the top left corner of the collated image.
+        Stops when the unit's position is out of range, unless
+        width and height are specified.
+
+        Parameters
+        ----------
+        width : total width in um (optional)
+        height : total height in um (optional)
+
+        Returns
+        -------
+        A large image of the mosaic.
+        '''
+        pass
+
 
 class FixedStage(CalibratedUnit):
     '''
