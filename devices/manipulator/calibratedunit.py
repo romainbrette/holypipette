@@ -475,15 +475,38 @@ class CalibratedStage(CalibratedUnit):
 
         Parameters
         ----------
-        width : total width in um (optional)
-        height : total height in um (optional)
+        width : total width in pixel (optional)
+        height : total height in pixel (optional)
 
         Returns
         -------
         A large image of the mosaic.
         '''
-        pass
+        dx, dy = self.camera.width, self.camera.height
+        # Number of moves in each direction
+        nx = 1+int(width/dx)
+        ny = 1+int(height/dy)
+        # Big image
+        big_image = zeros((ny*height,nx*width))
 
+        column = 0
+        xdirection = 1 # moving direction along x axis
+        for row in range(ny):
+            img = self.camera.snap()
+            big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
+            for _ in range(1,nx):
+                column+=xdirection
+                self.reference_relative_move([dx*xdirection, 0])
+                self.wait_until_still()
+                sleep(0.1)
+                img = self.camera.snap()
+                big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
+            if row<ny-1:
+                xdirection = -xdirection
+                self.reference_relative_move([0, dy])
+                self.wait_until_still()
+
+        return big_image
 
 class FixedStage(CalibratedUnit):
     '''
