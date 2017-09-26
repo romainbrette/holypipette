@@ -300,7 +300,7 @@ class CalibratedUnit(ManipulatorUnit):
                 distance = 2.  # um
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 message('Calibrating axis '+str(axis))
-                for k in range(5): # up to 128 um
+                for k in range(8): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     #self.step_move(distance-deltau[axis], axis)
