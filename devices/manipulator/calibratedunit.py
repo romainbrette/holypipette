@@ -219,9 +219,9 @@ class CalibratedUnit(ManipulatorUnit):
                         raise CalibrationError('Axis has not moved to target position.')
 
                     # 4) Estimate focal plane and position
-                    sleep(.1)
+                    sleep(.1) # normally not necessary
                     image = self.camera.snap()
-                    #cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
+                    cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
                         xt,yt,val = templatematching(image, template)
@@ -229,7 +229,7 @@ class CalibratedUnit(ManipulatorUnit):
                             valmax=val
                             x,y,z = xt,yt,i-len(stack)/2
 
-                    message('Camera x,y,z ='+str(x-x0)+','+str(y-y0)+','+str(z))
+                    message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
                     # 5) Estimate matrix column; from unit to camera (first in pixels)
                     self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
@@ -315,9 +315,6 @@ class CalibratedUnit(ManipulatorUnit):
                     zestimate = estimate[2]
                     #self.microscope.step_move(z0+previous_estimate[2]-zestimate)
                     self.microscope.absolute_move(z0 - zestimate)
-                    #if verbose:
-                    #    print "microscope z-z0:", self.microscope.position()-z0
-                    #    print "unit z-z0:", self.position(axis) - u0[axis]
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
 
@@ -337,7 +334,7 @@ class CalibratedUnit(ManipulatorUnit):
                     # 4) Estimate focal plane and position
                     sleep(.1)
                     image = self.camera.snap()
-                    #cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
+                    cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
                         xt,yt,val = templatematching(image, template)
@@ -345,7 +342,7 @@ class CalibratedUnit(ManipulatorUnit):
                             valmax=val
                             x,y,z = xt,yt,i-len(stack)/2
 
-                    message('Camera x,y,z ='+str(x-x0)+','+str(y-y0)+','+str(z))
+                    message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
                     # 5) Estimate matrix column; from unit to camera (first in pixels)
                     self.M[:,axis] = (array([x-x0, y-y0, z]) + estimate)/distance
