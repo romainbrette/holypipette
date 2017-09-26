@@ -199,7 +199,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
             ID = '0141'
         for _ in range(int(abs(steps))):
             self.send_command(ID, [axis], 0)
-            self.wait_motor_stop([axis])
+            self.wait_until_still([axis])
 
     def set_single_step_distance(self, axis, distance):
         '''
