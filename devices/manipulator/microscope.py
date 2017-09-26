@@ -9,6 +9,7 @@ TODO:
 from devices.manipulator import *
 import time
 import cv2
+from time import sleep
 
 __all__ = ['Microscope']
 
@@ -46,6 +47,7 @@ class Microscope(Manipulator):
         x : target position in um.
         '''
         self.dev.absolute_move(x, self.axis)
+        sleep(.05)
 
     def relative_move(self, x):
         '''
@@ -56,6 +58,7 @@ class Microscope(Manipulator):
         x : position shift in um.
         '''
         self.dev.relative_move(x, self.axis)
+        sleep(.05)
 
     def stop(self):
         """
@@ -68,6 +71,7 @@ class Microscope(Manipulator):
         Waits for the motors to stop.
         """
         self.dev.wait_until_still([self.axis])
+        sleep(.05)
 
     def stack(self, camera, z, preprocessing=lambda img:img, save = True):
         '''
