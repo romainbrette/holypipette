@@ -195,16 +195,16 @@ class CalibratedUnit(ManipulatorUnit):
         u0 = self.position()
 
         try:
-            for axis in [2]:#range(len(self.axes)):
+            for axis in range(len(self.axes)):
                 distance = 2.  # um
                 ucurrent = 0  # current position of the axis relative to u0
                 message('Calibrating axis '+str(axis))
                 for k in range(5): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
-                    #self.step_move(distance-ucurrent, axis)
+                    self.step_move(distance-ucurrent, axis)
                     ucurrent = distance
-                    self.absolute_move(u0[axis]+distance, axis)
+                    #self.absolute_move(u0[axis]+distance, axis)
 
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = self.M[2, axis] * distance
@@ -296,7 +296,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         try:
             previous_estimate = zeros(3)
-            for axis in [2]:#range(len(self.axes)):
+            for axis in range(len(self.axes)):
                 distance = 2.  # um
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 message('Calibrating axis '+str(axis))

@@ -16,7 +16,7 @@ def callback(event, x, y, flags, param):
         ys = y-camera.height/2
         print xs, ys
         #calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
-        calibrated_unit.reference_move(array([xs, ys, 0]))
+        calibrated_unit.reference_move(array([xs, ys, z0-microscope.position()]))
 
 #camera = OpenCVCamera()
 camera = Lumenera()
@@ -27,8 +27,8 @@ stage = ManipulatorUnit(controller,[7,8])
 microscope = Microscope(controller,9)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 unit = ManipulatorUnit(controller, [1,2,3])
-#calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
-calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
+calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
+#calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
 
 def message(msg):
     print msg
@@ -38,6 +38,8 @@ try:
     cv2.waitKey(0)
     u0 = unit.position()
     u0_stage = stage.position()
+    z0 = microscope.position()
+    print unit.position(), microscope.position()
 
     #t1 = time.time()
     #calibrated_stage.calibrate()
@@ -49,6 +51,10 @@ try:
     calibrated_unit.calibrate(message)
     t2 = time.time()
     print t2-t1,'s'
+
+    microscope.wait_until_still()
+    unit.wait_until_still()
+    print unit.position(),microscope.position()
 
     cv2.waitKey(0)
 
