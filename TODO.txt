@@ -1,9 +1,9 @@
-* If still doesn't work: maybe a problem with wait_until_still() for the microscope/stage
-  > then try adding sleeps
-  > or add waits between axis moves (no simultaneous move)
-
-* Platform compensation
+* Use steps for microscope moves?
+* Check correlation in template matching, compare with correlation within stack
+* inversion of z in calibration?
+* Avoid collisions
 * Maximization of calibration size
     -> need to know minimum pipette Z (use platform 0?)
     -> need to know manipulator and platform ranges
 * check position with image
+* test mosaic

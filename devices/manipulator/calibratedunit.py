@@ -20,7 +20,7 @@ import cv2
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
 verbose = True
-position_tolerance = 0.2 # in um
+position_tolerance = 0.1 # in um
 
 class CalibrationError(Exception):
     def __init__(self, message = 'Device is not calibrated'):
@@ -191,6 +191,11 @@ class CalibratedUnit(ManipulatorUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
+        # Calculate minimum correlation with stack images
+        min_match = min([templatematching(image, template)[2] for template in stack])
+        # We accept matches with a matching up to twice worse
+        match_threshold = 1-(1-min_match)*2
+
         # Store current position of unit
         u0 = self.position()
 
@@ -228,6 +233,8 @@ class CalibratedUnit(ManipulatorUnit):
                         if val > valmax:
                             valmax=val
                             x,y,z = xt,yt,i-len(stack)/2
+                    if valmax<match_threshold:
+                        raise CalibrationError('Matching error: the pipette is absent or not focused')
 
                     message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
@@ -289,6 +296,11 @@ class CalibratedUnit(ManipulatorUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
+        # Calculate minimum correlation with stack images
+        min_match = min([templatematching(image, template)[2] for template in stack])
+        # We accept matches with a matching up to twice worse
+        match_threshold = 1-(1-min_match)*2
+
         # Store current position of unit and stage
         u0 = self.position()
         stageu0 = self.stage.position()
@@ -341,6 +353,8 @@ class CalibratedUnit(ManipulatorUnit):
                         if val > valmax:
                             valmax=val
                             x,y,z = xt,yt,i-len(stack)/2
+                    if valmax<match_threshold:
+                        raise CalibrationError('Matching error: the pipette is absent or not focused')
 
                     message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
