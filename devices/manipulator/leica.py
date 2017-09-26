@@ -47,7 +47,7 @@ class Leica(Microscope):
         self.mmc.unloadDevice('Scope')
         self.mmc.unloadDevice(self.port_name)
 
-    def position(self, axis = None):
+    def position(self):
         '''
         Current position along an axis.
 
@@ -61,7 +61,7 @@ class Leica(Microscope):
         '''
         return self.mmc.getPosition()
 
-    def absolute_move(self, x, axis = None):
+    def absolute_move(self, x):
         '''
         Moves the device axis to position x in um.
 
@@ -72,7 +72,7 @@ class Leica(Microscope):
         '''
         self.mmc.setPosition(x)
 
-    def relative_move(self, x, axis = None):
+    def relative_move(self, x):
         '''
         Moves the device axis by relative amount x in um.
 
@@ -83,11 +83,14 @@ class Leica(Microscope):
         '''
         self.mmc.setRelativePosition(x)
 
-    def wait_until_still(self, axis = None):
+    def step_move(self, distance):
+        self.relative_move(x)
+
+    def wait_until_still(self):
         self.mmc.waitForSystem()
         time.sleep(.7) # That's a very long time!
 
-    def stop(self, axis = None):
+    def stop(self):
         self.mmc.stop()
 
 

@@ -60,6 +60,9 @@ class Microscope(Manipulator):
         self.dev.relative_move(x, self.axis)
         sleep(.05)
 
+    def step_move(self, distance):
+        self.dev.step_move(distance, self.axis)
+
     def stop(self):
         """
         Stop current movements.
