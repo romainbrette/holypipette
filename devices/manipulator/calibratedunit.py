@@ -20,6 +20,7 @@ import cv2
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
 verbose = True
+position_tolerance = 0.2 # in um
 
 class CalibrationError(Exception):
     def __init__(self, message = 'Device is not calibrated'):
@@ -157,6 +158,21 @@ class CalibratedUnit(ManipulatorUnit):
         if not self.stage.calibrated:
             self.stage.calibrate(message=message)
 
+        if self.fixed:
+            self.calibrate_without_stage(message)
+        else:
+            self.calibrate_with_stage(message)
+
+    def calibrate_without_stage(self, message = lambda str: None):
+        '''
+        Automatic calibration of the manipulator using the camera.
+        It is assumed that the pipette or some element attached to the unit is in the center of the image.
+        The stage is fixed.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
         message("Pipette cardinal position: "+str(pipette_position))
@@ -166,22 +182,125 @@ class CalibratedUnit(ManipulatorUnit):
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
+
+        # Check microscope position
+        if abs(z0-self.microscope.position())>position_tolerance:
+            raise CalibrationError('Microscope has not returned to its initial position.')
+
         # Initial position of template in image
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
+        # Store current position of unit
+        u0 = self.position()
+
+        try:
+            for axis in [2]:#range(len(self.axes)):
+                distance = 2.  # um
+                ucurrent = 0  # current position of the axis relative to u0
+                message('Calibrating axis '+str(axis))
+                for k in range(5): # up to 128 um
+                    message('Distance '+str(distance))
+                    # 2) Move axis by a small displacement
+                    #self.step_move(distance-ucurrent, axis)
+                    ucurrent = distance
+                    self.absolute_move(u0[axis]+distance, axis)
+
+                    # 3) Move focal plane by estimated amount (initially 0)
+                    zestimate = self.M[2, axis] * distance
+                    self.microscope.absolute_move(z0 - zestimate)
+                    self.microscope.wait_until_still()
+                    self.wait_until_still(axis)
+
+                    # Check microscope and axis positions
+                    if abs(z0 - zestimate - self.microscope.position()) > position_tolerance:
+                        raise CalibrationError('Microscope has not moved to target position.')
+                    if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
+                        raise CalibrationError('Axis has not moved to target position.')
+
+                    # 4) Estimate focal plane and position
+                    sleep(.1)
+                    image = self.camera.snap()
+                    #cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
+                    valmax = -1
+                    for i,template in enumerate(stack): # we look for the best matching template
+                        xt,yt,val = templatematching(image, template)
+                        if val > valmax:
+                            valmax=val
+                            x,y,z = xt,yt,i-len(stack)/2
+
+                    message('Camera x,y,z ='+str(x-x0)+','+str(y-y0)+','+str(z))
+
+                    # 5) Estimate matrix column; from unit to camera (first in pixels)
+                    self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
+                    message('Matrix column:'+str(self.M[:,axis]))
+
+                # 6) Multiply displacement by 2, and back to 2
+                    distance *=2
+
+                # 7) Stop when predicted move is out of screen
+
+                # Move back (not strictly necessary; at least not if using absolute moves)
+                self.absolute_move(u0[axis], axis)
+                self.wait_until_still(axis)
+                # Check axis position
+                if abs(u0[axis] - self.position(axis)) > position_tolerance:
+                    raise CalibrationError('Axis has not returned to initial position.')
+
+            # Compute the (pseudo-)inverse
+            self.Minv = pinv(self.M)
+
+            # 8) Calculate conversion factor and offset.
+            #    Offset is such that the initial position is zero in the reference system
+            #   (Maybe not what should be done)
+            self.r0 = -dot(self.M, u0)
+
+            self.calibrated = True
+
+        finally: # If something fails, move back to original position
+            self.absolute_move(u0)
+            self.microscope.absolute_move(z0)
+
+    def calibrate_with_stage(self, message = lambda str: None):
+        '''
+        Automatic calibration of the manipulator using the camera.
+        It is assumed that the pipette or some element attached to the unit is in the center of the image.
+        The stage is moved so as to compensate for manipulator movement.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
+        # 0) Determine pipette cardinal position (N, S, E, W etc)
+        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
+        message("Pipette cardinal position: "+str(pipette_position))
+
+        # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store current position
+        z0 = self.microscope.position()
+        z = z0+arange(-5,6) # +- 5 um around current position
+        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
+
+        # Check microscope position
+        if abs(z0-self.microscope.position())>position_tolerance:
+            raise CalibrationError('Microscope has not returned to its initial position.')
+
+        # Initial position of template in image
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, stack[5])
+
+        # Store current position of unit and stage
         u0 = self.position()
         stageu0 = self.stage.position()
         stager0 = self.stage.reference_position()
 
         try:
             previous_estimate = zeros(3)
-            for axis in range(len(self.axes)):
+            for axis in [2]:#range(len(self.axes)):
                 distance = 2.  # um
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 message('Calibrating axis '+str(axis))
-                for k in range(6): # up to 128 um
+                for k in range(5): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     #self.step_move(distance-deltau[axis], axis)
@@ -202,14 +321,17 @@ class CalibratedUnit(ManipulatorUnit):
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
 
+                    # Check microscope and axis positions
+                    if abs(z0 - zestimate - self.microscope.position()) > position_tolerance:
+                        raise CalibrationError('Microscope has not moved to target position.')
+                    if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
+                        raise CalibrationError('Axis has not moved to target position.')
+
                     # 3bis) Move platform to center the pipette
                     #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
-                    if self.fixed is False:
-                        #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
-                        self.stage.reference_relative_move(stager0+previous_estimate-estimate)
-                        self.stage.wait_until_still()
-                    else:
-                        estimate[:2]=0 # estimate of stage movement is zero
+                    #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
+                    self.stage.reference_relative_move(stager0+previous_estimate-estimate)
+                    self.stage.wait_until_still()
                     previous_estimate = estimate
 
                     # 4) Estimate focal plane and position
@@ -235,8 +357,11 @@ class CalibratedUnit(ManipulatorUnit):
                 # 7) Stop when predicted move is out of screen
 
                 # Move back (not strictly necessary; at least not if using absolute moves)
-                self.absolute_move(u0)
-                self.wait_until_still()
+                self.absolute_move(u0[axis], axis)
+                self.wait_until_still(axis)
+                # Check axis position
+                if abs(u0[axis] - self.position(axis)) > position_tolerance:
+                    raise CalibrationError('Axis has not returned to initial position.')
 
             # Compute the (pseudo-)inverse
             self.Minv = pinv(self.M)
