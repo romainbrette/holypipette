@@ -1,0 +1,9 @@
+* If still doesn't work: maybe a problem with wait_until_still() for the microscope/stage
+  > then try adding sleeps
+  > or add waits between axis moves (no simultaneous move)
+
+* Platform compensation
+* Maximization of calibration size
+    -> need to know minimum pipette Z (use platform 0?)
+    -> need to know manipulator and platform ranges
+* check position with image

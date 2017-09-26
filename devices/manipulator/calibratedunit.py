@@ -496,14 +496,14 @@ class CalibratedStage(CalibratedUnit):
             big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
             for _ in range(1,nx):
                 column+=xdirection
-                self.reference_relative_move([dx*xdirection, 0])
+                self.reference_relative_move([dx*xdirection,0,0])
                 self.wait_until_still()
                 sleep(0.1)
                 img = self.camera.snap()
                 big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
             if row<ny-1:
                 xdirection = -xdirection
-                self.reference_relative_move([0, dy])
+                self.reference_relative_move([0,dy,0])
                 self.wait_until_still()
 
         return big_image
