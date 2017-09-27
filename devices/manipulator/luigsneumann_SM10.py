@@ -19,6 +19,27 @@ from numpy import sign
 __all__ = ['LuigsNeumann_SM10']
 
 
+# Speed for slow velocity
+rps_slow =    [0.000017,
+               0.000040,
+               0.000141,
+               0.000260,
+               0.001280,
+               0.02630,
+               0.05070,
+               0.010200,
+               0.025100,
+               0.060100,
+               0.173000,
+               0.332000,
+               0.498000,
+               0.664000,  # TODO: Says 0.066400 in the docs...
+               0.996000,
+               1.328000]
+
+# Speed for fast velocity
+rps_fast =  [0.66, 1.73, 2.63, 3.79, 4.67, 5.68, 6.33, 7.81, 8.47, 9.52, 10.42, 11.36, 12.32, 13.23, 14.29, 15.15]
+
 def group_address(axes):
     '''
     Returns the address for a group of axes (list)
