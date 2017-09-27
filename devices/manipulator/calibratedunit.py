@@ -112,7 +112,7 @@ class CalibratedUnit(ManipulatorUnit):
         if not self.calibrated:
             raise CalibrationError
         u = dot(self.Minv, r)
-        self.step_move(u)
+        self.relative_move(u)
 
     def safe_move(self, r, withdraw = 0.):
         '''
@@ -294,6 +294,7 @@ class CalibratedUnit(ManipulatorUnit):
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
+        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
         # Check microscope position
         if abs(z0-self.microscope.position())>position_tolerance:
@@ -308,7 +309,7 @@ class CalibratedUnit(ManipulatorUnit):
         # We accept matches with a matching up to twice worse
         match_threshold = 1-(1-min_match)*2
 
-        # Store current position of unit and stage
+        # Store initial position of unit and stage
         u0 = self.position()
         stageu0 = self.stage.position()
         stager0 = self.stage.reference_position()
@@ -332,21 +333,21 @@ class CalibratedUnit(ManipulatorUnit):
 
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = estimate[2]
-                    self.microscope.relative_move(z0+previous_estimate[2]-zestimate)
-                    #self.microscope.absolute_move(z0 - zestimate)
+                    self.microscope.relative_move(zestimate-previous_estimate[2])
+                    #self.microscope.absolute_move(z0 + zestimate)
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
 
                     # Check microscope and axis positions
-                    if abs(z0 - zestimate - self.microscope.position()) > position_tolerance:
+                    if abs(z0 + zestimate - self.microscope.position()) > position_tolerance:
                         raise CalibrationError('Microscope has not moved to target position.')
                     if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
                         raise CalibrationError('Axis has not moved to target position.')
 
-                    # 3bis) Move platform to center the pipette
+                    # 3bis) Move platform to center the pipette (compensating movement = opposite)
                     #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
                     #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
-                    self.stage.reference_relative_move(stager0+previous_estimate-estimate)
+                    self.stage.reference_relative_move(previous_estimate-estimate)
                     self.stage.wait_until_still()
                     previous_estimate = estimate
 
@@ -359,7 +360,7 @@ class CalibratedUnit(ManipulatorUnit):
                         xt,yt,val = templatematching(image, template)
                         if val > valmax:
                             valmax=val
-                            x,y,z = xt,yt,i-len(stack)/2
+                            x,y,z = xt,yt,len(stack)/2-i # note the sign for z
                     if valmax<match_threshold:
                         raise CalibrationError('Matching error: the pipette is absent or not focused')
 
@@ -374,11 +375,16 @@ class CalibratedUnit(ManipulatorUnit):
 
                 # 7) Stop when predicted move is out of screen
 
-                # Move back (not strictly necessary; at least not if using absolute moves)
-                # **** Check if zestimate should be updated?? ****
-                self.absolute_move(u0[axis], axis)
+                # Move back (not strictly necessary)
+                self.relative_move(-deltau[axis], axis)
+                self.microscope.relative_move(-estimate[2])
+                self.stage.reference_relative_move(estimate)
                 self.wait_until_still(axis)
-                # Check axis position
+                self.microscope.wait_until_still()
+                self.stage.wait_until_still()
+                # Check microscope and axis positions
+                if abs(z0 - self.microscope.position()) > position_tolerance:
+                    raise CalibrationError('Microscope has not returned to target position.')
                 if abs(u0[axis] - self.position(axis)) > position_tolerance:
                     raise CalibrationError('Axis has not returned to initial position.')
 
@@ -386,15 +392,8 @@ class CalibratedUnit(ManipulatorUnit):
             self.Minv = pinv(self.M)
 
             # 8) Calculate conversion factor and offset.
-            #    Offset is such that the initial position is zero in the reference system
-            #   (Maybe not what should be done)
-            self.r0 = -dot(self.M, u0) - stager0
-
-            # Attached stage and Z axis
-            # Same as above except:
-            # * move the stage after unit movement to recenter
-            # * stop when position is unreachable
-            # So: general algorithm is move the stage to recenter when you can
+            #    Offset is such that the initial position is (0,0,z0) in the reference system
+            self.r0 = array([0,0,z0]) -dot(self.M, u0) - stager0
 
             self.calibrated = True
 
