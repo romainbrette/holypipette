@@ -14,6 +14,7 @@ import binascii
 import time
 import struct
 import numpy as np
+from numpy import sign
 
 __all__ = ['LuigsNeumann_SM10']
 
@@ -29,10 +30,20 @@ def group_address(axes):
 
 
 class LuigsNeumann_SM10(SerialDevice,Manipulator):
-    def __init__(self, name = None):
+    def __init__(self, name = None, stepmoves = True):
+        '''
+        A Luigs & Neurmann SM10 controller
+
+        Arguments
+        ---------
+        name : name of serial port
+        stepmoves : if True, relative moves use steps instead of relative move command
+        '''
         # Note that the port name is arbitrary, it should be set or found out
         SerialDevice.__init__(self, name)
         Manipulator.__init__(self)
+
+        self.stepmoves = stepmoves
 
         # Open the serial port; 1 second time out
         self.port.baudrate = 115200
@@ -164,7 +175,10 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         x : position shift in um.
         fast : True if fast move, False if slow move.
         '''
-        self.relative_move_group([x], [axis], fast=fast)
+        if self.stepmoves:
+            self.step_move(x, axis)
+        else:
+            self.relative_move_group([x], [axis], fast=fast) # why not using the specific command?
 
     def position_group(self, axes):
         '''
@@ -217,17 +231,21 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         x : position shift in um (vector or list).
         fast : True if fast move, False if slow move.
         '''
-        ID = 'A04A' if fast else 'A04B'
+        if self.stepmoves:
+            for i in axes:
+                self.step_move(x[i], i)
+        else:
+            ID = 'A04A' if fast else 'A04B'
 
-        axes4 = [0, 0, 0, 0]
-        axes4[:len(axes)] = axes
-        pos4 = [0, 0, 0, 0]
-        pos4[:len(x)] = x
+            axes4 = [0, 0, 0, 0]
+            axes4[:len(axes)] = axes
+            pos4 = [0, 0, 0, 0]
+            pos4[:len(x)] = x
 
-        pos = [b for p in pos4 for b in bytearray(struct.pack('f', p))]
+            pos = [b for p in pos4 for b in bytearray(struct.pack('f', p))]
 
-        # Send move command
-        self.send_command(ID, [0xA0] + axes4 + pos, -1)
+            # Send move command
+            self.send_command(ID, [0xA0] + axes4 + pos, -1)
 
     def single_step_trackball(self, axis, steps):
         '''
@@ -292,6 +310,20 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         ID = '0158'
         data = (axis, velocity)
         self.send_command(ID, data, 0)
+
+    def step_move(self, distance, axis=None, maxstep=255):
+        '''
+        Relative move using steps of up to 255 um.
+        This fixes a bug on L&N controller.
+        '''
+        number_step = abs(distance) // maxstep
+        last_step = abs(distance) % maxstep
+        if number_step:
+            self.set_single_step_distance(axis, maxstep)
+            self.single_step(axis, number_step*sign(distance))
+        if last_step:
+            self.set_single_step_distance(axis, last_step)
+            self.single_step(axis, sign(distance))
 
     def stop(self, axis):
         """

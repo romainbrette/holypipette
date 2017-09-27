@@ -12,16 +12,27 @@ import binascii
 import time
 import struct
 import warnings
+from numpy import sign
 
 __all__ = ['LuigsNeumann_SM5']
 
 verbose = True
 
 class LuigsNeumann_SM5(SerialDevice,Manipulator):
-    def __init__(self, name=None):
+    def __init__(self, name = None, stepmoves = True):
+        '''
+        A Luigs & Neurmann SM10 controller
+
+        Arguments
+        ---------
+        name : name of serial port
+        stepmoves : if True, relative moves use steps instead of relative move command
+        '''
         # Note that the port name is arbitrary, it should be set or found out
         SerialDevice.__init__(self, name)
         Manipulator.__init__(self)
+
+        self.stepmoves = stepmoves
 
         # Open the serial port; 1 second time out
         self.port.baudrate = 38400
@@ -147,9 +158,12 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         axis: axis number
         x : position shift in um.
         '''
-        x_hex = binascii.hexlify(struct.pack('>f', x))
-        data = [axis, int(x_hex[6:], 16), int(x_hex[4:6], 16), int(x_hex[2:4], 16), int(x_hex[:2], 16)]
-        self.send_command('004A', data, 0)
+        if self.stepmoves:
+            self.step_move(x, axis)
+        else:
+            x_hex = binascii.hexlify(struct.pack('>f', x))
+            data = [axis, int(x_hex[6:], 16), int(x_hex[4:6], 16), int(x_hex[2:4], 16), int(x_hex[:2], 16)]
+            self.send_command('004A', data, 0)
 
     def stop(self, axis):
         """
@@ -211,6 +225,20 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         ID = '013a'
         data = [axis] + list(bytearray(struct.pack('f', distance)))
         self.send_command(ID, data, 0)
+
+    def step_move(self, distance, axis=None, maxstep=255):
+        '''
+        Relative move using steps of up to 255 um.
+        This fixes a bug on L&N controller.
+        '''
+        number_step = abs(distance) // maxstep
+        last_step = abs(distance) % maxstep
+        if number_step:
+            self.set_single_step_distance(axis, maxstep)
+            self.single_step(axis, number_step*sign(distance))
+        if last_step:
+            self.set_single_step_distance(axis, last_step)
+            self.single_step(axis, sign(distance))
 
     def set_ramp_length(self, axis, length):
         """
