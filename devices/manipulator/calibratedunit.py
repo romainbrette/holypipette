@@ -335,6 +335,12 @@ class CalibratedUnit(ManipulatorUnit):
                     zestimate = estimate[2]
                     self.microscope.relative_move(zestimate-previous_estimate[2])
                     #self.microscope.absolute_move(z0 + zestimate)
+
+                    # 3bis) Move platform to center the pipette (compensating movement = opposite)
+                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
+                    #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
+                    self.stage.reference_relative_move(previous_estimate-estimate)
+                    self.stage.wait_until_still()
                     self.microscope.wait_until_still()
                     self.wait_until_still(axis)
 
@@ -343,12 +349,9 @@ class CalibratedUnit(ManipulatorUnit):
                         raise CalibrationError('Microscope has not moved to target position.')
                     if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
                         raise CalibrationError('Axis has not moved to target position.')
+                    if abs(stager0- estimate - self.stage.reference_position()) > position_tolerance:
+                        raise CalibrationError('Stage has not moved to target position.')
 
-                    # 3bis) Move platform to center the pipette (compensating movement = opposite)
-                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
-                    #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
-                    self.stage.reference_relative_move(previous_estimate-estimate)
-                    self.stage.wait_until_still()
                     previous_estimate = estimate
 
                     # 4) Estimate focal plane and position
@@ -382,11 +385,13 @@ class CalibratedUnit(ManipulatorUnit):
                 self.wait_until_still(axis)
                 self.microscope.wait_until_still()
                 self.stage.wait_until_still()
-                # Check microscope and axis positions
+                # Check microscope, axis and stage positions
                 if abs(z0 - self.microscope.position()) > position_tolerance:
                     raise CalibrationError('Microscope has not returned to target position.')
                 if abs(u0[axis] - self.position(axis)) > position_tolerance:
                     raise CalibrationError('Axis has not returned to initial position.')
+                if abs(stager0 - self.stage.reference_position()) > position_tolerance:
+                    raise CalibrationError('Stage has not returned to initial position.')
 
             # Compute the (pseudo-)inverse
             self.Minv = pinv(self.M)
