@@ -22,7 +22,7 @@ def callback(event, x, y, flags, param):
 camera = Lumenera()
 video = LiveFeed(camera, mouse_callback=callback)
 
-controller = LuigsNeumann_SM10()
+controller = LuigsNeumann_SM10(stepmoves=False)
 stage = ManipulatorUnit(controller,[7,8])
 microscope = Microscope(controller,9)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
