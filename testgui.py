@@ -16,7 +16,7 @@ def callback(event, x, y, flags, param):
         ys = y-camera.height/2
         print xs, ys
         #calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
-        calibrated_unit.reference_move(array([xs, ys, z0-microscope.position()]))
+        calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
 
 #camera = OpenCVCamera()
 camera = Lumenera()

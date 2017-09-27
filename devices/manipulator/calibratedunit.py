@@ -178,7 +178,7 @@ class CalibratedUnit(ManipulatorUnit):
         message("Pipette cardinal position: "+str(pipette_position))
 
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
-        # Store current position
+        # Store initial position
         z0 = self.microscope.position()
         z = z0+arange(-5,6) # +- 5 um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
@@ -197,7 +197,7 @@ class CalibratedUnit(ManipulatorUnit):
         # We accept matches with matching correlation up to twice worse
         match_threshold = 1-(1-min_match)*2
 
-        # Store current position of unit
+        # Store initial position of unit
         u0 = self.position()
 
         try:
@@ -246,14 +246,14 @@ class CalibratedUnit(ManipulatorUnit):
                     self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
                     message('Matrix column:'+str(self.M[:,axis]))
 
-                # 6) Multiply displacement by 2, and back to 2
+                # 6) Multiply displacement by 2, and back to 2)
                     distance *=2
 
                 # 7) Stop when predicted move is out of screen
 
-                # Move back (not strictly necessary; at least not if using absolute moves)
-                self.absolute_move(u0[axis], axis)
-                self.microscope.absolute_move(z0)
+                # Move back (not strictly necessary)
+                self.relative_move(-ucurrent, axis)
+                self.microscope.relative_move(-zcurrent)
                 self.microscope.wait_until_still()
                 self.wait_until_still(axis)
                 # Check microscope and axis positions
@@ -266,9 +266,8 @@ class CalibratedUnit(ManipulatorUnit):
             self.Minv = pinv(self.M)
 
             # 8) Calculate conversion factor and offset.
-            #    Offset is such that the initial position is zero in the reference system
-            #   (Maybe not what should be done)
-            self.r0 = -dot(self.M, u0)
+            #    Offset is such that the initial position is (0,0,z0) in the reference system
+            self.r0 = array([0,0,z0])-dot(self.M, u0)
 
             self.calibrated = True
 
