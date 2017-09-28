@@ -513,7 +513,7 @@ class CalibratedStage(CalibratedUnit):
         nx = 1+int(width/dx)
         ny = 1+int(height/dy)
         # Big image
-        big_image = zeros((ny*height,nx*width))
+        big_image = zeros((ny*dy,nx*dx))
 
         column = 0
         xdirection = 1 # moving direction along x axis
@@ -521,14 +521,14 @@ class CalibratedStage(CalibratedUnit):
         try:
             for row in range(ny):
                 img = self.camera.snap()
-                big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
+                big_image[row*dy:(row+1)*dy, column*dx:(column+1)*dx] = img
                 for _ in range(1,nx):
                     column+=xdirection
                     self.reference_relative_move([dx*xdirection,0,0])
                     self.wait_until_still()
                     sleep(0.1)
                     img = self.camera.snap()
-                    big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
+                    big_image[row * dy:(row + 1) * dy, column * dx:(column + 1) * dx] = img
                 if row<ny-1:
                     xdirection = -xdirection
                     self.reference_relative_move([0,dy,0])
