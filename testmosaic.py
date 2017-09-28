@@ -7,6 +7,7 @@ from gui import *
 import cv2
 import time
 from numpy import array
+import pylab
 
 def callback(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
@@ -17,7 +18,7 @@ def callback(event, x, y, flags, param):
 
 #camera = OpenCVCamera()
 camera = Lumenera()
-video = LiveFeed(camera, mouse_callback=callback)
+#video = LiveFeed(camera, mouse_callback=callback)
 
 controller = LuigsNeumann_SM10(stepmoves=False)
 stage = ManipulatorUnit(controller,[7,8])
@@ -30,6 +31,7 @@ calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 def message(msg):
     print msg
 
+"""
 try:
 
     cv2.waitKey(0)
@@ -45,8 +47,11 @@ try:
     cv2.waitKey(0)
 
     print camera.width,camera.height
-    mosaic = calibrated_stage.mosaic(camera.width*5,camera.height*5)
+    t1 = time.time()
+    mosaic = calibrated_stage.mosaic(camera.width*3,camera.height*3)
+    t2 = time.time()
     print mosaic.shape
+    print "Mosaic took", t2 - t1, "s"
 
     cv2.waitKey(0)
 
@@ -55,3 +60,18 @@ finally:
     microscope.absolute_move(z0)
     stage.absolute_move(u0_stage)
     video.stop()
+"""
+
+t1 = time.time()
+calibrated_stage.calibrate()
+t2 = time.time()
+print "Calibration took", t2 - t1, "s"
+print calibrated_stage.M, calibrated_stage.r0
+t1 = time.time()
+mosaic = calibrated_stage.mosaic(camera.width * 3, camera.height * 3)
+t2 = time.time()
+print mosaic.shape
+print "Mosaic took", t2 - t1, "s"
+
+pylab.imshow(mosaic[::5,::5], cmap = 'gray')
+pylab.show()

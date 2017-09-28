@@ -456,7 +456,7 @@ class CalibratedStage(CalibratedUnit):
         u0 = self.position()
 
         # 1) Move each axis by a small displacement (50 um)
-        distance = 150. # in um
+        distance = 100. # in um
         for axis in range(len(self.axes)):  # normally just two axes
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
@@ -524,14 +524,14 @@ class CalibratedStage(CalibratedUnit):
                 big_image[row*dy:(row+1)*dy, column*dx:(column+1)*dx] = img
                 for _ in range(1,nx):
                     column+=xdirection
-                    self.reference_relative_move([dx*xdirection,0,0])
+                    self.reference_relative_move([-dx*xdirection,0,0]) # sign: it's a compensatory move
                     self.wait_until_still()
                     sleep(0.1)
                     img = self.camera.snap()
                     big_image[row * dy:(row + 1) * dy, column * dx:(column + 1) * dx] = img
                 if row<ny-1:
                     xdirection = -xdirection
-                    self.reference_relative_move([0,dy,0])
+                    self.reference_relative_move([0,-dy,0])
                     self.wait_until_still()
         finally: # move back to initial position
             self.absolute_move(u0)
