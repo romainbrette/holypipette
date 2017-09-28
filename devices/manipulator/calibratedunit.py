@@ -10,7 +10,7 @@ Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot, arange
-from numpy.linalg import inv, pinv
+from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
 from vision.crop import *
@@ -317,12 +317,12 @@ class CalibratedUnit(ManipulatorUnit):
         stager0 = self.stage.reference_position()
 
         try:
-            previous_estimate = zeros(3)
             for axis in range(len(self.axes)):
                 distance = 2.  # um
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
+                previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(8): # up to 128 um
+                for k in range(5): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     self.relative_move(distance-deltau[axis], axis)
@@ -351,7 +351,7 @@ class CalibratedUnit(ManipulatorUnit):
                         raise CalibrationError('Microscope has not moved to target position.')
                     if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
                         raise CalibrationError('Axis has not moved to target position.')
-                    if abs(stager0- estimate - self.stage.reference_position()) > position_tolerance:
+                    if norm((stager0- estimate - self.stage.reference_position())[:2]) > position_tolerance:
                         raise CalibrationError('Stage has not moved to target position.')
 
                     previous_estimate = estimate
@@ -392,7 +392,7 @@ class CalibratedUnit(ManipulatorUnit):
                     raise CalibrationError('Microscope has not returned to target position.')
                 if abs(u0[axis] - self.position(axis)) > position_tolerance:
                     raise CalibrationError('Axis has not returned to initial position.')
-                if abs(stager0 - self.stage.reference_position()) > position_tolerance:
+                if norm(stageu0 - self.stage.position()) > position_tolerance:
                     raise CalibrationError('Stage has not returned to initial position.')
 
             # Compute the (pseudo-)inverse
