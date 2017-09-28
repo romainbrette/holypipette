@@ -196,6 +196,7 @@ class CalibratedUnit(ManipulatorUnit):
         min_match = min([templatematching(image, template)[2] for template in stack])
         # We accept matches with matching correlation up to twice worse
         match_threshold = 1-(1-min_match)*2
+        message('Matching threshold: '+str(match_threshold))
 
         # Store initial position of unit
         u0 = self.position()
@@ -308,6 +309,7 @@ class CalibratedUnit(ManipulatorUnit):
         min_match = min([templatematching(image, template)[2] for template in stack])
         # We accept matches with a matching up to twice worse
         match_threshold = 1-(1-min_match)*2
+        message('Matching threshold: '+str(match_threshold))
 
         # Store initial position of unit and stage
         u0 = self.position()
