@@ -506,6 +506,8 @@ class CalibratedStage(CalibratedUnit):
         -------
         A large image of the mosaic.
         '''
+        u0=self.position()
+
         dx, dy = self.camera.width, self.camera.height
         # Number of moves in each direction
         nx = 1+int(width/dx)
@@ -515,20 +517,24 @@ class CalibratedStage(CalibratedUnit):
 
         column = 0
         xdirection = 1 # moving direction along x axis
-        for row in range(ny):
-            img = self.camera.snap()
-            big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
-            for _ in range(1,nx):
-                column+=xdirection
-                self.reference_relative_move([dx*xdirection,0,0])
-                self.wait_until_still()
-                sleep(0.1)
+
+        try:
+            for row in range(ny):
                 img = self.camera.snap()
                 big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
-            if row<ny-1:
-                xdirection = -xdirection
-                self.reference_relative_move([0,dy,0])
-                self.wait_until_still()
+                for _ in range(1,nx):
+                    column+=xdirection
+                    self.reference_relative_move([dx*xdirection,0,0])
+                    self.wait_until_still()
+                    sleep(0.1)
+                    img = self.camera.snap()
+                    big_image[row*width:(row+1)*width, column*height:column*(height+1)] = img
+                if row<ny-1:
+                    xdirection = -xdirection
+                    self.reference_relative_move([0,dy,0])
+                    self.wait_until_still()
+        finally: # move back to initial position
+            self.absolute_move(u0)
 
         return big_image
 

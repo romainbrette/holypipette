@@ -44,6 +44,13 @@ try:
 
     cv2.waitKey(0)
 
+    print camera.width,camera.height
+    mosaic = calibrated_stage.mosaic(camera.width*5,camera.height*5)
+    print mosaic.shape
+
+    cv2.waitKey(0)
+
+
 finally:
     microscope.absolute_move(z0)
     stage.absolute_move(u0_stage)
