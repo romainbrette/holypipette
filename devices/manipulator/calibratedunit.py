@@ -322,12 +322,11 @@ class CalibratedUnit(ManipulatorUnit):
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(5): # up to 128 um
+                for k in range(8): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     self.relative_move(distance-deltau[axis], axis)
                     deltau[axis] = distance
-                    #self.absolute_move(u0[axis]+distance, axis)
 
                     # 2bis) Estimate target position on the camera
                     estimate = dot(self.M, deltau)
@@ -336,11 +335,8 @@ class CalibratedUnit(ManipulatorUnit):
                     # 3) Move focal plane by estimated amount (initially 0)
                     zestimate = estimate[2]
                     self.microscope.relative_move(zestimate-previous_estimate[2])
-                    #self.microscope.absolute_move(z0 + zestimate)
 
                     # 3bis) Move platform to center the pipette (compensating movement = opposite)
-                    #if self.stage.reference_is_accessible(stageu0+estimate[:2]):
-                    #self.stage.reference_move(previous_estimate-estimate+self.stage.reference_position())
                     self.stage.reference_relative_move(previous_estimate-estimate)
                     self.stage.wait_until_still()
                     self.microscope.wait_until_still()
@@ -460,7 +456,7 @@ class CalibratedStage(CalibratedUnit):
         u0 = self.position()
 
         # 1) Move each axis by a small displacement (50 um)
-        distance = 50. # in um
+        distance = 150. # in um
         for axis in range(len(self.axes)):  # normally just two axes
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)

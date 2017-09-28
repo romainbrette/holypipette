@@ -1,9 +1,5 @@
-* Use steps for microscope moves?
-    > maybe directly inserted in relative_move: does steps instead of absolute moves
-
-* Check correlation in template matching, compare with correlation within stack
-* inversion of z in calibration?
 * Avoid collisions
+    find out direction of vertical displacements
 * Maximization of calibration size
     -> need to know minimum pipette Z (use platform 0?)
     -> need to know manipulator and platform ranges
