@@ -61,4 +61,5 @@ try:
 finally:
     unit.absolute_move(u0)
     stage.absolute_move(u0_stage)
+    microscope.absolute_move(z0)
     video.stop()
