@@ -33,6 +33,8 @@ class LiveFeedQt(QtWidgets.QMainWindow):
 
 
         self.scrollArea = QtWidgets.QScrollArea()
+        self.scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.scrollArea.setWidget(self.imageLabel)
         self.setCentralWidget(self.scrollArea)
 
