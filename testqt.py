@@ -6,66 +6,52 @@ Seems to work, except the camera apparently doesn't start until waitkey (??)
 from devices import *
 from vision import *
 from gui import *
+import sys
 import cv2
 import time
 from numpy import array
-from PyQt5 import Qt
-
-#def callback(event, x, y, flags, param):
-def callback(event):
-    if event.button() == Qt.LeftButton:
-        x,y = event.x(), event.y()
-        xs = x-camera.width/2
-        ys = y-camera.height/2
-        print xs, ys
-        calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
-        #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
-
-#camera = OpenCVCamera()
-camera = Lumenera()
-video = LiveFeedQt(camera, mouse_callback=callback)
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import Qt
 
 
+class TestGui(QtCore.QObject):
+    calibrate_signal = QtCore.pyqtSignal()
 
-controller = LuigsNeumann_SM10(stepmoves=False)
-stage = ManipulatorUnit(controller,[7,8])
-microscope = Microscope(controller,9)
-calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
-unit = ManipulatorUnit(controller, [1,2,3])
-calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
-#calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
+    def __init__(self):
+        super(TestGui, self).__init__()
+        self.camera = OpenCVCamera()
+        # camera = Lumenera()
+        self.video = LiveFeedQt(self.camera, key_callback=self.keypress_callback,
+                                mouse_callback=self.mouse_callback)
+        self.calibration_thread = QtCore.QThread()
+        self.calibrator = Calibrator()
+        self.calibrator.moveToThread(self.calibration_thread)
+        self.calibrate_signal.connect(self.calibrator.do_calibration)
+        self.calibration_thread.start()
+        self.video.show()
 
-def message(msg):
-    print msg
-print "yo"
-try:
+    def mouse_callback(self, event):
+        if event.button() == Qt.LeftButton:
+            x, y = event.x(), event.y()
+            xs = x - self.camera.width/2
+            ys = y - self.camera.height/2
+            print xs, ys
 
-    cv2.waitKey(0)
-    u0 = unit.position()
-    u0_stage = stage.position()
-    z0 = microscope.position()
-    print unit.position(), microscope.position()
+    def keypress_callback(self, event):
+        if event.key() == Qt.Key_C:
+            self.calibrate_signal.emit()
 
-    #t1 = time.time()
-    #calibrated_stage.calibrate()
-    #t2 = time.time()
-    #print "Calibration took",t2-t1,"s"
-    #print calibrated_stage.M, calibrated_stage.r0
 
-    t1= time.time()
-    #calibrated_unit.calibrate(message)
-    calibrated_stage.calibrate(message)
-    t2 = time.time()
-    print t2-t1,'s'
+class Calibrator(QtCore.QObject):
 
-    microscope.wait_until_still()
-    unit.wait_until_still()
-    print unit.position(),microscope.position()
+    @QtCore.pyqtSlot()
+    def do_calibration(self):
+        print('Starting calibration....')
+        time.sleep(1)
+        print('Still doing something....')
+        time.sleep(1)
+        print('Done')
 
-    cv2.waitKey(0)
-
-finally:
-    unit.absolute_move(u0)
-    stage.absolute_move(u0_stage)
-    microscope.absolute_move(z0)
-    video.stop()
+app = QtWidgets.QApplication(sys.argv)
+gui = TestGui()
+sys.exit(app.exec_())

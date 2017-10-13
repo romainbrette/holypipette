@@ -21,13 +21,15 @@ class ClickableLabel(QtWidgets.QLabel):
 
 
 class LiveFeedQt(QtWidgets.QMainWindow):
-    def __init__(self, camera, mouse_callback=None, image_edit=insert_cross):
+    def __init__(self, camera, mouse_callback=None, key_callback=None,
+                 image_edit=insert_cross):
         super(LiveFeedQt, self).__init__()
         self.image_edit = image_edit
 
         self.camera = camera
         self.width, self.height = camera.width, self.camera.height
         self.imageLabel = ClickableLabel(mouse_callback)
+        self.key_callback = key_callback
 
 
         self.scrollArea = QtWidgets.QScrollArea()
@@ -62,6 +64,8 @@ class LiveFeedQt(QtWidgets.QMainWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.close()
+        elif self.key_callback is not None:
+            self.key_callback(event)
 
 
 if __name__ == '__main__':
