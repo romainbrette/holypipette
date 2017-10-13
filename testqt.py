@@ -9,9 +9,12 @@ from gui import *
 import cv2
 import time
 from numpy import array
+from PyQt5 import Qt
 
-def callback(event, x, y, flags, param):
-    if event == cv2.EVENT_LBUTTONDOWN:
+#def callback(event, x, y, flags, param):
+def callback(event):
+    if event.button() == Qt.LeftButton:
+        x,y = event.x(), event.y()
         xs = x-camera.width/2
         ys = y-camera.height/2
         print xs, ys
@@ -20,7 +23,9 @@ def callback(event, x, y, flags, param):
 
 #camera = OpenCVCamera()
 camera = Lumenera()
-video = LiveFeed(camera, mouse_callback=callback)
+video = LiveFeedQt(camera, mouse_callback=callback)
+
+
 
 controller = LuigsNeumann_SM10(stepmoves=False)
 stage = ManipulatorUnit(controller,[7,8])
@@ -32,7 +37,7 @@ calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=came
 
 def message(msg):
     print msg
-
+print "yo"
 try:
 
     cv2.waitKey(0)
@@ -48,6 +53,7 @@ try:
     #print calibrated_stage.M, calibrated_stage.r0
 
     t1= time.time()
+    #calibrated_unit.calibrate(message)
     calibrated_stage.calibrate(message)
     t2 = time.time()
     print t2-t1,'s'

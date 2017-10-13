@@ -1,6 +1,7 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
+__all__ = ['LiveFeedQt']
 
 def insert_cross(image):
     width, height = image.shape[:2]
@@ -20,13 +21,13 @@ class ClickableLabel(QtWidgets.QLabel):
 
 
 class LiveFeedQt(QtWidgets.QMainWindow):
-    def __init__(self, camera, callback=None, image_edit=insert_cross):
+    def __init__(self, camera, mouse_callback=None, image_edit=insert_cross):
         super(LiveFeedQt, self).__init__()
         self.image_edit = image_edit
 
         self.camera = camera
         self.width, self.height = camera.width, self.camera.height
-        self.imageLabel = ClickableLabel(callback)
+        self.imageLabel = ClickableLabel(mouse_callback)
 
 
         self.scrollArea = QtWidgets.QScrollArea()
