@@ -17,6 +17,7 @@ class TestGui(QtWidgets.QMainWindow):
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
+        self.setWindowTitle("Calibration GUI")
         self.camera = camera
         self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
         self.setCentralWidget(self.video)
@@ -29,8 +30,12 @@ class TestGui(QtWidgets.QMainWindow):
     def mouse_callback(self, event):
         if event.button() == Qt.LeftButton:
             x, y = event.x(), event.y()
-            xs = x - self.camera.width/2
-            ys = y - self.camera.height/2
+            xs = x - self.video.size().width()/2
+            ys = y - self.video.size().height()/2
+            # displayed image is not necessarily the same size as the original camera image
+            scale = 1.0*self.camera.width / self.video.size().width()
+            xs *= scale
+            ys *= scale
             print xs, ys
             calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
 

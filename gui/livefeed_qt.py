@@ -5,49 +5,43 @@ from devices.camera.umanagercamera import Lumenera
 
 __all__ = ['LiveFeedQt']
 
-def insert_cross(image):
-    width, height = image.shape[:2]
-    if len(image.shape) == 3:  # color image
-        image[width//2-10:width//2+10, height//2, :] = (0, 0, 200)
-        image[width//2, height//2-10:height//2+10, :] = (0, 0, 200)
-    else:  # grayscale image
-        image[width//2-10:width//2+10, height//2] = 0
-        image[width//2, height//2-10:height//2+10] = 0
-    return image
+def draw_cross(pixmap):
+    painter = QtGui.QPainter(pixmap)
+    painter.setPen(QtGui.QColor(200, 0, 0))
+    c_x, c_y = pixmap.width()/2, pixmap.height()/2
+    painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
+    painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
 
 
-class ClickableLabel(QtWidgets.QLabel):
-    def __init__(self, callback=None):
-        self.callback = callback
-        super(ClickableLabel, self).__init__()
-
-    def mousePressEvent(self, event):
-        if self.callback is not None:
-            self.callback(event)
-
-
-class LiveFeedQt(QtWidgets.QScrollArea):
+class LiveFeedQt(QtWidgets.QLabel):
     def __init__(self, camera, mouse_callback=None,
-                 image_edit=insert_cross):
+                 image_edit=lambda frame: frame,
+                 display_edit=draw_cross):
         super(LiveFeedQt, self).__init__()
+        # The image_edit function (does nothing by default) gets the raw
+        # unscaled image (i.e. a numpy array), while the display_edit
+        # function gets a QPixmap and is meant to draw GUI elements in
+        # "display space" (by default, a red cross in the middle of the
+        # screen).
         self.image_edit = image_edit
-
+        self.display_edit = display_edit
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
-        self.imageLabel = ClickableLabel(mouse_callback)
-
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setWidget(self.imageLabel)
+        self.callback = mouse_callback
 
         self.update_image()
-        self.imageLabel.adjustSize()
 
-        self.resize(self.imageLabel.sizeHint())
+        self.setMinimumSize(640, 480)
+        self.setAlignment(Qt.AlignCenter)
+        #self.setSizePolicy(QtWidgets.QSizePolicy.Minimum)
 
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
         timer.start(33) #30 Hz
+
+    def mousePressEvent(self, event):
+        if self.callback is not None:
+            self.callback(event)
 
     @QtCore.pyqtSlot()
     def update_image(self):
@@ -71,5 +65,12 @@ class LiveFeedQt(QtWidgets.QScrollArea):
             # direct support for this format in QImage
             q_image = q_image.rgbSwapped()
 
-        self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(q_image))
+        pixmap = QtGui.QPixmap.fromImage(q_image)
+        size = self.size()
+        width, height = size.width(), size.height()
+        scaled_pixmap = pixmap.scaled(width, height,
+                                     Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        if self.display_edit is not None:
+            self.display_edit(scaled_pixmap)
+        self.setPixmap(scaled_pixmap)
 
