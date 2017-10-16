@@ -492,8 +492,11 @@ class CalibratedStage(CalibratedUnit):
             u.append(self.position())
         rx = r[1]-r[0]
         ry = r[2]-r[0]
+        r = vstack((rx,ry)).T
         ux = u[1]-u[0]
         uy = u[2]-u[0]
+        u = vstack((ux,uy)).T
+        self.M = dot(r,inv(u))
         '''
 
         # 4) Recompute the matrix and the (pseudo) inverse
