@@ -22,9 +22,9 @@ def where_is_paramecium(frame): # Locate paramecium
     gauss = cv2.GaussianBlur(resized, (9, 9), 0)
     canny = cv2.Canny(gauss, gauss.shape[0]/8, gauss.shape[0]/8)
     ret, thresh = cv2.threshold(canny, 127, 255, 0)
-    contours, hierarchy = cv2.findContours(thresh, 1, 2)
+    ret = cv2.findContours(thresh, 1, 2)
+    contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
     distmin = 1e6
-    xmin, ymin = 0
     for cnt in contours:
         try:
             M = cv2.moments(cnt)
@@ -44,15 +44,23 @@ def where_is_paramecium(frame): # Locate paramecium
                     angle = theta # not used here
         except cv2.error:
             pass
-    return xmin*ratio,ymin*ratio
+    if distmin<1e5:
+        return xmin*ratio,ymin*ratio
+    else:
+        return None,None
 
-#camera = OpenCVCamera()
-camera = Lumenera()
-video = LiveFeed(camera, mouse_callback=callback)
+if False:
+    camera = Lumenera()
+    controller = LuigsNeumann_SM10(stepmoves=False)
+    stage = ManipulatorUnit(controller,[7,8])
+    microscope = Microscope(controller,9)
+else:
+    camera = Hamamatsu()
+    controller = LuigsNeumann_SM5(name='COM3', stepmoves=False)
+    stage = ManipulatorUnit(controller,[7,8])
+    microscope = Leica()
 
-controller = LuigsNeumann_SM10(stepmoves=True)
-stage = ManipulatorUnit(controller,[7,8])
-microscope = Microscope(controller,9)
+video = LiveFeed(camera)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 
 try:
@@ -75,12 +83,11 @@ try:
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
 
-        frame = video.snap()
+        frame = camera.snap()
         x,y = where_is_paramecium(frame)
-        moveto(x,y)
-
-    cv2.waitKey(0)
-
+        print x,y
+        if x is not None:
+            moveto(x,y)
 
 finally:
     microscope.absolute_move(z0)

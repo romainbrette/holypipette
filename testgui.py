@@ -19,20 +19,21 @@ def callback(event, x, y, flags, param):
         #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
 
 #camera = OpenCVCamera()
-#camera = Lumenera()
-camera = Hamamatsu()
-video = LiveFeed(camera, mouse_callback=callback)
 
 if False:
+    camera = Lumenera()
     controller = LuigsNeumann_SM10(stepmoves=False)
     stage = ManipulatorUnit(controller,[7,8])
     microscope = Microscope(controller,9)
     unit = ManipulatorUnit(controller, [1,2,3])
 else:
+    camera = Hamamatsu()
     controller = LuigsNeumann_SM5(name='COM3', stepmoves=False)
     stage = ManipulatorUnit(controller,[7,8])
     microscope = Leica()
     unit = ManipulatorUnit(controller, [1,2,3])
+
+video = LiveFeed(camera, mouse_callback=callback)
 
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
