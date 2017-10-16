@@ -7,10 +7,13 @@ __all__ = ['LiveFeedQt']
 
 def draw_cross(pixmap):
     painter = QtGui.QPainter(pixmap)
-    painter.setPen(QtGui.QColor(200, 0, 0))
+    pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
+    pen.setWidth(2)
+    painter.setPen(pen)
     c_x, c_y = pixmap.width()/2, pixmap.height()/2
-    painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
-    painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
+    painter.drawLine(c_x - 10, c_y, c_x + 10, c_y)
+    painter.drawLine(c_x, c_y - 10, c_x, c_y + 10)
+    painter.end()
 
 
 class LiveFeedQt(QtWidgets.QLabel):
