@@ -12,21 +12,20 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 
 
-class TestGui(QtCore.QObject):
+class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
 
     def __init__(self):
         super(TestGui, self).__init__()
         self.camera = OpenCVCamera()
         # camera = Lumenera()
-        self.video = LiveFeedQt(self.camera, key_callback=self.keypress_callback,
-                                mouse_callback=self.mouse_callback)
+        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
+        self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
         self.calibrator = Calibrator()
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
         self.calibration_thread.start()
-        self.video.show()
 
     def mouse_callback(self, event):
         if event.button() == Qt.LeftButton:
@@ -35,9 +34,17 @@ class TestGui(QtCore.QObject):
             ys = y - self.camera.height/2
             print xs, ys
 
-    def keypress_callback(self, event):
+    def keyPressEvent(self, event):
         if event.key() == Qt.Key_C:
             self.calibrate_signal.emit()
+        elif event.key() == Qt.Key_Escape:
+            self.close()
+
+    def closeEvent(self, event):
+        print "closing"
+        self.calibration_thread.quit()
+        self.camera.video.release()
+        event.accept()
 
 
 class Calibrator(QtCore.QObject):
@@ -46,20 +53,21 @@ class Calibrator(QtCore.QObject):
     def do_calibration(self):
         print('Starting calibration....')
         t1 = time.time()
-        calibrated_stage.calibrate(message)
+        calibrated_stage.calibrate()
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
 
 controller = LuigsNeumann_SM10(stepmoves=False)
-stage = ManipulatorUnit(controller,[7,8])
-microscope = Microscope(controller,9)
+stage = ManipulatorUnit(controller, [7, 8])
+microscope = Microscope(controller, 9)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
-unit = ManipulatorUnit(controller, [1,2,3])
+unit = ManipulatorUnit(controller, [1, 2, 3])
 calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
 def message(msg):
     print msg
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui()
+gui.show()
 sys.exit(app.exec_())
