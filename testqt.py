@@ -15,10 +15,9 @@ from PyQt5.QtCore import Qt
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, camera):
         super(TestGui, self).__init__()
-        self.camera = OpenCVCamera()
-        # camera = Lumenera()
+        self.camera = camera
         self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
@@ -33,6 +32,7 @@ class TestGui(QtWidgets.QMainWindow):
             xs = x - self.camera.width/2
             ys = y - self.camera.height/2
             print xs, ys
+            calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_C:
@@ -58,6 +58,8 @@ class Calibrator(QtCore.QObject):
         print t2 - t1, 's'
         print('Done')
 
+#camera = OpenCVCamera()
+camera = Lumenera()
 controller = LuigsNeumann_SM10(stepmoves=False)
 stage = ManipulatorUnit(controller, [7, 8])
 microscope = Microscope(controller, 9)
@@ -68,6 +70,6 @@ def message(msg):
     print msg
 
 app = QtWidgets.QApplication(sys.argv)
-gui = TestGui()
+gui = TestGui(camera)
 gui.show()
 sys.exit(app.exec_())

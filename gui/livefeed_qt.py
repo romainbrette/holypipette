@@ -33,7 +33,7 @@ class LiveFeedQt(QtWidgets.QScrollArea):
         self.image_edit = image_edit
 
         self.camera = camera
-        self.width, self.height = camera.width, self.camera.height
+        self.width, self.height = self.camera.width, self.camera.height
         self.imageLabel = ClickableLabel(mouse_callback)
 
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -49,40 +49,27 @@ class LiveFeedQt(QtWidgets.QScrollArea):
         timer.timeout.connect(self.update_image)
         timer.start(33) #30 Hz
 
+    @QtCore.pyqtSlot()
     def update_image(self):
         # get data and display
-        frame = self.image_edit(self.camera.snap())
-        bytesPerLine = 3 * self.width
-        format = QtGui.QImage.Format_RGB888
+        frame = self.camera.snap()
+        if len(frame.shape) == 2:
+            # Grayscale image via MicroManager
+            bytesPerLine = self.width
+            format = QtGui.QImage.Format_Grayscale8
+        else:
+            # Color image via OpenCV
+            bytesPerLine = 3*self.width
+            format = QtGui.QImage.Format_RGB888
 
+        frame = self.image_edit(frame)
         q_image = QtGui.QImage(frame.data, self.width, self.height,
                                bytesPerLine, format)
-        # OpenCV returns images as 24bit BGR (and not RGB), but there is no
-        # direct support for this format in QImage
-        q_image = q_image.rgbSwapped()
+
+        if format == QtGui.QImage.Format_RGB888:
+            # OpenCV returns images as 24bit BGR (and not RGB), but there is no
+            # direct support for this format in QImage
+            q_image = q_image.rgbSwapped()
 
         self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(q_image))
 
-
-if __name__ == '__main__':
-    from devices.camera.opencvcamera import OpenCVCamera
-    import sys
-
-    # Example of using this camera live feed as a standalone program together
-    # with a callback that receives mouse click events
-    def my_callback(event):
-        if event.button() == Qt.LeftButton:
-            button = 'Left'
-        elif event.button() == Qt.MiddleButton:
-            button = 'Middle'
-        elif event.button() == Qt.RightButton:
-            button = 'Right'
-        else:
-            button = 'Unknown'
-        print('{} button: ({}, {})'.format(button, event.x(), event.y()))
-
-    app = QtWidgets.QApplication(sys.argv)
-    camera = OpenCVCamera()
-    viewer = LiveFeedQt(camera, mouse_callback=my_callback)
-    viewer.show()
-    sys.exit(app.exec_())
