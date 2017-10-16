@@ -472,9 +472,29 @@ class CalibratedStage(CalibratedUnit):
 
         # Compute the (pseudo-)inverse
         self.Minv = pinv(self.M)
+        # Offset is such that the initial position is zero in the reference system
+        self.r0 = -dot(self.M, u0)
 
-        # More accurate calibration (optional):
+        # More accurate calibration:
         # 3) Move to three corners using the computed matrix
+        '''
+        width, height = self.camera.width, self.camera.height
+        theight, twidth = template.shape # template dimensions
+        # List of corners, reference coordinates
+        # We use a margin of 1/4 of the template
+        r = [array([-(width-twidth*3./4),-(height-theight*3./4)]),
+            array([(width-twidth*3./4),-(height-theight*3./4)]),
+            array([-(width-twidth*3./4),(height-theight*3./4)])]
+        u = []
+        for ri in r:
+            self.reference_move(ri)
+            self.wait_until_still()
+            u.append(self.position())
+        rx = r[1]-r[0]
+        ry = r[2]-r[0]
+        ux = u[1]-u[0]
+        uy = u[2]-u[0]
+        '''
 
         # 4) Recompute the matrix and the (pseudo) inverse
         #self.Minv = pinv(self.M)
