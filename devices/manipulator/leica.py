@@ -5,6 +5,7 @@ Communication through serial COM port.
 import warnings
 from .microscope import *
 import sys
+import time
 sys.path.append('C:\\Program Files\\Micro-Manager-1.4') # This is not good!
 try:
     import MMCorePy
@@ -21,8 +22,6 @@ class Leica(Microscope):
         ----------
         name : port name
         '''
-        Microscope.__init__(self)
-
         self.port_name = name
         mmc = MMCorePy.CMMCore()
         self.mmc = mmc

@@ -16,7 +16,7 @@ from numpy import sign
 
 __all__ = ['LuigsNeumann_SM5']
 
-verbose = True
+verbose = False
 
 class LuigsNeumann_SM5(SerialDevice,Manipulator):
     def __init__(self, name = None, stepmoves = True):
@@ -46,7 +46,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         self.establish_connection()
 
         # Initialize ramp length of all axes to 210 ms
-        for axis in range(1,10):
+        for axis in range(1,3):
             self.set_ramp_length(axis,3)
             time.sleep(.05)
 

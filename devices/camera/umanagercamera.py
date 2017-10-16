@@ -8,6 +8,7 @@ TODO:
 from camera import *
 import sys
 import warnings
+import cv2
 sys.path.append('C:\\Program Files\\Micro-Manager-1.4')
 try:
     import MMCorePy
@@ -39,11 +40,16 @@ class uManagerCamera(Camera):
         return (self.cam.getRemainingImageCount() > 0)
 
     def snap(self):
-        return self.cam.getLastImage() # What happens if there is no new frame?
+        frame = self.cam.getLastImage() # What happens if there is no new frame?
+        if frame.dtype == 'uint16':
+            frame = cv2.convertScaleAbs(frame, alpha=2 ** -2)
+        else:
+            frame = cv2.convertScaleAbs(frame)
+        return frame
 
 class Hamamatsu(uManagerCamera):
     def __init__(self):
-        uManagerCamera.__init__(self, 'HamamatsuHam', 'HamamatsuHam_DCAM', 60)
+        uManagerCamera.__init__(self, 'HamamatsuHam', 'HamamatsuHam_DCAM', 10)
 
 class Lumenera(uManagerCamera):
     def __init__(self):

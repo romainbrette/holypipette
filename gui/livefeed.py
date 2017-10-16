@@ -63,13 +63,9 @@ class LiveFeed(Thread):
         while self.show: # is that necessary?
             if self.cam.new_frame():
                 # Get image and convert
-                frame = self.cam.snap()
+                self.frame = self.cam.snap()
                 #frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                 # Convert to 8 bit gray scale # why? and shouldn't be done on Camera level?
-                if frame.dtype == 'uint16':
-                    self.frame = cv2.convertScaleAbs(frame, alpha=2**-2)
-                else:
-                    self.frame = cv2.convertScaleAbs(frame)
 
                 # Display the image with editing (to add a cross, etc)
                 cv2.imshow(self.title, self.editing(self.frame))
