@@ -45,6 +45,13 @@ class TestGui(QtWidgets.QMainWindow):
         elif event.key() == Qt.Key_Escape:
             self.close()
 
+    def closeEvent(self, event):
+        try:
+            self.camera.video.release()  # necessary for OpenCV
+        except AttributeError:
+            pass
+        event.accept()
+
 
 class Calibrator(QtCore.QObject):
 
