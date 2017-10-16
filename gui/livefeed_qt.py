@@ -1,12 +1,18 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
 
+from devices.camera.umanagercamera import Lumenera
+
 __all__ = ['LiveFeedQt']
 
 def insert_cross(image):
     width, height = image.shape[:2]
-    image[width//2-10:width//2+10, height//2, :] = (0, 0, 200)
-    image[width//2, height//2-10:height//2+10, :] = (0, 0, 200)
+    if len(image.shape) == 3:  # color image
+        image[width//2-10:width//2+10, height//2, :] = (0, 0, 200)
+        image[width//2, height//2-10:height//2+10, :] = (0, 0, 200)
+    else:  # grayscale image
+        image[width//2-10:width//2+10, height//2] = 0
+        image[width//2, height//2-10:height//2+10] = 0
     return image
 
 
@@ -89,6 +95,6 @@ if __name__ == '__main__':
 
     app = QtWidgets.QApplication(sys.argv)
     camera = OpenCVCamera()
-    viewer = LiveFeedQt(camera, callback=my_callback)
+    viewer = LiveFeedQt(camera, mouse_callback=my_callback)
     viewer.show()
     sys.exit(app.exec_())

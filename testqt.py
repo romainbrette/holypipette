@@ -1,7 +1,5 @@
 '''
 This is a test GUI, to test the functionality.
-
-Seems to work, except the camera apparently doesn't start until waitkey (??)
 '''
 from devices import *
 from vision import *
@@ -47,10 +45,20 @@ class Calibrator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def do_calibration(self):
         print('Starting calibration....')
-        time.sleep(1)
-        print('Still doing something....')
-        time.sleep(1)
+        t1 = time.time()
+        calibrated_stage.calibrate(message)
+        t2 = time.time()
+        print t2 - t1, 's'
         print('Done')
+
+controller = LuigsNeumann_SM10(stepmoves=False)
+stage = ManipulatorUnit(controller,[7,8])
+microscope = Microscope(controller,9)
+calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
+unit = ManipulatorUnit(controller, [1,2,3])
+calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
+def message(msg):
+    print msg
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui()
