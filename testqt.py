@@ -36,8 +36,8 @@ class TestGui(QtWidgets.QMainWindow):
             scale = 1.0*self.camera.width / self.video.size().width()
             xs *= scale
             ys *= scale
-            print xs, ys
-            calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
+            #calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
+            calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_C:
@@ -59,19 +59,26 @@ class Calibrator(QtCore.QObject):
     def do_calibration(self):
         print('Starting calibration....')
         t1 = time.time()
-        calibrated_stage.calibrate()
+        #calibrated_stage.calibrate()
+        calibrated_unit.calibrate(message)
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
 
 #camera = OpenCVCamera()
 camera = Lumenera()
-controller = LuigsNeumann_SM10(stepmoves=False)
+controller = LuigsNeumann_SM10(stepmoves=True)
 stage = ManipulatorUnit(controller, [7, 8])
 microscope = Microscope(controller, 9)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 unit = ManipulatorUnit(controller, [1, 2, 3])
-calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
+#calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
+calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
+
+u0 = unit.position()
+u0_stage = stage.position()
+z0 = microscope.position()
+
 def message(msg):
     print msg
 
@@ -79,3 +86,7 @@ app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)
 gui.show()
 sys.exit(app.exec_())
+
+unit.absolute_move(u0)
+stage.absolute_move(u0_stage)
+microscope.absolute_move(z0)
