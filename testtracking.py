@@ -9,6 +9,7 @@ import time
 from numpy import array
 from math import atan2
 
+
 def moveto(x, y):
     xs = x-camera.width/2
     ys = y-camera.height/2
