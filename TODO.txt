@@ -1,3 +1,4 @@
+* Configuration script for each rig
 * Avoid collisions
     find out direction of vertical displacements
 * Maximization of calibration size

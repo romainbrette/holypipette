@@ -1,7 +1,5 @@
 '''
 This is a test GUI, to test the functionality.
-
-Seems to work, except the camera apparently doesn't start until waitkey (??)
 '''
 from devices import *
 from vision import *
