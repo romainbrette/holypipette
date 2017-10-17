@@ -23,12 +23,21 @@ pipette_position = pipette_cardinal(template)
 template = crop_cardinal(template, pipette_position)
 print pipette_position
 
+# Error margins for position estimation
+xmargin = template.shape[1] / 4
+ymargin = template.shape[0] / 4
+
 time.sleep(0.1)
 
 image = camera.snap()
+x0,y0,c = templatematching(image, template)
+print x0,y0,c
+
+image = image[y0-ymargin:y0+ymargin, x0-xmargin:x0+xmargin]
 t1 = time.time()
 for _ in range(11):
     x, y, c = templatematching(image, template)
+print x,y,c
 t2 = time.time()
 print t2-t1
 
