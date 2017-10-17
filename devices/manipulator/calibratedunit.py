@@ -16,11 +16,13 @@ from time import sleep
 from vision.crop import *
 from vision.findpipette import *
 import cv2
+from time import sleep
 
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
 verbose = True
 position_tolerance = 0.1 # in um
+sleep_time = 1. # Sleep time before taking pictures after a pipette move, because the pipette might vibrate
 
 class CalibrationError(Exception):
     def __init__(self, message = 'Device is not calibrated'):
@@ -189,6 +191,7 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError('Microscope has not returned to its initial position.')
 
         # Initial position of template in image
+        sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
@@ -207,7 +210,7 @@ class CalibratedUnit(ManipulatorUnit):
                 ucurrent = 0  # current position of the axis relative to u0
                 zcurrent = 0
                 message('Calibrating axis '+str(axis))
-                for k in range(5): # up to 128 um
+                for k in range(7): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     self.relative_move(distance-ucurrent, axis)
@@ -229,7 +232,7 @@ class CalibratedUnit(ManipulatorUnit):
                         raise CalibrationError('Axis has not moved to target position.')
 
                     # 4) Estimate focal plane and position
-                    sleep(.1) # normally not necessary
+                    sleep(sleep_time)
                     image = self.camera.snap()
                     cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
@@ -302,6 +305,7 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError('Microscope has not returned to its initial position.')
 
         # Initial position of template in image
+        sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
 
@@ -353,7 +357,7 @@ class CalibratedUnit(ManipulatorUnit):
                     previous_estimate = estimate
 
                     # 4) Estimate focal plane and position
-                    sleep(.1)
+                    sleep(sleep_time)
                     image = self.camera.snap()
                     cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
@@ -449,6 +453,7 @@ class CalibratedStage(CalibratedUnit):
         template = crop_center(self.camera.snap())
 
         # Calculate the location of the template in the image
+        sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
@@ -460,7 +465,7 @@ class CalibratedStage(CalibratedUnit):
         for axis in range(len(self.axes)):  # normally just two axes
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
-            #sleep(0.1) # For the camera thread ** doesn't work!
+            sleep(sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             message('Camera x,y =' + str(x - x0) + ',' + str(y - y0))

@@ -1,5 +1,7 @@
 '''
-Tests the reliability of pattern matching
+Tests the reliability of pattern matching.
+
+Apparently precision is a pixel in x,y.
 '''
 from devices import *
 from vision import *
@@ -13,8 +15,12 @@ if True:
 else:
     camera = Hamamatsu()
 
+first_image = camera.snap()
+time.sleep(2)
+
 template = crop_center(camera.snap())
 pipette_position = pipette_cardinal(template)
+template = crop_cardinal(template, pipette_position)
 print pipette_position
 
 time.sleep(0.1)
