@@ -45,20 +45,26 @@ class TestGui(QtWidgets.QMainWindow):
 
     def keyPressEvent(self, event):
         try:
+            if event.modifiers() == Qt.ShiftModifier:
+                distance = 50
+            elif event.modifiers() == Qt.AltModifier:
+                distance = 2.5
+            else:
+                distance = 10
             if event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
             elif event.key() == Qt.Key_Left:
-                stage.relative_move(-5,0)
+                stage.relative_move(-distance,0)
             elif event.key() == Qt.Key_Right:
-                stage.relative_move(5, 0)
+                stage.relative_move(distance, 0)
             elif event.key() == Qt.Key_Up:
-                stage.relative_move(-5, 1)
+                stage.relative_move(-distance, 1)
             elif event.key() == Qt.Key_Down:
-                stage.relative_move(5, 1)
+                stage.relative_move(distance, 1)
             elif event.key() == Qt.Key_PageUp:
-                microscope.relative_move(5)
+                microscope.relative_move(distance)
             elif event.key() == Qt.Key_PageDown:
-                microscope.relative_move(-5)
+                microscope.relative_move(-distance)
             elif event.key() == Qt.Key_Escape:
                 self.close()
         except Exception:
