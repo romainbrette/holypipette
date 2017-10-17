@@ -13,7 +13,10 @@ if True:
 else:
     camera = Hamamatsu()
 
-template = camera.snap()
+template = crop_center(camera.snap())
+pipette_position = pipette_cardinal(template)
+print pipette_position
+
 time.sleep(0.1)
 
 xlist, ylist = zeros(10),zeros(10)
