@@ -1,3 +1,4 @@
+* Stage calibration on entire image
 * Possible optimization: instead of sleep before snap, do the template matching until stable results
 * Avoid collisions
     find out direction of vertical displacements

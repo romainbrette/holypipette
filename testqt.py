@@ -12,6 +12,9 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 import traceback
 
+# This is a setup script that is specific of the rig
+from setup_script import *
+
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
 
@@ -31,15 +34,14 @@ class TestGui(QtWidgets.QMainWindow):
         if event.button() == Qt.LeftButton:
             try:
                 x, y = event.x(), event.y()
-                print x,y
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
                 # displayed image is not necessarily the same size as the original camera image
                 scale = 1.0*self.camera.width / self.video.size().width()
                 xs *= scale
                 ys *= scale
-                #calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
-                calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
+                calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
+                #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
             except Exception:
                 print(traceback.format_exc())
 
@@ -84,28 +86,18 @@ class Calibrator(QtCore.QObject):
     def do_calibration(self):
         print('Starting calibration....')
         t1 = time.time()
-        #calibrated_stage.calibrate()
         try:
-            calibrated_unit.calibrate(message)
+            #calibrated_unit.calibrate(message)
+            calibrated_stage.calibrate()
         except Exception:
             print(traceback.format_exc())
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
 
-#camera = OpenCVCamera()
-camera = Lumenera()
-controller = LuigsNeumann_SM10(stepmoves=False)
-stage = ManipulatorUnit(controller, [7, 8])
-microscope = Microscope(controller, 9)
-calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
-unit = ManipulatorUnit(controller, [1, 2, 3])
-calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
-#calibrated_unit = CalibratedUnit(unit, None, microscope, camera=camera)
-
-u0 = unit.position()
-u0_stage = stage.position()
-z0 = microscope.position()
+#u0 = unit.position()
+#u0_stage = stage.position()
+#z0 = microscope.position()
 
 def message(msg):
     print msg
@@ -115,7 +107,7 @@ gui = TestGui(camera)
 gui.show()
 ret = app.exec_()
 
-unit.absolute_move(u0)
-stage.absolute_move(u0_stage)
-microscope.absolute_move(z0)
+#unit.absolute_move(u0)
+#stage.absolute_move(u0_stage)
+#microscope.absolute_move(z0)
 sys.exit(ret)

@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange
+from numpy import array, ones, zeros, eye, dot, arange, vstack
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -502,20 +502,21 @@ class CalibratedStage(CalibratedUnit):
         self.Minv = pinv(self.M)
         # Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
+        self.calibrated = True
 
         # More accurate calibration:
         # 3) Move to three corners using the computed matrix
-        '''
         width, height = self.camera.width, self.camera.height
         theight, twidth = template.shape # template dimensions
         # List of corners, reference coordinates
         # We use a margin of 1/4 of the template
-        r = [array([-(width-twidth*3./4),-(height-theight*3./4)]),
-            array([(width-twidth*3./4),-(height-theight*3./4)]),
-            array([-(width-twidth*3./4),(height-theight*3./4)])]
+        r = [array([-(width/2-twidth*3./4),-(height/2-theight*3./4)]),
+            array([(width/2-twidth*3./4),-(height/2-theight*3./4)]),
+            array([-(width/2-twidth*3./4),(height/2-theight*3./4)])]
         u = []
         for ri in r:
-            self.reference_move(ri)
+            print ri
+            self.reference_move(-ri)
             self.wait_until_still()
             u.append(self.position())
         rx = r[1]-r[0]
@@ -524,18 +525,15 @@ class CalibratedStage(CalibratedUnit):
         ux = u[1]-u[0]
         uy = u[2]-u[0]
         u = vstack((ux,uy)).T
-        self.M = dot(r,inv(u))
-        '''
+        self.M[:2,:] = dot(r,inv(u))
 
         # 4) Recompute the matrix and the (pseudo) inverse
-        #self.Minv = pinv(self.M)
+        self.Minv = pinv(self.M)
 
         # 5) Calculate conversion factor.
 
         # 6) Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
-
-        self.calibrated = True
 
         # Move back
         self.absolute_move(u0)
