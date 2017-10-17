@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+import traceback
 
 from devices.camera.umanagercamera import Lumenera
 
@@ -48,32 +49,35 @@ class LiveFeedQt(QtWidgets.QLabel):
 
     @QtCore.pyqtSlot()
     def update_image(self):
-        # get data and display
-        frame = self.camera.snap()
-        if len(frame.shape) == 2:
-            # Grayscale image via MicroManager
-            bytesPerLine = self.width
-            format = QtGui.QImage.Format_Grayscale8
-        else:
-            # Color image via OpenCV
-            bytesPerLine = 3*self.width
-            format = QtGui.QImage.Format_RGB888
+        try:
+            # get data and display
+            frame = self.camera.snap()
+            if len(frame.shape) == 2:
+                # Grayscale image via MicroManager
+                bytesPerLine = self.width
+                format = QtGui.QImage.Format_Grayscale8
+            else:
+                # Color image via OpenCV
+                bytesPerLine = 3*self.width
+                format = QtGui.QImage.Format_RGB888
 
-        frame = self.image_edit(frame)
-        q_image = QtGui.QImage(frame.data, self.width, self.height,
-                               bytesPerLine, format)
+            frame = self.image_edit(frame)
+            q_image = QtGui.QImage(frame.data, self.width, self.height,
+                                   bytesPerLine, format)
 
-        if format == QtGui.QImage.Format_RGB888:
-            # OpenCV returns images as 24bit BGR (and not RGB), but there is no
-            # direct support for this format in QImage
-            q_image = q_image.rgbSwapped()
+            if format == QtGui.QImage.Format_RGB888:
+                # OpenCV returns images as 24bit BGR (and not RGB), but there is no
+                # direct support for this format in QImage
+                q_image = q_image.rgbSwapped()
 
-        pixmap = QtGui.QPixmap.fromImage(q_image)
-        size = self.size()
-        width, height = size.width(), size.height()
-        scaled_pixmap = pixmap.scaled(width, height,
-                                     Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        if self.display_edit is not None:
-            self.display_edit(scaled_pixmap)
-        self.setPixmap(scaled_pixmap)
+            pixmap = QtGui.QPixmap.fromImage(q_image)
+            size = self.size()
+            width, height = size.width(), size.height()
+            scaled_pixmap = pixmap.scaled(width, height,
+                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
+            if self.display_edit is not None:
+                self.display_edit(scaled_pixmap)
+            self.setPixmap(scaled_pixmap)
 
+        except Exception:
+            print(traceback.format_exc())

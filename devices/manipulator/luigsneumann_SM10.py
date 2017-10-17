@@ -253,8 +253,8 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         fast : True if fast move, False if slow move.
         '''
         if self.stepmoves:
-            for i in axes:
-                self.step_move(x[i], i)
+            for i,axis in enumerate(axes):
+                self.step_move(x[i], axis)
         else:
             ID = 'A04A' if fast else 'A04B'
 
