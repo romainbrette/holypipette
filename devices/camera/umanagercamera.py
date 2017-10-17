@@ -7,8 +7,10 @@ TODO:
 '''
 from camera import *
 import sys
+import threading
 import warnings
 import cv2
+from time import sleep
 sys.path.append('C:\\Program Files\\Micro-Manager-1.4')
 try:
     import MMCorePy
@@ -19,6 +21,7 @@ __all__ = ['uManagerCamera', 'Hamamatsu', 'Lumenera']
 
 class uManagerCamera(Camera):
     def __init__(self, brand, name, exposure):
+        self.lock = threading.Lock()
         self.cam = MMCorePy.CMMCore()
         self.cam.loadDevice('Camera', brand, name)
         self.cam.initializeDevice('Camera')
@@ -40,7 +43,12 @@ class uManagerCamera(Camera):
         return (self.cam.getRemainingImageCount() > 0)
 
     def snap(self):
+        self.lock.acquire()
+        while not self.new_frame():
+            sleep(0.01)
+            print "ouch"
         frame = self.cam.getLastImage() # What happens if there is no new frame?
+        self.lock.release()
         if frame.dtype == 'uint16':
             frame = cv2.convertScaleAbs(frame, alpha=2 ** -2)
         else:

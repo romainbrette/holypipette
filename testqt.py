@@ -31,6 +31,7 @@ class TestGui(QtWidgets.QMainWindow):
         if event.button() == Qt.LeftButton:
             try:
                 x, y = event.x(), event.y()
+                print x,y
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
                 # displayed image is not necessarily the same size as the original camera image
@@ -43,10 +44,25 @@ class TestGui(QtWidgets.QMainWindow):
                 print(traceback.format_exc())
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_C:
-            self.calibrate_signal.emit()
-        elif event.key() == Qt.Key_Escape:
-            self.close()
+        try:
+            if event.key() == Qt.Key_C:
+                self.calibrate_signal.emit()
+            elif event.key() == Qt.Key_Left:
+                stage.relative_move(-5,0)
+            elif event.key() == Qt.Key_Right:
+                stage.relative_move(5, 0)
+            elif event.key() == Qt.Key_Up:
+                stage.relative_move(-5, 1)
+            elif event.key() == Qt.Key_Down:
+                stage.relative_move(5, 1)
+            elif event.key() == Qt.Key_PageUp:
+                microscope.relative_move(5)
+            elif event.key() == Qt.Key_PageDown:
+                microscope.relative_move(-5)
+            elif event.key() == Qt.Key_Escape:
+                self.close()
+        except Exception:
+            print(traceback.format_exc())
 
     def closeEvent(self, event):
         try:
@@ -91,8 +107,9 @@ def message(msg):
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)
 gui.show()
-sys.exit(app.exec_())
+ret = app.exec_()
 
 unit.absolute_move(u0)
 stage.absolute_move(u0_stage)
 microscope.absolute_move(z0)
+sys.exit(ret)
