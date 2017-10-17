@@ -1,3 +1,4 @@
+* Template matching is actually very slow!!
 * Configuration script for each rig
 * Possible optimization: instead of sleep before snap, do the template matching until stable results
 * Avoid collisions

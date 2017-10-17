@@ -25,6 +25,13 @@ print pipette_position
 
 time.sleep(0.1)
 
+image = camera.snap()
+t1 = time.time()
+for _ in range(11):
+    x, y, c = templatematching(image, template)
+t2 = time.time()
+print t2-t1
+
 xlist, ylist = zeros(10),zeros(10)
 for i in range(10):
     image = camera.snap()
