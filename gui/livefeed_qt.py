@@ -41,7 +41,7 @@ class LiveFeedQt(QtWidgets.QLabel):
 
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
-        timer.start(33) #30 Hz
+        timer.start(50) #20 Hz
 
     def mousePressEvent(self, event):
         if self.callback is not None:
