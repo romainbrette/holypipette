@@ -26,6 +26,7 @@ print pipette_position
 # Error margins for position estimation
 xmargin = template.shape[1] / 4
 ymargin = template.shape[0] / 4
+print xmargin,ymargin
 
 time.sleep(0.1)
 
@@ -33,11 +34,11 @@ image = camera.snap()
 x0,y0,c = templatematching(image, template)
 print x0,y0,c
 
-image = image[y0-ymargin:y0+ymargin, x0-xmargin:x0+xmargin]
+image = image[y0-ymargin:y0+template.shape[0]+ymargin, x0-xmargin:x0+template.shape[1]+xmargin]
 t1 = time.time()
 for _ in range(11):
     x, y, c = templatematching(image, template)
-print x,y,c
+print x+x0-xmargin,y+y0-ymargin,c
 t2 = time.time()
 print t2-t1
 

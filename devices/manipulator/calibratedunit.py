@@ -195,8 +195,9 @@ class CalibratedUnit(ManipulatorUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
         # Error margins for position estimation
-        xmargin = stack[5].shape[1]/4
-        ymargin = stack[5].shape[0]/4
+        template_height, template_width = stack[5].shape
+        xmargin = template_width/4
+        ymargin = template_height/4
 
         # Calculate minimum correlation with stack images
         min_match = min([templatematching(image, template)[2] for template in stack])
@@ -223,6 +224,7 @@ class CalibratedUnit(ManipulatorUnit):
                     # 3) Move focal plane by estimated amount (initially 0)
                     estimate = self.M[:,axis] * distance
                     xestimate, yestimate, zestimate = estimate
+                    xestimate, yestimate = int(xestimate), int(yestimate)
                     #self.microscope.absolute_move(zestimate-z0)
                     self.microscope.relative_move(zestimate-zcurrent)
                     zcurrent = zestimate
@@ -239,7 +241,8 @@ class CalibratedUnit(ManipulatorUnit):
                     sleep(sleep_time)
                     image = self.camera.snap()
                     # 4bis) Crop image around estimated position
-                    image = image[y0+yestimate-ymargin:y0+yestimate+ymargin, x0+xestimate-xmargin:x0+xestimate+xmargin]
+                    image = image[y0+yestimate-ymargin:y0+yestimate+template_height+ymargin,
+                                  x0+xestimate-xmargin:x0+xestimate+template_width+xmargin]
 
                     cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
