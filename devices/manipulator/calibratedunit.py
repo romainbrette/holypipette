@@ -248,13 +248,14 @@ class CalibratedUnit(ManipulatorUnit):
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
                         xt,yt,val = templatematching(image, template)
-                        xt+= x0+xestimate-xmargin
-                        yt+= y0+yestimate-ymargin
                         if val > valmax:
                             valmax=val
                             x,y,z = xt,yt,len(stack)/2-i # note the sign for z
                     if valmax<match_threshold:
                         raise CalibrationError('Matching error: the pipette is absent or not focused')
+
+                    x+= x0+xestimate-xmargin
+                    y+= y0+yestimate-ymargin
 
                     message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
@@ -320,6 +321,10 @@ class CalibratedUnit(ManipulatorUnit):
         sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[5])
+        # Error margins for position estimation
+        template_height, template_width = stack[5].shape
+        xmargin = template_width/4
+        ymargin = template_height/4
 
         # Calculate minimum correlation with stack images
         min_match = min([templatematching(image, template)[2] for template in stack])
@@ -338,7 +343,7 @@ class CalibratedUnit(ManipulatorUnit):
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(8): # up to 128 um
+                for k in range(7): # up to 128 um
                     message('Distance '+str(distance))
                     # 2) Move axis by a small displacement
                     self.relative_move(distance-deltau[axis], axis)
@@ -371,6 +376,10 @@ class CalibratedUnit(ManipulatorUnit):
                     # 4) Estimate focal plane and position
                     sleep(sleep_time)
                     image = self.camera.snap()
+                    # 4bis) Crop image around estimated position
+                    image = image[y0-ymargin:y0+template_height+ymargin,
+                                  x0-xmargin:x0+template_width+xmargin]
+
                     cv2.imwrite('./screenshots/focus{}.jpg'.format(k), image)
                     valmax = -1
                     for i,template in enumerate(stack): # we look for the best matching template
@@ -380,6 +389,8 @@ class CalibratedUnit(ManipulatorUnit):
                             x,y,z = xt,yt,len(stack)/2-i # note the sign for z
                     if valmax<match_threshold:
                         raise CalibrationError('Matching error: the pipette is absent or not focused')
+                    x+= x0-xmargin
+                    y+= y0-ymargin
 
                     message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
 
