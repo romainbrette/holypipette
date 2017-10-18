@@ -346,6 +346,9 @@ class CalibratedUnit(ManipulatorUnit):
                 message('Calibrating axis '+str(axis))
                 for k in range(7): # up to 128 um
                     message('Distance '+str(distance))
+                    old_deltau = deltau.copy()
+                    deltau[axis] = distance
+
                     # 2) Estimate target position on the camera
                     estimate = dot(self.M, deltau)
                     zestimate = estimate[2]
@@ -356,10 +359,14 @@ class CalibratedUnit(ManipulatorUnit):
                         if (zestimate-self.microscope.floor_Z)*self.microscope.up_direction<abs(distance)*.1:
                             message('We reached the coverslip, aborting.')
                             break
+                    # Check whether unit position is reachable
+                    if self.unit.min is not None:
+                        if (u0+deltau<self.unit.min).any() | (u0+deltau>self.unit.max).any():
+                            message('Pipette cannot reach next position, aborting.')
+                            break
 
                     # 2bis) Move axis by a small displacement
-                    self.relative_move(distance-deltau[axis], axis)
-                    deltau[axis] = distance
+                    self.relative_move(distance-old_deltau[axis], axis)
 
                     # 3) Move platform to center the pipette (compensating movement = opposite)
                     self.stage.reference_relative_move(previous_estimate-estimate)

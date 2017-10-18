@@ -17,6 +17,7 @@ from setup_script import *
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
+    motor_ranges_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -28,6 +29,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrator = Calibrator()
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
+        self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.calibration_thread.start()
 
     def mouse_callback(self, event):
@@ -47,15 +49,14 @@ class TestGui(QtWidgets.QMainWindow):
 
     def keyPressEvent(self, event):
         try:
+            # Arrows move the stage
             if event.modifiers() == Qt.ShiftModifier:
                 distance = 50
             elif event.modifiers() == Qt.AltModifier:
                 distance = 2.5
             else:
                 distance = 10
-            if event.key() == Qt.Key_C:
-                self.calibrate_signal.emit()
-            elif event.key() == Qt.Key_Left:
+            if event.key() == Qt.Key_Left:
                 stage.relative_move(-distance,0)
             elif event.key() == Qt.Key_Right:
                 stage.relative_move(distance, 0)
@@ -67,8 +68,19 @@ class TestGui(QtWidgets.QMainWindow):
                 microscope.relative_move(distance)
             elif event.key() == Qt.Key_PageDown:
                 microscope.relative_move(-distance)
+            # Calibration
+            elif event.key() == Qt.Key_C:
+                self.calibrate_signal.emit()
+            # Quit
             elif event.key() == Qt.Key_Escape:
                 self.close()
+            # Motor ranges
+            elif event.key() == Qt.Key_R:
+                self.motor_ranges_signal.emit()
+            # Floor Z (coverslip)
+            elif event.key() == Qt.Key_F:
+                microscope.floor_Z = microscope.position()
+                print("Floor Z: "+str(microscope.floor_Z))
         except Exception:
             print(traceback.format_exc())
 
@@ -94,6 +106,17 @@ class Calibrator(QtCore.QObject):
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
+
+    @QtCore.pyqtSlot()
+    def do_motor_ranges(self):
+        print('Measuring motor ranges for the stage')
+        stage.motor_ranges()
+        print stage.min, stage.max
+        print('Measuring motor ranges for the unit')
+        unit.motor_ranges()
+        print unit.min, unit.max
+        print('Done')
+
 
 #u0 = unit.position()
 #u0_stage = stage.position()

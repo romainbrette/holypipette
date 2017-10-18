@@ -1,8 +1,8 @@
 * Stage calibration on entire image: test
 * Avoid collisions: test
 * Maximization of calibration size
-    -> need to know manipulator and platform ranges
-    alternatively: abort when CalibrationError
+    (alternatively: abort when CalibrationError)
+    check stage target position
 * Safe pipette move to target (+10 um)
 * Resistance meter
 * Keyboard-based application
