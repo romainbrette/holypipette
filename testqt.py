@@ -11,9 +11,19 @@ from numpy import array
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 import traceback
+import inspect
+import signal
 
 # This is a setup script that is specific of the rig
 from setup_script import *
+
+# Catch segmentation faults and aborts
+def signal_handler(signum, frame):
+    print("*** Received signal %d" % signum)
+    print("*** Frame: %s" % inspect.getframeinfo(frame))
+
+signal.signal(signal.SIGSEGV, signal_handler)
+signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
