@@ -27,6 +27,7 @@ class Microscope(Manipulator):
         Manipulator.__init__(self)
         self.dev = dev
         self.axis = axis
+        self.up_direction = None # Up direction, must be provided or calculated
 
     def position(self):
         '''

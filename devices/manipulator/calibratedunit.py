@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange, vstack
+from numpy import array, ones, zeros, eye, dot, arange, vstack, sign
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -68,6 +68,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.camera = camera
 
         self.calibrated = False
+        self.up_direction = [-1 for _ in range(len(unit.axes))] # Default up direction, determined during calibration
 
         # Matrices for passing to the camera/microscope system
         self.M = zeros((3,len(unit.axes))) # unit to camera
@@ -263,7 +264,7 @@ class CalibratedUnit(ManipulatorUnit):
                     self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
                     message('Matrix column:'+str(self.M[:,axis]))
 
-                # 6) Multiply displacement by 2, and back to 2)
+                    # 6) Multiply displacement by 2, and back to 2)
                     distance *=2
 
                 # 7) Stop when predicted move is out of screen
@@ -339,7 +340,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         try:
             for axis in range(len(self.axes)):
-                distance = 2.  # um
+                distance = -2.*self.up_direction[axis]  # 2 um going down
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
@@ -353,15 +354,15 @@ class CalibratedUnit(ManipulatorUnit):
                     estimate = dot(self.M, deltau)
                     message('Estimated move:'+str(estimate))
 
-                    # 3) Move focal plane by estimated amount (initially 0)
-                    zestimate = estimate[2]
-                    self.microscope.relative_move(zestimate-previous_estimate[2])
-
-                    # 3bis) Move platform to center the pipette (compensating movement = opposite)
+                    # 3) Move platform to center the pipette (compensating movement = opposite)
                     self.stage.reference_relative_move(previous_estimate-estimate)
                     self.stage.wait_until_still()
-                    self.microscope.wait_until_still()
                     self.wait_until_still(axis)
+
+                    # 3bis) Move focal plane by estimated amount (initially 0)
+                    zestimate = estimate[2]
+                    self.microscope.relative_move(zestimate-previous_estimate[2])
+                    self.microscope.wait_until_still()
 
                     # Check microscope and axis positions
                     if abs(z0 + zestimate - self.microscope.position()) > position_tolerance:
@@ -398,10 +399,27 @@ class CalibratedUnit(ManipulatorUnit):
                     self.M[:,axis] = (array([x-x0, y-y0, z]) + estimate)/distance
                     message('Matrix column:'+str(self.M[:,axis]))
 
-                # 6) Multiply displacement by 2, and back to 2
-                    distance *=2
+                    # 5bis) Determine pipette up direction
+                    # We only need to it once, and we do it when the displacement is large enough
+                    if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
+                        positive_move = self.M[:,0]
+                        self.up_direction[0] = up_direction(pipette_position, positive_move*sign(distance))
+                        message('Axis 0 up direction: '+str(self.up_direction[0]))
+                        # Now determine microscope up direction
+                        self.microscope.up_direction = sign(self.M[2,0]*up_direction)
+                        message('Microscope up direction: '+str(self.microscope.up_direction))
+                    elif k==4:
+                        # For other axes, we use microscope up direction
+                        # If microscope up direction is provided, this is what we use too instead of guessing
+                        self.up_direction[axis] = sign(self.M[2,axis]*self.microscope.up_direction)
+                        message('Axis '+str(axis)+' up direction: ' + str(self.up_direction[0]))
+                    # If we were actually going up, then we should now invert the direction
+                    if distance * self.up_direction[axis] > 0:
+                        message("Pipette was going up, now inverting direction")
+                        distance = -distance
 
-                # 7) Stop when predicted move is out of screen
+                    # 6) Multiply displacement by 2, and back to 2
+                    distance *=2
 
                 # Move back (not strictly necessary)
                 self.relative_move(-deltau[axis], axis)

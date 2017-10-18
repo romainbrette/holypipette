@@ -4,6 +4,7 @@
 * Maximization of calibration size
     -> need to know minimum pipette Z (use platform 0?)
     -> need to know manipulator and platform ranges
+* Safe pipette move to target (+10 um)
 * Resistance meter
 * Keyboard-based application
     save/load configuration
