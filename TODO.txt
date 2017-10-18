@@ -1,5 +1,5 @@
-* Save/Load
-* Recalibrate
+* Recalibrate: test
+* Safe moves
 * Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
     (alternatively: abort when CalibrationError)

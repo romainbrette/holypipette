@@ -179,6 +179,8 @@ class Calibrator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def do_recalibration(self):
         print('Starting recalibration....')
+        calibrated_stage.recalibrate(message)
+        print('Done')
 
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):

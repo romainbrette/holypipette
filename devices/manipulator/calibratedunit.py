@@ -471,6 +471,19 @@ class CalibratedUnit(ManipulatorUnit):
             self.absolute_move(u0)
             self.stage.absolute_move(stageu0)
 
+    def recalibrate(self, message = lambda str: None):
+        '''
+        Recalibrates the unit by shifting the reference frame (r0).
+        It assumes that the pipette is centered on screen.
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
+        #    Offset is such that the position is (0,0,z0) in the reference system
+        u0 = self.position()
+        z0 = self.microscope.position()
+        stager0 = self.stage.reference_position()
+        self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
 
 class CalibratedStage(CalibratedUnit):
     '''
