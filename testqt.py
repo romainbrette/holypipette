@@ -11,11 +11,17 @@ from numpy import array
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 import traceback
+import pickle
+from numpy.linalg import pinv
 import inspect
 import signal
 
 # This is a setup script that is specific of the rig
 from setup_script import *
+from os.path import expanduser
+
+home = expanduser("~")
+config_filename = home+'/config_manipulator.cfg'
 
 # Catch segmentation faults and aborts
 def signal_handler(signum, frame):
@@ -27,6 +33,7 @@ signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
+    recalibrate_signal = QtCore.pyqtSignal()
     motor_ranges_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
@@ -46,6 +53,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
+        self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.calibration_thread.start()
 
     def mouse_callback(self, event):
@@ -98,14 +106,47 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Escape:
                 self.close()
             # Motor ranges
+            elif event.key() == Qt.Key_M:
+                #self.motor_ranges_signal.emit()
+                pass
+            # Recalibrate
             elif event.key() == Qt.Key_R:
-                self.motor_ranges_signal.emit()
+                self.recalibrate_signal.emit()
+            # Save configuration
+            elif event.key() == Qt.Key_S:
+                self.save()
+            # Load configuration
+            elif event.key() == Qt.Key_L:
+                self.load()
             # Floor Z (coverslip)
             elif event.key() == Qt.Key_F:
                 microscope.floor_Z = microscope.position()
                 print("Floor Z: "+str(microscope.floor_Z))
         except Exception:
             print(traceback.format_exc())
+
+    def save(self):
+        # Saves configuration
+        print("Saving configuration")
+        cfg = {'stage.M' : calibrated_stage.M,
+               'stage.r0' : calibrated_stage.r0,
+               'unit.M' : calibrated_unit.M,
+               'unit.r0' : calibrated_unit.r0}
+        pickle.dump(cfg, open(config_filename, "wb"))
+
+    def load(self):
+        # Loads configuration
+        print("Loading configuration")
+        cfg = pickle.load(open(config_filename, "rb"))
+        calibrated_stage.M = cfg['stage.M']
+        calibrated_stage.Minv = pinv(calibrated_stage.M)
+        calibrated_stage.r0 = cfg['stage.r0']
+        calibrated_stage.calibrated = True
+
+        calibrated_unit.M = cfg['unit.M']
+        calibrated_unit.Minv = pinv(calibrated_unit.M)
+        calibrated_unit.r0 = cfg['unit.r0']
+        calibrated_unit.calibrated = True
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
@@ -134,6 +175,10 @@ class Calibrator(QtCore.QObject):
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
+
+    @QtCore.pyqtSlot()
+    def do_recalibration(self):
+        print('Starting recalibration....')
 
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):

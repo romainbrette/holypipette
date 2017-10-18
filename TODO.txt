@@ -1,10 +1,9 @@
+* Save/Load
+* Recalibrate
+* Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
     (alternatively: abort when CalibrationError)
     check stage target position
 * Safe pipette move to target (+10 um)
 * Resistance meter
-* Keyboard-based application
-    save/load configuration
-    calibrate
-    recalibrate (tip)
 * Possible optimization: instead of sleep before snap, do the template matching until stable results

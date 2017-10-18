@@ -106,7 +106,10 @@ class ManipulatorUnit(Manipulator):
     def motor_ranges(self):
         """
         Runs the motors to calculate ranges of the motors.
+
+        DOESN'T WORK! DO NOT USE!
         """
+        return
         dx = ones(len(self.axes)) * 1000000. # (1 meter; should more than any platform)
         self.relative_move(-dx)
         self.wait_until_still()

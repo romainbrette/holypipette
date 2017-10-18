@@ -21,7 +21,7 @@ from time import sleep
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
 verbose = True
-position_tolerance = 0.1 # in um
+position_tolerance = 0.5 # in um
 sleep_time = 1. # Sleep time before taking pictures after a pipette move, because the pipette might vibrate
 
 class CalibrationError(Exception):
@@ -310,7 +310,8 @@ class CalibratedUnit(ManipulatorUnit):
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store current position
         z0 = self.microscope.position()
-        z = z0+arange(-5,6) # +- 5 um around current position
+        zrange = 8 # range in microns around focal position
+        z = z0+arange(-zrange,zrange+1) # +- 5 um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
         # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
@@ -321,9 +322,9 @@ class CalibratedUnit(ManipulatorUnit):
         # Initial position of template in image
         sleep(sleep_time)
         image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[5])
+        x0, y0, _ = templatematching(image, stack[zrange])
         # Error margins for position estimation
-        template_height, template_width = stack[5].shape
+        template_height, template_width = stack[zrange].shape
         xmargin = template_width/4
         ymargin = template_height/4
 
@@ -344,7 +345,7 @@ class CalibratedUnit(ManipulatorUnit):
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(7): # up to 128 um
+                for k in range(12): # up to 2 mm
                     message('Distance '+str(distance))
                     old_deltau = deltau.copy()
                     deltau[axis] = distance
@@ -377,18 +378,20 @@ class CalibratedUnit(ManipulatorUnit):
                     self.microscope.relative_move(zestimate-previous_estimate[2])
                     self.microscope.wait_until_still()
 
+                    sleep(sleep_time)
+
                     # Check microscope and axis positions
                     if abs(z0 + zestimate - self.microscope.position()) > position_tolerance:
                         raise CalibrationError('Microscope has not moved to target position.')
                     if abs(u0[axis]+distance - self.position(axis)) > position_tolerance:
                         raise CalibrationError('Axis has not moved to target position.')
                     if norm((stager0- estimate - self.stage.reference_position())[:2]) > position_tolerance:
+                        message('Stage error: '+str(norm((stager0- estimate - self.stage.reference_position())[:2])))
                         raise CalibrationError('Stage has not moved to target position.')
 
                     previous_estimate = estimate
 
                     # 4) Estimate focal plane and position
-                    sleep(sleep_time)
                     image = self.camera.snap()
                     # 4bis) Crop image around estimated position
                     image = image[y0-ymargin:y0+template_height+ymargin,
@@ -400,13 +403,13 @@ class CalibratedUnit(ManipulatorUnit):
                         xt,yt,val = templatematching(image, template)
                         if val > valmax:
                             valmax=val
-                            x,y,z = xt,yt,len(stack)/2-i # note the sign for z
-                    if valmax<match_threshold:
-                        raise CalibrationError('Matching error: the pipette is absent or not focused')
+                            x,y,z = xt,yt,zrange-i # note the sign for z
                     x+= x0-xmargin
                     y+= y0-ymargin
 
                     message('Camera x,y,z, correlation ='+str(x-x0)+','+str(y-y0)+','+str(z)+','+str(valmax))
+                    if valmax<match_threshold:
+                        raise CalibrationError('Matching error: the pipette is absent or not focused')
 
                     # 5) Estimate matrix column; from unit to camera (first in pixels)
                     self.M[:,axis] = (array([x-x0, y-y0, z]) + estimate)/distance
