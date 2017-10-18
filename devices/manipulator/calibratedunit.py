@@ -422,11 +422,12 @@ class CalibratedUnit(ManipulatorUnit):
                     distance *=2
 
                 # Move back (not strictly necessary)
-                self.relative_move(-deltau[axis], axis)
+                # First move microscope up to avoid collisions
                 self.microscope.relative_move(-estimate[2])
+                self.microscope.wait_until_still()
+                self.relative_move(-deltau[axis], axis)
                 self.stage.reference_relative_move(estimate)
                 self.wait_until_still(axis)
-                self.microscope.wait_until_still()
                 self.stage.wait_until_still()
                 # Check microscope, axis and stage positions
                 if abs(z0 - self.microscope.position()) > position_tolerance:
@@ -446,9 +447,11 @@ class CalibratedUnit(ManipulatorUnit):
             self.calibrated = True
 
         finally: # If something fails, move back to original position
+            # First move microscope up to avoid collisions
+            self.microscope.absolute_move(z0)
+            self.microscope.wait_until_still()
             self.absolute_move(u0)
             self.stage.absolute_move(stageu0)
-            self.microscope.absolute_move(z0)
 
 
 class CalibratedStage(CalibratedUnit):

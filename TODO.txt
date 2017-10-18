@@ -1,6 +1,5 @@
-* Stage calibration on entire image
-* Avoid collisions
-    find out direction of vertical displacements
+* Stage calibration on entire image: test
+* Avoid collisions: test
 * Maximization of calibration size
     -> need to know minimum pipette Z (use platform 0?)
     -> need to know manipulator and platform ranges
