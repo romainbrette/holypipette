@@ -24,3 +24,14 @@ class Camera(object):
         Returns the current image
         '''
         return None
+
+    def set_exposure(self, value):
+        print('Setting exposure time not supported for this camera')
+
+    def get_exposure(self):
+        print('Getting exposure time not supported for this camera')
+        return -1
+
+    def change_exposure(self, change):
+        if self.get_exposure() > 0:
+            self.set_exposure(self.get_exposure() + change)

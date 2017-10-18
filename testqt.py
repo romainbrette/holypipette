@@ -32,7 +32,13 @@ class TestGui(QtWidgets.QMainWindow):
     def __init__(self, camera):
         super(TestGui, self).__init__()
         self.setWindowTitle("Calibration GUI")
+        self.status_bar = QtWidgets.QStatusBar()
+        self.status_label = QtWidgets.QLabel()
+        self.status_bar.addPermanentWidget(self.status_label)
+        self.status_bar.setSizeGripEnabled(False)
+        self.setStatusBar(self.status_bar)
         self.camera = camera
+        self.update_status_bar()
         self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
@@ -78,6 +84,13 @@ class TestGui(QtWidgets.QMainWindow):
                 microscope.relative_move(distance)
             elif event.key() == Qt.Key_PageDown:
                 microscope.relative_move(-distance)
+            # Changing camera exposure
+            elif event.key() == Qt.Key_Plus:
+                self.camera.change_exposure(2.5)
+                self.update_status_bar()
+            elif event.key() == Qt.Key_Minus:
+                self.camera.change_exposure(-2.5)
+                self.update_status_bar()
             # Calibration
             elif event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
@@ -93,6 +106,11 @@ class TestGui(QtWidgets.QMainWindow):
                 print("Floor Z: "+str(microscope.floor_Z))
         except Exception:
             print(traceback.format_exc())
+
+    def update_status_bar(self):
+        exposure = self.camera.get_exposure()
+        if exposure > 0:
+            self.status_label.setText("Exposure time: %.2fms" % exposure)
 
     def closeEvent(self, event):
         try:

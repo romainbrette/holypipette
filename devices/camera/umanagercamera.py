@@ -26,6 +26,8 @@ class uManagerCamera(Camera):
         self.cam.loadDevice('Camera', brand, name)
         self.cam.initializeDevice('Camera')
         self.cam.setCameraDevice('Camera')
+        self.min_exposure = self.cam.getPropertyLowerLimit('Camera', 'Exposure')
+        self.max_exposure = self.cam.getPropertyUpperLimit('Camera', 'Exposure')
         self.cam.setExposure(exposure)
         self.width, self.height = self.cam.getImageWidth(), self.cam.getImageHeight()
 
@@ -54,6 +56,13 @@ class uManagerCamera(Camera):
         else:
             frame = cv2.convertScaleAbs(frame)
         return frame
+
+    def set_exposure(self, value):
+        if self.min_exposure <= value <= self.max_exposure:
+            self.cam.setExposure(value)
+
+    def get_exposure(self):
+        return self.cam.getExposure()
 
 class Hamamatsu(uManagerCamera):
     def __init__(self):
