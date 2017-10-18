@@ -346,13 +346,20 @@ class CalibratedUnit(ManipulatorUnit):
                 message('Calibrating axis '+str(axis))
                 for k in range(7): # up to 128 um
                     message('Distance '+str(distance))
-                    # 2) Move axis by a small displacement
+                    # 2) Estimate target position on the camera
+                    estimate = dot(self.M, deltau)
+                    zestimate = estimate[2]
+                    message('Estimated move:'+str(estimate))
+
+                    # Check whether we might reach the floor (with 10% accuracy)
+                    if self.microscope.floor_Z is not None:
+                        if (zestimate-self.microscope.floor_Z)*self.microscope.up_direction<abs(distance)*.1:
+                            message('We reached the coverslip, aborting.')
+                            break
+
+                    # 2bis) Move axis by a small displacement
                     self.relative_move(distance-deltau[axis], axis)
                     deltau[axis] = distance
-
-                    # 2bis) Estimate target position on the camera
-                    estimate = dot(self.M, deltau)
-                    message('Estimated move:'+str(estimate))
 
                     # 3) Move platform to center the pipette (compensating movement = opposite)
                     self.stage.reference_relative_move(previous_estimate-estimate)
@@ -360,7 +367,6 @@ class CalibratedUnit(ManipulatorUnit):
                     self.wait_until_still(axis)
 
                     # 3bis) Move focal plane by estimated amount (initially 0)
-                    zestimate = estimate[2]
                     self.microscope.relative_move(zestimate-previous_estimate[2])
                     self.microscope.wait_until_still()
 

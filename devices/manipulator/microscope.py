@@ -28,6 +28,7 @@ class Microscope(Manipulator):
         self.dev = dev
         self.axis = axis
         self.up_direction = None # Up direction, must be provided or calculated
+        self.floor_Z = None # This is the Z coordinate of the coverslip
 
     def position(self):
         '''
