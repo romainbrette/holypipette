@@ -1,5 +1,3 @@
-* Stage calibration on entire image: test
-* Avoid collisions: test
 * Maximization of calibration size
     (alternatively: abort when CalibrationError)
     check stage target position

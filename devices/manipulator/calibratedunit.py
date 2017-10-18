@@ -360,8 +360,8 @@ class CalibratedUnit(ManipulatorUnit):
                             message('We reached the coverslip, aborting.')
                             break
                     # Check whether unit position is reachable
-                    if self.unit.min is not None:
-                        if (u0+deltau<self.unit.min).any() | (u0+deltau>self.unit.max).any():
+                    if self.min is not None:
+                        if (u0+deltau<self.min).any() | (u0+deltau>self.max).any():
                             message('Pipette cannot reach next position, aborting.')
                             break
 
@@ -416,15 +416,17 @@ class CalibratedUnit(ManipulatorUnit):
                     # We only need to it once, and we do it when the displacement is large enough
                     if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
                         positive_move = self.M[:,0]
-                        self.up_direction[0] = up_direction(pipette_position, positive_move*sign(distance))
+                        self.up_direction[0] = up_direction(pipette_position, -positive_move*sign(distance)) # since we did a negative move
                         message('Axis 0 up direction: '+str(self.up_direction[0]))
                         # Now determine microscope up direction
-                        self.microscope.up_direction = sign(self.M[2,0]*up_direction)
+                        self.microscope.up_direction = sign(self.M[2,0]*self.up_direction[0])
                         message('Microscope up direction: '+str(self.microscope.up_direction))
                     elif k==4:
                         # For other axes, we use microscope up direction
                         # If microscope up direction is provided, this is what we use too instead of guessing
-                        self.up_direction[axis] = sign(self.M[2,axis]*self.microscope.up_direction)
+                        s = sign(self.M[2,axis]*self.microscope.up_direction)
+                        if s != 0:
+                            self.up_direction[axis] = s
                         message('Axis '+str(axis)+' up direction: ' + str(self.up_direction[0]))
                     # If we were actually going up, then we should now invert the direction
                     if distance * self.up_direction[axis] > 0:

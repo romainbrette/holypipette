@@ -42,8 +42,8 @@ class TestGui(QtWidgets.QMainWindow):
                 scale = 1.0*self.camera.width / self.video.size().width()
                 xs *= scale
                 ys *= scale
-                calibrated_stage.reference_move(calibrated_stage.reference_position() - array([xs, ys, 0]))
-                #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
+                #calibrated_stage.reference_relative_move(- array([xs, ys, 0]))
+                calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
             except Exception:
                 print(traceback.format_exc())
 
@@ -99,8 +99,8 @@ class Calibrator(QtCore.QObject):
         print('Starting calibration....')
         t1 = time.time()
         try:
-            #calibrated_unit.calibrate(message)
-            calibrated_stage.calibrate()
+            calibrated_unit.calibrate(message)
+            #calibrated_stage.calibrate()
         except Exception:
             print(traceback.format_exc())
         t2 = time.time()
@@ -110,10 +110,10 @@ class Calibrator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):
         print('Measuring motor ranges for the stage')
-        stage.motor_ranges()
+        calibrated_stage.motor_ranges()
         print stage.min, stage.max
         print('Measuring motor ranges for the unit')
-        unit.motor_ranges()
+        calibrated_unit.motor_ranges()
         print unit.min, unit.max
         print('Done')
 

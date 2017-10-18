@@ -2,7 +2,7 @@
 Methods to find the pipette in an image
 '''
 from vision.crop import *
-from numpy import dot, array
+from numpy import dot, array, sign
 
 __all__ = ['pipette_cardinal', 'up_direction']
 
@@ -31,4 +31,4 @@ def up_direction(pipette_position, positive_move):
     '''
     y,x = cardinal_points[pipette_position] # position of pipette in square (0..2, 0..2)
     pipette_vector = array((1,1)) - array((x,y))
-    return dot(pipette_vector,positive_move)>0
+    return sign(dot(pipette_vector,positive_move[:2]))
