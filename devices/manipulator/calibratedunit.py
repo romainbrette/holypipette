@@ -510,14 +510,19 @@ class CalibratedStage(CalibratedUnit):
         theight, twidth = template.shape # template dimensions
         # List of corners, reference coordinates
         # We use a margin of 1/4 of the template
-        r = [array([-(width/2-twidth*3./4),-(height/2-theight*3./4)]),
+        rtarget = [array([-(width/2-twidth*3./4),-(height/2-theight*3./4)]),
             array([(width/2-twidth*3./4),-(height/2-theight*3./4)]),
             array([-(width/2-twidth*3./4),(height/2-theight*3./4)])]
         u = []
-        for ri in r:
-            print ri
-            self.reference_move(-ri)
+        r = []
+        for ri in rtarget:
+            self.reference_move(ri)
             self.wait_until_still()
+            sleep(sleep_time)
+            image = self.camera.snap()
+            x, y, _ = templatematching(image, template)
+            message('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+            r.append(array([x,y]))
             u.append(self.position())
         rx = r[1]-r[0]
         ry = r[2]-r[0]
@@ -525,7 +530,10 @@ class CalibratedStage(CalibratedUnit):
         ux = u[1]-u[0]
         uy = u[2]-u[0]
         u = vstack((ux,uy)).T
+        message('r: '+str(r))
+        message('u: '+str(u))
         self.M[:2,:] = dot(r,inv(u))
+        message('Matrix: ' + str(self.M))
 
         # 4) Recompute the matrix and the (pseudo) inverse
         self.Minv = pinv(self.M)

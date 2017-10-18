@@ -12,6 +12,9 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 from math import atan2
 
+# This is a setup script that is specific of the rig
+from setup_script import *
+
 def moveto(x, y):
     xs = x-camera.width/2
     ys = y-camera.height/2
@@ -110,7 +113,7 @@ class Calibrator(QtCore.QObject):
     def do_calibration(self):
         print('Starting calibration....')
         t1 = time.time()
-        calibrated_stage.calibrate()
+        calibrated_stage.calibrate(message)
         t2 = time.time()
         print t2 - t1, 's'
         print('Done')
@@ -127,14 +130,6 @@ class Tracker(QtCore.QObject):
                 #moveto(x,y)
                 pass
 
-#camera = OpenCVCamera()
-camera = Lumenera()
-controller = LuigsNeumann_SM10(stepmoves=False)
-stage = ManipulatorUnit(controller, [7, 8])
-microscope = Microscope(controller, 9)
-calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
-unit = ManipulatorUnit(controller, [1, 2, 3])
-calibrated_unit = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
 def message(msg):
     print msg
 
