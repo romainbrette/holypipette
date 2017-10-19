@@ -61,6 +61,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibration_thread.start()
 
     def mouse_callback(self, event):
+        # Click = move
+        # Shift-click = move and patch
         if event.button() == Qt.LeftButton:
             try:
                 x, y = event.x(), event.y()
@@ -73,7 +75,10 @@ class TestGui(QtWidgets.QMainWindow):
                 #calibrated_stage.reference_relative_move(- array([xs, ys, 0]))
                 #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
                 self.calibrator.move_position = array([xs, ys, microscope.position()])
-                self.move_signal.emit()
+                if event.modifiers() == Qt.ShiftModifier:
+                    self.patch_signal.emit()
+                else:
+                    self.move_signal.emit()
             except Exception:
                 print(traceback.format_exc())
 
@@ -178,7 +183,7 @@ class TestGui(QtWidgets.QMainWindow):
 class Calibrator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
-    def do_patch(self): # Start the patch-clamp procedure (no movement yet)
+    def do_patch(self): # Start the patch-clamp procedure
         print("Starting patch-clamp")
         patcher.start()
         # Pressure level 1
@@ -190,6 +195,7 @@ class Calibrator(QtCore.QObject):
         # Check initial resistance
         R = patcher.resistance()
         print("Resistance:" + str(R))
+        '''
         if R<5e6:
             print("Resistance is too low (broken tip?)")
             patcher.stop()
@@ -198,8 +204,11 @@ class Calibrator(QtCore.QObject):
             print("Resistance is too high (obstructed?)")
             patcher.stop()
             return
+        '''
 
         # Move pipette to target
+        safety_margin = 10. # 10 um above cell
+        calibrated_unit.safe_move(self.move_position + microscope.up_direction*array([0,0,1])*safety_margin)
 
         # Check resistance again
         newR = patcher.resistance()
