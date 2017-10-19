@@ -231,8 +231,9 @@ class Calibrator(QtCore.QObject):
         success = False
         for _ in range(15): # move 15 um down
             # move by 1 um down
-            calibrated_unit.relative_move(-calibrated_unit.up_position[2])
-            calibrated_unit.wait_until_still(2)
+            # Cleaner: use reference relative move
+            unit.relative_move(-1, axis=2) #*calibrated_unit.up_position[2]
+            unit.wait_until_still(2)
             time.sleep(1)
             oldR = R
             R = patcher.resistance()
@@ -257,7 +258,6 @@ class Calibrator(QtCore.QObject):
                             patcher.stop()
                             return
                         R = patcher.resistance()
-                        print("R = "+str(patcher.resistance()))
                     success = True
                     break
         pressure.set_pressure(0)

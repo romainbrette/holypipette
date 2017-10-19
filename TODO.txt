@@ -1,5 +1,4 @@
 * Debugging gui for the SM10; reproduce movements, test if image moved
-* Safe move: add withdraw
 * Adjust speeds for horizontal moves
 * Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
@@ -14,3 +13,4 @@
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * DLL Path in multiclamp
 * Resistance in status bar
+* Safe move: add withdraw with correct direction
