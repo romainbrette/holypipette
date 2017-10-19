@@ -231,11 +231,12 @@ class Calibrator(QtCore.QObject):
         for _ in range(param_max_distance): # move 15 um down
             # move by 1 um down
             # Cleaner: use reference relative move
-            unit.relative_move(-1, axis=2) #*calibrated_unit.up_position[2]
+            unit.relative_move(1, axis=2) #*calibrated_unit.up_position[2]
             unit.wait_until_still(2)
             time.sleep(1)
             oldR = R
             R = patcher.resistance()
+            print("R = "+str(patcher.resistance()))
             if R>oldR*(1+param_cell_R_increase): # R increases: near cell?
                 time.sleep(10)
                 if R>oldR*(1+param_cell_R_increase):
