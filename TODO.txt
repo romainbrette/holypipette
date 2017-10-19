@@ -1,8 +1,9 @@
-* Safe moves
+* Debugging gui for the SM10; reproduce movements, test if image moved
+* Safe move: add withdraw
+* Adjust speeds for horizontal moves
 * Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
     (alternatively: abort when CalibrationError)
     check stage target position
-* Safe pipette move to target (+10 um)
 * Resistance meter
 * Possible optimization: instead of sleep before snap, do the template matching until stable results

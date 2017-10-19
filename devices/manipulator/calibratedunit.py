@@ -120,8 +120,11 @@ class CalibratedUnit(ManipulatorUnit):
     def safe_move(self, r, withdraw = 0.):
         '''
         Moves the device to position x (an XYZ vector) in a way that minimizes
-        interaction with tissue. The manipulator is first moved horizontally,
+        interaction with tissue.
+
+        If the movement is down, the manipulator is first moved horizontally,
         then along the pipette axis.
+        If the movement is up, a direct move is done.
 
         Parameters
         ----------
@@ -130,22 +133,23 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         if not self.calibrated:
             raise CalibrationError
-        # First, we determine the intersection between the line going through x
-        # with direction corresponding to the manipulator first axis.
-        #n = array([0,0,1.]) # vector normal the focal plane (we are in stage coordinates)
-        #p = dot(self.M, array([1.,0.,0.]))
+
         p = self.M[:,0] # this is the vector for the first manipulator axis
-        uprime = self.position()
-        #alpha = dot(n,uprime-u)/dot(n,p)
-        #alpha = (self.position()-u)[2] / p[2]
+        uprime = self.reference_position()
 
-        alpha = (uprime - r)[2] / self.M[2,0]
-        # TODO: check whether the intermediate move is accessible
+        # First we check whether movement is up or down
+        if (r[2] - uprime[2])*self.microscope.up_direction<0:
+            # Movement is down
+            # First, we determine the intersection between the line going through x
+            # with direction corresponding to the manipulator first axis.
+            alpha = (uprime - r)[2] / self.M[2,0]
+            # TODO: check whether the intermediate move is accessible
 
-        # Intermediate move
-        self.reference_move(r + alpha * p)
-        # We need to wait here!
-        self.wait_until_still()
+            # Intermediate move
+            self.reference_move(r + alpha * p)
+            # We need to wait here!
+            self.wait_until_still()
+
         # Final move
         self.reference_move(r - withdraw * p) # Or relative move in manipulator coordinates, first axis (faster)
 

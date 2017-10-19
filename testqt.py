@@ -35,6 +35,7 @@ class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
     recalibrate_signal = QtCore.pyqtSignal()
     motor_ranges_signal = QtCore.pyqtSignal()
+    move_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -54,6 +55,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrate_signal.connect(self.calibrator.do_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
+        self.move_signal.connect(self.calibrator.move_pipette)
         self.calibration_thread.start()
 
     def mouse_callback(self, event):
@@ -67,7 +69,9 @@ class TestGui(QtWidgets.QMainWindow):
                 xs *= scale
                 ys *= scale
                 #calibrated_stage.reference_relative_move(- array([xs, ys, 0]))
-                calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
+                #calibrated_unit.reference_move(array([xs, ys, microscope.position()]))
+                self.calibrator.move_position = array([xs, ys, microscope.position()])
+                self.move_signal.emit()
             except Exception:
                 print(traceback.format_exc())
 
@@ -131,7 +135,9 @@ class TestGui(QtWidgets.QMainWindow):
         cfg = {'stage.M' : calibrated_stage.M,
                'stage.r0' : calibrated_stage.r0,
                'unit.M' : calibrated_unit.M,
-               'unit.r0' : calibrated_unit.r0}
+               'unit.r0' : calibrated_unit.r0,
+               'microscope.up' : microscope.up_direction,
+               'unit.up' : calibrated_unit.up_direction}
         pickle.dump(cfg, open(config_filename, "wb"))
 
     def load(self):
@@ -147,6 +153,9 @@ class TestGui(QtWidgets.QMainWindow):
         calibrated_unit.Minv = pinv(calibrated_unit.M)
         calibrated_unit.r0 = cfg['unit.r0']
         calibrated_unit.calibrated = True
+        calibrated_unit.up_direction = cfg['unit.up']
+
+        microscope.up_direction = cfg['microscope.up']
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
@@ -162,6 +171,10 @@ class TestGui(QtWidgets.QMainWindow):
 
 
 class Calibrator(QtCore.QObject):
+
+    @QtCore.pyqtSlot()
+    def move_pipette(self):
+        calibrated_unit.safe_move(self.move_position)
 
     @QtCore.pyqtSlot()
     def do_calibration(self):
