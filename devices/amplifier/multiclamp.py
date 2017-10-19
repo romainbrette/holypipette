@@ -19,6 +19,7 @@ Gains: actually these are additional gains
 import ctypes
 import functools
 import logging
+import os
 
 __all__ = ['MultiClampChannel', 'MultiClamp']
 

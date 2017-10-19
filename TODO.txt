@@ -5,7 +5,6 @@
 * Maximization of calibration size
     (alternatively: abort when CalibrationError)
     check stage target position
-* Resistance meter
 * Possible optimization: instead of sleep before snap, do the template matching until stable results
 * Automatically move and focus pipette when appearing on screen
     ideas: if tip on screen, look at how total intensity changes with focus
@@ -14,3 +13,4 @@
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * DLL Path in multiclamp
+* Resistance in status bar

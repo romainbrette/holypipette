@@ -113,7 +113,10 @@ class TestGui(QtWidgets.QMainWindow):
                 else:
                     print("Starting patch")
                     patcher.start()
-                    print("Resistance:"+str(patcher.resistance()))
+                    for _ in range(5):
+                        time.sleep(1)
+                        print("Resistance:"+str(patcher.resistance()))
+                self.patch_on = not self.patch_on
             # Calibration
             elif event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
