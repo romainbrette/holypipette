@@ -476,6 +476,21 @@ class MultiClampChannel(object):
                                        ctypes.byref(self.last_error)):
             self.check_error()
 
+    # **** Voltage clamp ****
+    @needs_select
+    def switch_holding(self, enable): # True if voltage is clamped
+        if not self.dll.MCCMSG_SetHoldingEnable(self.msg_handler,
+                                                ctypes.c_bool(enable),
+                                                ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def set_holding(self, value): # Voltage-clamp value
+        if not self.dll.MCCMSG_SetHolding(self.msg_handler,
+                                          ctypes.c_double(value),
+                                          ctypes.byref(self.last_error)):
+            self.check_error()
+
     # **** Compensation ****
 
     @needs_select
@@ -549,6 +564,87 @@ class MultiClampChannel(object):
                                                  ctypes.byref(self.last_error)):
             self.check_error()
         return self.get_bridge_resistance()
+
+    # **** Zap ****
+    @needs_select
+    def zap(self):
+        if not self.dll.MCCMSG_Zap(self.msg_handler,
+                                   ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def set_zap_duration(self, duration):
+        if not self.dll.MCCMSG_SetZapDuration(self.msg_handler,
+                                              ctypes.c_double(duration),
+                                              ctypes.byref(self.last_error)):
+            self.check_error()
+
+    # **** Measuring V and R ****
+    @needs_select
+    def get_meter_value(self):
+        value = ctypes.c_double(0.)
+        if not self.dll.MCCMSG_GetMeterValue(self.msg_handler,
+                                             ctypes.byref(value),
+                                             ctypes.c_uint(0),
+                                             ctypes.byref(self.last_error)):
+            self.check_error()
+        return value.value
+
+    @needs_select
+    def switch_resistance_meter(self, enable):
+        if not self.dll.MCCMSG_SetMeterResistEnable(self.msg_handler,
+                                                    ctypes.c_bool(enable),
+                                                    ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def resistance_meter_state(self): # On/off state
+        enable = ctypes.c_bool(False)
+        if not self.dll.MCCMSG_GetMeterResistEnable(self.msg_handler,
+                                                    ctypes.byref(enable),
+                                                    ctypes.byref(self.last_error)):
+            self.check_error()
+        return enable.value
+
+    # **** Repeated pulses ****
+    @needs_select
+    def switch_pulses(self, enable):
+        if not self.dll.MCCMSG_SetTestSignalEnable(self.msg_handler,
+                                                   ctypes.c_bool(enable),
+                                                   ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def set_pulses_amplitude(self, amplitude):
+        if not self.dll.MCCMSG_SetTestSignalAmplitude(self.msg_handler,
+                                                      ctypes.c_double(amplitude),
+                                                      ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def get_pulses_amplitude(self):
+        amplitude = ctypes.c_double(0.)
+        if not self.dll.MCCMSG_GetTestSignalAmplitude(self.msg_handler,
+                                                      ctypes.byref(amplitude),
+                                                      ctypes.byref(self.last_error)):
+            self.check_error()
+        return amplitude.value
+
+    @needs_select
+    def set_pulses_frequency(self, frequency):
+        if not self.dll.MCCMSG_SetTestSignalFrequency(self.msg_handler,
+                                                      ctypes.c_double(frequency),
+                                                      ctypes.byref(self.last_error)):
+            self.check_error()
+
+    @needs_select
+    def get_pulses_frequency(self):
+        frequency = ctypes.c_double(0.)
+        if not self.dll.MCCMSG_GetTestSignalFrequency(self.msg_handler,
+                                                      ctypes.byref(frequency),
+                                                      ctypes.byref(self.last_error)):
+            self.check_error()
+        return frequency.value
 
 
     def close(self):

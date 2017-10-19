@@ -58,6 +58,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.move_signal.connect(self.calibrator.move_pipette)
         self.calibration_thread.start()
 
+        self.patch_on = False
+
     def mouse_callback(self, event):
         if event.button() == Qt.LeftButton:
             try:
@@ -103,6 +105,15 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Minus:
                 self.camera.change_exposure(-2.5)
                 self.update_status_bar()
+            # Patch
+            elif event.key() == Qt.Key_P:
+                if self.patch_on:
+                    print("Stopping patch")
+                    patcher.stop()
+                else:
+                    print("Starting patch")
+                    patcher.start()
+                    print("Resistance:"+str(patcher.resistance()))
             # Calibration
             elif event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
@@ -212,6 +223,9 @@ class Calibrator(QtCore.QObject):
 
 def message(msg):
     print msg
+
+amplifier = MultiClampChannel()
+patcher = MulticlampPatcher(amplifier)
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)
