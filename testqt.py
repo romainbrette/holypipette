@@ -61,6 +61,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.move_signal.connect(self.calibrator.move_pipette)
         self.patch_signal.connect(self.calibrator.do_patch)
         self.calibration_thread.start()
+        self.load()
 
     def mouse_callback(self, event):
         # Click = move

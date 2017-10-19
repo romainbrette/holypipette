@@ -1,4 +1,8 @@
+* Semiautomatic calibration:
+    user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * Debugging gui for the SM10; reproduce movements, test if image moved
+
+
 * Adjust speeds for horizontal moves
 * Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
@@ -9,8 +13,6 @@
     ideas: if tip on screen, look at how total intensity changes with focus
 * Semiautomatic recalibration:
     pipette is put in approximate focus, then template matching (requires storing photos of pipette)
-* Semiautomatic calibration:
-    user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * DLL Path in multiclamp
 * Resistance in status bar
 * Safe move: add withdraw with correct direction
