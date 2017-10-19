@@ -179,7 +179,7 @@ class Calibrator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def do_recalibration(self):
         print('Starting recalibration....')
-        calibrated_stage.recalibrate(message)
+        calibrated_unit.recalibrate(message)
         print('Done')
 
     @QtCore.pyqtSlot()

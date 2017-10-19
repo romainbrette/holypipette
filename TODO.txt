@@ -1,4 +1,3 @@
-* Recalibrate: test
 * Safe moves
 * Motor ranges using Home and Setting Home direction
 * Maximization of calibration size
