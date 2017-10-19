@@ -208,21 +208,22 @@ class Calibrator(QtCore.QObject):
 
         # Move pipette to target
         safety_margin = 10. # 10 um above cell
-        calibrated_unit.safe_move(self.move_position + microscope.up_direction*array([0,0,1])*safety_margin)
+        calibrated_unit.safe_move(self.move_position + microscope.up_direction*array([0,0,1.])*safety_margin)
 
         # Check resistance again
         newR = patcher.resistance()
         if abs(newR - R) > 1e6:
             print("Pipette is obstructed; R = "+str(newR))
-            patcher.stop()
-            return
+            #patcher.stop()
+            #return
 
         # Release pressure
+        print("Releasing pressure")
         pressure.set_pressure(0)
 
         # Pipette offset
         amplifier.auto_pipette_offset()
-        time.sleep(2)
+        time.sleep(2) # why?
 
         # Approach and make the seal
         print("Approaching the cell")
