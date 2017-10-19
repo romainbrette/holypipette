@@ -492,6 +492,12 @@ class MultiClampChannel(object):
                                           ctypes.byref(self.last_error)):
             self.check_error()
 
+    @needs_select
+    def null_current(self): # Makes the current zero
+        if not self.dll.MCCMSG_SetMode(self.msg_handler, ctypes.c_uint(2),
+                                       ctypes.byref(self.last_error)):
+            self.check_error()
+
     # **** Compensation ****
 
     @needs_select

@@ -211,8 +211,9 @@ class Calibrator(QtCore.QObject):
         calibrated_unit.safe_move(self.move_position + microscope.up_direction*array([0,0,1.])*safety_margin)
 
         # Check resistance again
-        newR = patcher.resistance()
-        if abs(newR - R) > 1e6:
+        oldR = R
+        R = patcher.resistance()
+        if abs(R - oldR) > 1e6:
             print("Pipette is obstructed; R = "+str(newR))
             #patcher.stop()
             #return
@@ -227,8 +228,65 @@ class Calibrator(QtCore.QObject):
 
         # Approach and make the seal
         print("Approaching the cell")
+        success = False
+        for _ in range(15): # move 15 um down
+            # move by 1 um down
+            calibrated_unit.relative_move(-calibrated_unit.up_position[2])
+            calibrated_unit.wait_until_still(2)
+            time.sleep(1)
+            oldR = R
+            R = patcher.resistance()
+            if R>oldR*1.15: # R increases: near cell?
+                time.sleep(10)
+                if R>oldR*1.15:
+                    # Still higher, we are near the cell
+                    print("Sealing, R = "+str(patcher.resistance()))
+                    pressure.set_pressure(-30)
+                    t0 = time.time()
+                    t = t0
+                    R = patcher.resistance()
+                    while (R<1e9) | (t-t0<15.):
+                        # Wait at least 15s and until we get a Gigaseal
+                        t = time.time()
+                        if t-t0<10:
+                            # Ramp to -70 mV in 10 s
+                            amplifier.set_holding(-.070*(t-t0)/10.)
+                        if t-t0>=90.:
+                            # No seal in 90 s
+                            print("Seal unsuccessful")
+                            patcher.stop()
+                            return
+                        R = patcher.resistance()
+                        print("R = "+str(patcher.resistance()))
+                    success = True
+                    break
+        pressure.set_pressure(0)
+        if not success:
+            print("Seal unsuccessful")
+            patcher.stop()
+            return
+
+        print("Seal successful, R = "+str(patcher.resistance()))
 
         # Go whole-cell
+        print("Breaking in")
+        trials = 0
+        if patcher.resistance()<1e9:
+            print("Seal lost")
+            patcher.stop()
+            return
+
+        while patcher.resistance()>300e6: # Success when resistance goes below 300 MOhm
+            amplifier.zap()
+            pressure.ramp(amplitude=-230., duration=1.5)
+            time.sleep(1.3)
+            trials+=1
+            if trials==4:
+                print("Break-in unsuccessful")
+                patcher.stop()
+                return
+
+        print("Successful break-in, R = "+str(patcher.resistance()))
 
         patcher.stop()
         print("Done")
