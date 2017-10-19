@@ -1,6 +1,8 @@
 '''
 A general pressure controller class
 '''
+from time import time
+
 all = ['PressureController']
 
 class PressureController(object):
@@ -18,3 +20,14 @@ class PressureController(object):
         Sets the pressure, on designated port.
         '''
         pass
+
+    def ramp(self,amplitude = -230., duration = 1.5, port = 0):
+        '''
+        Makes a ramp of pressure
+        '''
+        t0 = time()
+        t = t0
+        while t-t0<duration:
+            self.set_pressure(amplitude*(t-t0)/duration,port)
+            t = time()
+        self.set_pressure(0., port)

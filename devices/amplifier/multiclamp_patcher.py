@@ -11,7 +11,7 @@ class MulticlampPatcher(object):
     def __init__(self, amplifier):
         self.amp = amplifier # should be a MultiClampChannel object
 
-    def start(self, pulse_amplitude=1e-2, pulse_frequency=1e-2):
+    def start(self, pulse_amplitude=1e-2, pulse_frequency=1e-2): # Not clear what the units are for frequency
         '''
         Initialize the patch clamp procedure (in bath)
         '''
@@ -35,6 +35,13 @@ class MulticlampPatcher(object):
         # Set zap duration
         self.amp.set_zap_duration(1)  # ms
 
+        # Automatic offset
+        self.amp.auto_pipette_offset()
+
+        # Set holding potential
+        self.amp.set_holding(0.)
+        self.amp.switch_holding(True)
+
         # Enable resistance metering
         self.amp.switch_resistance_meter(True)
 
@@ -45,3 +52,5 @@ class MulticlampPatcher(object):
     def stop(self):
         # Disable resistance metering
         self.amp.switch_resistance_meter(False)
+        # Disable holding
+        self.amp.switch_holding(False)

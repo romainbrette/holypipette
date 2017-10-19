@@ -36,6 +36,7 @@ class TestGui(QtWidgets.QMainWindow):
     recalibrate_signal = QtCore.pyqtSignal()
     motor_ranges_signal = QtCore.pyqtSignal()
     move_signal = QtCore.pyqtSignal()
+    patch_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -56,9 +57,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.move_signal.connect(self.calibrator.move_pipette)
+        self.patch_signal.connect(self.calibrator.do_patch)
         self.calibration_thread.start()
-
-        self.patch_on = False
 
     def mouse_callback(self, event):
         if event.button() == Qt.LeftButton:
@@ -107,16 +107,7 @@ class TestGui(QtWidgets.QMainWindow):
                 self.update_status_bar()
             # Patch
             elif event.key() == Qt.Key_P:
-                if self.patch_on:
-                    print("Stopping patch")
-                    patcher.stop()
-                else:
-                    print("Starting patch")
-                    patcher.start()
-                    for _ in range(5):
-                        time.sleep(1)
-                        print("Resistance:"+str(patcher.resistance()))
-                self.patch_on = not self.patch_on
+                self.patch_signal.emit()
             # Calibration
             elif event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
@@ -187,6 +178,52 @@ class TestGui(QtWidgets.QMainWindow):
 class Calibrator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
+    def do_patch(self): # Start the patch-clamp procedure (no movement yet)
+        print("Starting patch-clamp")
+        patcher.start()
+        # Pressure level 1
+        pressure.set_pressure(25)
+
+        # Wait for a few seconds
+        time.sleep(4.)
+
+        # Check initial resistance
+        R = patcher.resistance()
+        print("Resistance:" + str(R))
+        if R<5e6:
+            print("Resistance is too low (broken tip?)")
+            patcher.stop()
+            return
+        elif R>10e6:
+            print("Resistance is too high (obstructed?)")
+            patcher.stop()
+            return
+
+        # Move pipette to target
+
+        # Check resistance again
+        newR = patcher.resistance()
+        if abs(newR - R) > 1e6:
+            print("Pipette is obstructed; R = "+str(newR))
+            patcher.stop()
+            return
+
+        # Release pressure
+        pressure.set_pressure(0)
+
+        # Pipette offset
+        amplifier.auto_pipette_offset()
+        time.sleep(2)
+
+        # Approach and make the seal
+        print("Approaching the cell")
+
+        # Go whole-cell
+
+        patcher.stop()
+        print("Done")
+
+    @QtCore.pyqtSlot()
     def move_pipette(self):
         calibrated_unit.safe_move(self.move_position)
 
@@ -229,6 +266,7 @@ def message(msg):
 
 amplifier = MultiClampChannel()
 patcher = MulticlampPatcher(amplifier)
+pressure = OB1()
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)

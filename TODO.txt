@@ -1,3 +1,4 @@
+* Pressure controller
 * Debugging gui for the SM10; reproduce movements, test if image moved
 * Safe move: add withdraw
 * Adjust speeds for horizontal moves
