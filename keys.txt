@@ -1,0 +1,18 @@
+Arrows                  Move stage by 10 um
+Page up / Page down     Move microscope up/down by 10 um
+Shift+arrows            Move by 50 um
+Alt+arrows              Move by 2.5 um
+
++/-                     Change exposure time
+
+Click                   Move pipette
+Shift-click             Move pipette and patch
+
+L                       Load configuration
+S                       Save configuration
+C                       Calibrate (primary calibration)
+R                       Recalibrate (secondary calibration)
+
+F                       Define coverslip Z
+
+Esc                     Quit

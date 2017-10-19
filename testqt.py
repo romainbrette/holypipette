@@ -112,9 +112,6 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Minus:
                 self.camera.change_exposure(-2.5)
                 self.update_status_bar()
-            # Patch
-            elif event.key() == Qt.Key_P:
-                self.patch_signal.emit()
             # Calibration
             elif event.key() == Qt.Key_C:
                 self.calibrate_signal.emit()
