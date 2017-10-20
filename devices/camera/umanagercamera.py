@@ -47,8 +47,8 @@ class uManagerCamera(Camera):
     def snap(self):
         self.lock.acquire()
         while not self.new_frame():
-            sleep(0.01)
-            print "ouch"
+            sleep(0.05)
+            print("no image available, waiting for 5ms")
         frame = self.cam.getLastImage() # What happens if there is no new frame?
         self.lock.release()
         if frame.dtype == 'uint16':
@@ -63,6 +63,14 @@ class uManagerCamera(Camera):
 
     def get_exposure(self):
         return self.cam.getExposure()
+
+    def reset(self):
+        print('Resetting image acquisition...')
+        self.lock.acquire()
+        self.cam.stopSequenceAcquisition()
+        self.cam.startContinuousSequenceAcquisition(1)
+        self.lock.release()
+        print('...done')
 
 class Hamamatsu(uManagerCamera):
     def __init__(self):

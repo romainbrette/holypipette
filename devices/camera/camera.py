@@ -35,3 +35,6 @@ class Camera(object):
     def change_exposure(self, change):
         if self.get_exposure() > 0:
             self.set_exposure(self.get_exposure() + change)
+
+    def reset(self):
+        pass

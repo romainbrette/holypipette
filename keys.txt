@@ -15,4 +15,7 @@ R                       Recalibrate (secondary calibration)
 
 F                       Define coverslip Z
 
+F1                      Reset camera (stop/start image acquisition)
+
 Esc                     Quit
+
