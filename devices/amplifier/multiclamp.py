@@ -477,6 +477,12 @@ class MultiClampChannel(object):
                                        ctypes.byref(self.last_error)):
             self.check_error()
 
+    @needs_select # I=0
+    def null_current(self):
+        if not self.dll.MCCMSG_SetMode(self.msg_handler, ctypes.c_uint(2),
+                                       ctypes.byref(self.last_error)):
+            self.check_error()
+
     # **** Voltage clamp ****
     @needs_select
     def switch_holding(self, enable): # True if voltage is clamped
@@ -490,12 +496,6 @@ class MultiClampChannel(object):
         if not self.dll.MCCMSG_SetHolding(self.msg_handler,
                                           ctypes.c_double(value),
                                           ctypes.byref(self.last_error)):
-            self.check_error()
-
-    @needs_select
-    def null_current(self): # Makes the current zero
-        if not self.dll.MCCMSG_SetMode(self.msg_handler, ctypes.c_uint(2),
-                                       ctypes.byref(self.last_error)):
             self.check_error()
 
     # **** Compensation ****

@@ -54,5 +54,5 @@ class MulticlampPatcher(object):
         self.amp.switch_resistance_meter(False)
         # Disable holding
         self.amp.switch_holding(False)
-        # Cancel current
+        # Mode I=0
         self.amp.null_current()

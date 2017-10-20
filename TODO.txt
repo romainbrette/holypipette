@@ -1,3 +1,7 @@
+* Calibrate without stage
+* Check compensation movements
+* Check whether best match is with the Z border
+* Slow moves when in field
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * Debugging gui for the SM10; reproduce movements, test if image moved
@@ -9,9 +13,13 @@
     (alternatively: abort when CalibrationError)
     check stage target position
 * Possible optimization: instead of sleep before snap, do the template matching until stable results
-* Automatically move and focus pipette when appearing on screen
+
+** Automatically move and focus pipette when appearing on screen
     ideas: if tip on screen, look at how total intensity changes with focus
-* Semiautomatic recalibration:
+    In fact: move pipette up along X axis until there is no black on one border, or intensity
+    disappears quickly. Then move up along Z axis until template matching works.
+
+** Semiautomatic recalibration:
     pipette is put in approximate focus, then template matching (requires storing photos of pipette)
 * DLL Path in multiclamp
 * Resistance in status bar
