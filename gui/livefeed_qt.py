@@ -50,6 +50,8 @@ class LiveFeedQt(QtWidgets.QLabel):
     @QtCore.pyqtSlot()
     def update_image(self):
         try:
+            if not self.camera.new_frame():
+                return
             # get data and display
             frame = self.camera.snap()
             if len(frame.shape) == 2:

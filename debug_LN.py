@@ -34,11 +34,9 @@ signal.signal(signal.SIGSEGV, signal_handler)
 signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
-    calibrate_signal = QtCore.pyqtSignal()
-    recalibrate_signal = QtCore.pyqtSignal()
-    motor_ranges_signal = QtCore.pyqtSignal()
+    debug_signal = QtCore.pyqtSignal()
     move_signal = QtCore.pyqtSignal()
-    patch_signal = QtCore.pyqtSignal()
+    recalibrate_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -57,6 +55,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrator.moveToThread(self.calibration_thread)
         self.debug_signal.connect(self.calibrator.do_debug)
         self.move_signal.connect(self.calibrator.move_pipette)
+        self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.calibration_thread.start()
         self.load()
 
@@ -65,6 +64,7 @@ class TestGui(QtWidgets.QMainWindow):
         # Shift-click = move and patch
         if event.button() == Qt.LeftButton:
             try:
+                print("moving")
                 x, y = event.x(), event.y()
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
@@ -107,6 +107,9 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Minus:
                 self.camera.change_exposure(-2.5)
                 self.update_status_bar()
+            # Recalibrate
+            elif event.key() == Qt.Key_R:
+                self.recalibrate_signal.emit()
             # Calibration
             elif event.key() == Qt.Key_D:
                 self.debug_signal.emit()
@@ -151,13 +154,59 @@ class Calibrator(QtCore.QObject):
     @QtCore.pyqtSlot()
     def do_debug(self): # Debug the controller
         print("Debugging")
-        print("Moving pipette and microscope down")
-        unit.relative_move(10, axis=2)
-        microscope.relative_move(10)
+        try:
+            image = crop_center(camera.snap())
+            cv2.imwrite('./screenshots/firstimage.jpg', image)
+            microscope.relative_move(2)
+            microscope.wait_until_still()
+            img = crop_center(camera.snap())
+            _,_,c1 = templatematching(image,img)
+            microscope.relative_move(-4)
+            microscope.wait_until_still()
+            img = crop_center(camera.snap())
+            _, _, c2 = templatematching(image, img)
+            threshold = min((c1,c2))
+            print("Threshold="+str(threshold))
+
+            microscope.relative_move(2)
+            microscope.wait_until_still()
+
+            fast = False
+
+            failure = False
+            for axis in [1,2,3,7,8,9]:
+                print("Moving along axis "+str(axis))
+                for x in [4,8,16,32,64,128]:
+                    print(x)
+                    controller.relative_move(-x, axis=axis, fast=fast)
+                    controller.wait_until_still([axis])
+                    controller.relative_move(-x, axis=axis, fast=fast)
+                    controller.wait_until_still([axis])
+                    controller.relative_move(2*x, axis=axis, fast=fast)
+                    controller.wait_until_still([axis])
+                    time.sleep(2)
+                    img = crop_center(camera.snap())
+                    _, _, c = templatematching(image, img)
+                    print("Correlation = "+str(c))
+                    if c<threshold:
+                        print("Failed!")
+                        failure = True
+                        cv2.imwrite('./screenshots/failimage.jpg', img)
+                        break
+                if failure:
+                    break
+        except Exception:
+            print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
     def move_pipette(self):
         calibrated_unit.safe_move(self.move_position)
+
+    @QtCore.pyqtSlot()
+    def do_recalibration(self):
+        print('Starting recalibration....')
+        calibrated_unit.recalibrate(message)
+        print('Done')
 
 
 def message(msg):
