@@ -1,10 +1,9 @@
+* Replace wait until still by wait until target reached (with deadline)
 * Calibrate without stage
 * Check compensation movements
 * Check whether best match is with the Z border
-* Slow moves when in field
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
-* Debugging gui for the SM10; reproduce movements, test if image moved
 
 
 * Adjust speeds for horizontal moves
