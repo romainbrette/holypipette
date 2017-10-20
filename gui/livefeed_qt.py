@@ -1,6 +1,8 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import Qt
+
 import traceback
+import numpy as np
 
 from devices.camera.umanagercamera import Lumenera
 
@@ -56,8 +58,13 @@ class LiveFeedQt(QtWidgets.QLabel):
             frame = self.camera.snap()
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
-                bytesPerLine = self.width
-                format = QtGui.QImage.Format_Grayscale8
+                if frame.dtype == np.dtype('uint32'):
+                    bytesPerLine = self.width*4
+                    format = QtGui.QImage.Format_RGB32
+                else:
+                    bytesPerLine = self.width
+                    format = QtGui.QImage.Format_Grayscale8
+
             else:
                 # Color image via OpenCV
                 bytesPerLine = 3*self.width
