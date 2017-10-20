@@ -16,7 +16,7 @@ from time import sleep
 from vision.crop import *
 from vision.findpipette import *
 import cv2
-from time import sleep
+from time import sleep, time
 
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
 
@@ -380,11 +380,17 @@ class CalibratedUnit(ManipulatorUnit):
                     # 3) Move platform to center the pipette (compensating movement = opposite)
                     self.stage.reference_relative_move(previous_estimate-estimate)
                     self.stage.wait_until_still()
+                    t0=time()
                     self.wait_until_still(axis)
+                    t1=time()
+                    print t1-t0,"s for unit"
 
                     # 3bis) Move focal plane by estimated amount (initially 0)
                     self.microscope.relative_move(zestimate-previous_estimate[2])
+                    t0=time()
                     self.microscope.wait_until_still()
+                    t1=time()
+                    print t1-t0,"s for microscope"
 
                     sleep(sleep_time)
 

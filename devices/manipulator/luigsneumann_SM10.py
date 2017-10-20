@@ -14,10 +14,14 @@ import binascii
 import time
 import struct
 import numpy as np
-from numpy import sign
+from numpy import sign, array
+from numpy.linalg import norm
 
 __all__ = ['LuigsNeumann_SM10']
 
+# Default setting for fast/slow
+default_fast = None # Decide based on distance
+slowfast_threshold = 150. # in micron
 
 # Speed for slow velocity
 rps_slow =    [0.000017,
@@ -173,7 +177,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         '''
         self.send_command('0144', [axis, speed], 0)
 
-    def absolute_move(self, x, axis, fast=True):
+    def absolute_move(self, x, axis, fast=default_fast):
         '''
         Moves the device axis to position x.
 
@@ -186,7 +190,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         '''
         self.absolute_move_group([x], [axis], fast=fast)
 
-    def relative_move(self, x, axis, fast=True):
+    def relative_move(self, x, axis, fast=default_fast):
         '''
         Moves the device axis by relative amount x in um.
 
@@ -194,7 +198,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         ----------
         axis: axis number
         x : position shift in um.
-        fast : True if fast move, False if slow move.
+        fast : True if fast move, False if slow move. None: decide based on distance.
         '''
         if self.stepmoves:
             self.step_move(x, axis)
@@ -220,7 +224,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         assert all(r == a for r, a in zip(ret[:3], axes))
         return np.array(ret[4:4+len(axes)])
 
-    def absolute_move_group(self, x, axes, fast=True):
+    def absolute_move_group(self, x, axes, fast=default_fast):
         '''
         Moves the device group of axes to position x.
 
@@ -230,6 +234,8 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         x : target position in um (vector or list)
         fast : True if fast move, False if slow move.
         '''
+        if fast is None:
+            fast = True # not taken into account here, just relative moves
         ID = 'A048' if fast else 'A049'
 
         axes4 = [0, 0, 0, 0]
@@ -242,7 +248,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         # Send move command
         self.send_command(ID, [0xA0] + axes4 + pos, -1)
 
-    def relative_move_group(self, x, axes, fast=True):
+    def relative_move_group(self, x, axes, fast=default_fast):
         '''
         Moves the device group of axes by relative amount x in um.
 
@@ -250,12 +256,18 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         ----------
         axes : list of axis numbers
         x : position shift in um (vector or list).
-        fast : True if fast move, False if slow move.
+        fast : True if fast move, False if slow move. None: decide based on distance.
         '''
         if self.stepmoves:
             for i,axis in enumerate(axes):
                 self.step_move(x[i], axis)
         else:
+            if fast is None:
+                if norm(array(x))>slowfast_threshold:
+                    fast = True
+                else:
+                    fast = False
+
             ID = 'A04A' if fast else 'A04B'
 
             axes4 = [0, 0, 0, 0]
@@ -407,7 +419,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         axes4 = [0, 0, 0, 0]
         axes4[:len(axes)] = axes
         data = [0xA0] + axes + [0]
-        time.sleep(0.1)  # right after a motor command the motors are not moving yet
+        time.sleep(0.2)  # right after a motor command the motors are not moving yet
         ret = struct.unpack('20B', self.send_command('A120', data, 20))
         moving = [ret[6 + i*4] for i in range(len(axes))]
         is_moving = any(moving)

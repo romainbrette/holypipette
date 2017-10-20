@@ -157,21 +157,26 @@ class Calibrator(QtCore.QObject):
         try:
             image = crop_center(camera.snap())
             cv2.imwrite('./screenshots/firstimage.jpg', image)
-            microscope.relative_move(2)
-            microscope.wait_until_still()
+            '''
+            controller.relative_move(2, axis=1)
+            controller.wait_until_still([1])
+            time.sleep(2)
             img = crop_center(camera.snap())
             _,_,c1 = templatematching(image,img)
-            microscope.relative_move(-4)
-            microscope.wait_until_still()
+            controller.relative_move(-4, axis=1)
+            controller.wait_until_still([1])
+            time.sleep(2)
             img = crop_center(camera.snap())
             _, _, c2 = templatematching(image, img)
             threshold = min((c1,c2))
+            '''
+            threshold = 0.8
             print("Threshold="+str(threshold))
 
-            microscope.relative_move(2)
-            microscope.wait_until_still()
+            controller.relative_move(2, axis=1)
+            controller.wait_until_still([1])
 
-            fast = False
+            fast = True
 
             failure = False
             for axis in [1,2,3,7,8,9]:
