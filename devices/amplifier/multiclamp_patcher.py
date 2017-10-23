@@ -39,8 +39,8 @@ class MulticlampPatcher(object):
         self.amp.auto_pipette_offset()
 
         # Set holding potential
-        self.amp.set_holding(0.)
         self.amp.switch_holding(True)
+        self.amp.set_holding(0.)
 
         # Enable resistance metering
         self.amp.switch_resistance_meter(True)

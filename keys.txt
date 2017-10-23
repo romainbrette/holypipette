@@ -12,6 +12,9 @@ L                       Load configuration
 S                       Save configuration
 C                       Calibrate (primary calibration)
 R                       Recalibrate (secondary calibration)
+Shift-R                 Recalibrate automatically
+
+P                       Take photos
 
 F                       Define coverslip Z (floor)
 G                       Go to coverslip Z with microscope

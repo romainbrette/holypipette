@@ -18,7 +18,8 @@ from vision.findpipette import *
 import cv2
 from time import sleep, time
 
-__all__ = ['CalibratedUnit','CalibrationError','CalibratedStage']
+__all__ = ['CalibratedUnit','CalibrationError','CalibratedStage',
+           'stack_depth']
 
 verbose = True
 
@@ -489,6 +490,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
         It assumes that the pipette is centered on screen.
+
         Parameters
         ----------
         message : a function to which messages are passed
@@ -498,6 +500,35 @@ class CalibratedUnit(ManipulatorUnit):
         z0 = self.microscope.position()
         stager0 = self.stage.reference_position()
         self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
+
+    def auto_recalibrate(self, stack = None, x0 = None, y0 = None, message = lambda str: None):
+        '''
+        Recalibrates the unit by shifting the reference frame (r0).
+        The pipette is visually identified using a stack of photos.
+
+        Parameters
+        ----------
+        stack : stack of photos at different Z positions around focus
+        message : a function to which messages are passed
+        '''
+        u0 = self.position()
+        z0 = self.microscope.position()
+        stager0 = self.stage.reference_position()
+
+        image = self.camera.snap()
+
+        valmax = -1
+        for i, template in enumerate(stack):  # we look for the best matching template
+            xt, yt, val = templatematching(image, template)
+            if val > valmax:
+                valmax = val
+                x, y, z = xt, yt, stack_depth - i  # note the sign for z
+
+        if valmax < 0.6: # completely arbitary here
+            raise CalibrationError('Matching error: the pipette is absent or not focused')
+
+        #    Offset is such that the position is (x,y,z0+z) in the reference system
+        self.r0 = array([x, y, z0 + z]) - dot(self.M, u0) - stager0
 
 class CalibratedStage(CalibratedUnit):
     '''

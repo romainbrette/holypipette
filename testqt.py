@@ -7,7 +7,7 @@ from gui import *
 import sys
 import cv2
 import time
-from numpy import array
+from numpy import array, arange
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 import traceback
@@ -36,9 +36,11 @@ signal.signal(signal.SIGABRT, signal_handler)
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
     recalibrate_signal = QtCore.pyqtSignal()
+    auto_recalibrate_signal = QtCore.pyqtSignal()
     motor_ranges_signal = QtCore.pyqtSignal()
     move_signal = QtCore.pyqtSignal()
     patch_signal = QtCore.pyqtSignal()
+    photo_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -60,6 +62,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.move_signal.connect(self.calibrator.move_pipette)
         self.patch_signal.connect(self.calibrator.do_patch)
+        self.photo_signal.connect(self.calibrator.take_photos)
+        self.auto_recalibrate_signal.connect(self.calibrator.do_auto_recalibration)
         self.calibration_thread.start()
         self.load()
 
@@ -126,7 +130,10 @@ class TestGui(QtWidgets.QMainWindow):
                 pass
             # Recalibrate
             elif event.key() == Qt.Key_R:
-                self.recalibrate_signal.emit()
+                if event.modifiers() == Qt.ShiftModifier:
+                    self.auto_recalibrate_signal.emit()
+                else:
+                    self.recalibrate_signal.emit()
             # Save configuration
             elif event.key() == Qt.Key_S:
                 self.save()
@@ -143,6 +150,9 @@ class TestGui(QtWidgets.QMainWindow):
             # Reset camera
             elif event.key() == Qt.Key_F1:
                 self.camera.reset()
+            # Take photos around current point, assuming tip in focus
+            elif event.key() == Qt.Key_P:
+                self.photo_signal.emit()
         except Exception:
             print(traceback.format_exc())
 
@@ -321,6 +331,15 @@ class Calibrator(QtCore.QObject):
         calibrated_unit.recalibrate(message)
 
     @QtCore.pyqtSlot()
+    def do_auto_recalibration(self):
+        print('Automatic recalibration....')
+        try:
+            calibrated_unit.auto_recalibrate(message, stack=stack, x0=x0, y0=y0)
+            print("Done")
+        except CalibrationError:
+            print('Failed')
+
+    @QtCore.pyqtSlot()
     def do_motor_ranges(self):
         print('Measuring motor ranges for the stage')
         calibrated_stage.motor_ranges()
@@ -329,6 +348,21 @@ class Calibrator(QtCore.QObject):
         calibrated_unit.motor_ranges()
         print unit.min, unit.max
         print('Done')
+
+    @QtCore.pyqtSlot()
+    def take_photos(self):
+        global stack,x0,y0
+
+        print("Taking photos")
+        # Store current position
+        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
+        z0 = self.microscope.position()
+        z = z0+arange(-stack_depth,stack_depth+1) # +- 5 um around current position
+        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
+        time.sleep(0.5)
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, stack[stack_depth])
+        print("Done")
 
 
 #u0 = unit.position()
@@ -341,6 +375,8 @@ def message(msg):
 amplifier = MultiClampChannel()
 patcher = MulticlampPatcher(amplifier)
 pressure = OB1()
+stack = None
+x0, y0 = None, None
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)

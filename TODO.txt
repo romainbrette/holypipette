@@ -1,3 +1,5 @@
+* Load/save configuration as dictionaries
+* Refactor taking stack of photos
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
 * Refactor automatic patch
