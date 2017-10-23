@@ -334,10 +334,12 @@ class Calibrator(QtCore.QObject):
     def do_auto_recalibration(self):
         print('Automatic recalibration....')
         try:
-            calibrated_unit.auto_recalibrate(message, stack=stack, x0=x0, y0=y0)
+            calibrated_unit.auto_recalibrate(message=message, stack=stack, x0=x0, y0=y0)
             print("Done")
-        except CalibrationError:
-            print('Failed')
+        except Exception:
+            print(traceback.format_exc())
+        #except CalibrationError:
+        #    print('Failed')
 
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):
@@ -353,17 +355,20 @@ class Calibrator(QtCore.QObject):
     def take_photos(self):
         global stack,x0,y0
 
-        print("Taking photos")
-        # Store current position
-        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
-        z0 = self.microscope.position()
-        z = z0+arange(-stack_depth,stack_depth+1) # +- 5 um around current position
-        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
-        time.sleep(0.5)
-        image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[stack_depth])
-        print("Done")
-
+        try:
+            print("Taking photos")
+            # Store current position
+            pipette_position = pipette_cardinal(crop_center(camera.snap()))
+            z0 = microscope.position()
+            z = z0+arange(-stack_depth,stack_depth+1) # +- 5 um around current position
+            image = camera.snap()
+            stack = microscope.stack(camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
+            time.sleep(0.5)
+            image = camera.snap()
+            x0, y0, _ = templatematching(image, stack[stack_depth])
+            print("Done")
+        except Exception:
+            print(traceback.format_exc())
 
 #u0 = unit.position()
 #u0_stage = stage.position()

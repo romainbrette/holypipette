@@ -520,6 +520,7 @@ class CalibratedUnit(ManipulatorUnit):
         valmax = -1
         for i, template in enumerate(stack):  # we look for the best matching template
             xt, yt, val = templatematching(image, template)
+            print(val)
             if val > valmax:
                 valmax = val
                 x, y, z = xt, yt, stack_depth - i  # note the sign for z
@@ -527,8 +528,10 @@ class CalibratedUnit(ManipulatorUnit):
         if valmax < 0.6: # completely arbitary here
             raise CalibrationError('Matching error: the pipette is absent or not focused')
 
+        message('Pipette identifed at x,y,z='+str(x-x0)+','+str(y-y0)+','+str(z))
+
         #    Offset is such that the position is (x,y,z0+z) in the reference system
-        self.r0 = array([x, y, z0 + z]) - dot(self.M, u0) - stager0
+        self.r0 = array([x-x0, y-y0, z0 + z]) - dot(self.M, u0) - stager0
 
 class CalibratedStage(CalibratedUnit):
     '''
