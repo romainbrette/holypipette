@@ -533,25 +533,37 @@ class CalibratedUnit(ManipulatorUnit):
         dy = yt - ymargin
 
         valmax = -1
-        for i, template in enumerate(stack):  # we look for the best matching template
-            xt, yt, val = templatematching(image, template)
-            xt += dx
-            yt += dy
-            if val > valmax:
-                valmax = val
-                x, y, z = xt, yt, stack_depth - i  # note the sign for z
+        out_of_scope = True
 
-        if valmax < 0.6: # completely arbitary here
-            raise CalibrationError('Matching error: the pipette is absent or not focused')
+        previous_correlation = -1
+        while out_of_scope:
+            for i, template in enumerate(stack):  # we look for the best matching template
+                xt, yt, val = templatematching(image, template)
+                xt += dx
+                yt += dy
+                if val > valmax:
+                    valmax = val
+                    x, y, z = xt, yt, stack_depth - i  # note the sign for z
+                    if (i==0) | (i==len(stack)-1): # probably outside the stack
+                        out_of_scope = True
+                    else:
+                        out_of_scope = False
 
-        message('Pipette identifed at x,y,z='+str(x-x0)+','+str(y-y0)+','+str(z))
+            if valmax < previous_correlation: # completely arbitary here
+                raise CalibrationError('Matching error: the pipette is absent or not focused')
 
-        #    Offset is such that the position is (x,y,z0+z) in the reference system
-        self.r0 = array([x-x0, y-y0, z0 + z]) - dot(self.M, u0) - stager0
+            previous_correlation = valmax
 
-        # Move pipette to center
-        #self.relative_move([0,0,z0+z])
-        #self.wait_until_still()
+            message('Pipette identifed at x,y,z='+str(x-x0)+','+str(y-y0)+','+str(z))
+
+            #    Offset is such that the position is (x,y,z0+z) in the reference system
+            self.r0 = array([x-x0, y-y0, z0 + z]) - dot(self.M, u0) - stager0
+
+            # Move pipette to center
+            self.reference_move([0,0,z0+z])
+            self.wait_until_still()
+
+            # If pipette was outside the scope of the stack, iterate
 
 class CalibratedStage(CalibratedUnit):
     '''
