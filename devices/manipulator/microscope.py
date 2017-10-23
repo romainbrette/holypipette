@@ -104,3 +104,19 @@ class Microscope(Manipulator):
         self.absolute_move(position)
         self.wait_until_still()
         return images
+
+    def save_configuration(self):
+        '''
+        Outputs configuration in a dictionary.
+        '''
+        config = {'up_direction' : self.up_direction,
+                  'floor_Z' : self.floor_Z}
+        return config
+
+    def load_configuration(self, config):
+        '''
+        Loads configuration from dictionary config.
+        Variables not present in the dictionary are untouched.
+        '''
+        self.up_direction = config.get('up_direction', self.up_direction)
+        self.floor_Z = config.get('floor_Z', self.floor_Z)

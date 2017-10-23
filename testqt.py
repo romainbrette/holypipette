@@ -184,6 +184,22 @@ class TestGui(QtWidgets.QMainWindow):
 
         microscope.up_direction = cfg['microscope.up']
 
+    def new_save(self):
+        # Saves configuration
+        print("Saving configuration")
+        cfg = {'stage' : calibrated_stage.save_configuration(),
+               'unit' : calibrated_unit.save_configuration(),
+               'microscope' : microscope.save_configuration()}
+        pickle.dump(cfg, open(config_filename, "wb"))
+
+    def new_load(self):
+        # Loads configuration
+        print("Loading configuration")
+        cfg = pickle.load(open(config_filename, "rb"))
+        microscope.load_configuration(cfg['microscope'])
+        calibrated_stage.load_configuration(cfg['calibrated_stage'])
+        calibrated_unit.load_configuration(cfg['calibrated_unit'])
+
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
         if exposure > 0:
@@ -197,7 +213,7 @@ class TestGui(QtWidgets.QMainWindow):
         event.accept()
 
 
-class Calibrator(QtCore.QObject):
+class Calibrator(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
 
     @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure

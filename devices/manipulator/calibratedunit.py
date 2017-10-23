@@ -579,6 +579,27 @@ class CalibratedUnit(ManipulatorUnit):
             self.reference_move([0, 0, z])
         self.wait_until_still()
 
+    def save_configuration(self):
+        '''
+        Outputs configuration in a dictionary.
+        '''
+        config = {'up_direction' : self.up_direction,
+                  'M' : self.M,
+                  'r0' : self.r0}
+        return config
+
+    def load_configuration(self, config):
+        '''
+        Loads configuration from dictionary config.
+        Variables not present in the dictionary are untouched.
+        '''
+        self.up_direction = config.get('up_direction', self.up_direction)
+        self.M = config.get('M', self.M)
+        if 'M' in config:
+            self.Minv = pinv(self.M)
+            self.calibrated = True
+        self.r0 = config.get('r0', self.r0)
+
 class CalibratedStage(CalibratedUnit):
     '''
     A horizontal stage calibrated to a fixed reference coordinate system.

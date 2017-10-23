@@ -33,10 +33,6 @@
     In fact: move pipette up along X axis until there is no black on one border, or intensity
     disappears quickly. Then move up along Z axis until template matching works.
 
-** Automatic recalibration:
-    move to center
-    iterative template matching, with appropriate cropping
-
 * DLL Path in multiclamp
 * Resistance in status bar
 * Safe move: add withdraw with correct direction
