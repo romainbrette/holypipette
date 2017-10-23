@@ -19,6 +19,7 @@
     2) Move right above
     3) Go down (slowly?)
     save floor Z
+* Paramecium tracking
 
 * Adjust speeds for horizontal moves
 * Motor ranges using Home and Setting Home direction
