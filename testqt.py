@@ -73,7 +73,7 @@ class TestGui(QtWidgets.QMainWindow):
                 ys = y - self.video.size().height()/2
                 # print self.video.size().width(), self.video.size().height()
                 # displayed image is not necessarily the same size as the original camera image
-                scale = 1.0*self.camera.width / self.video.size().width()
+                scale = 1.0*self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
                 ys *= scale
                 #calibrated_stage.reference_relative_move(- array([xs, ys, 0]))
