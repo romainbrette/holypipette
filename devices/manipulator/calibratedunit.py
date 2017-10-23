@@ -501,7 +501,7 @@ class CalibratedUnit(ManipulatorUnit):
         stager0 = self.stage.reference_position()
         self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
 
-    def auto_recalibrate(self, stack = None, x0 = None, y0 = None, message = lambda str: None):
+    def auto_recalibrate(self, stack = None, x0 = None, y0 = None, center = True, message = lambda str: None):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
         The pipette is visually identified using a stack of photos.
@@ -510,6 +510,7 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         stack : stack of photos at different Z positions around focus
         x0, y0 : position of template on screen
+        center : if True, move pipette at the center after recalibration
         message : a function to which messages are passed
         '''
         u0 = self.position()
@@ -536,7 +537,12 @@ class CalibratedUnit(ManipulatorUnit):
         out_of_scope = True
 
         previous_correlation = -1
-        while out_of_scope:
+        totalz = 0 # Total movement in Z
+        while out_of_scope & (abs(totalz)<50.): # no more than 50 micron
+            image = self.camera.snap()
+            image = image[yt - ymargin:yt + template_height + ymargin,
+                    xt - xmargin:xt + template_width + xmargin]
+
             for i, template in enumerate(stack):  # we look for the best matching template
                 xt, yt, val = templatematching(image, template)
                 xt += dx
@@ -549,6 +555,8 @@ class CalibratedUnit(ManipulatorUnit):
                     else:
                         out_of_scope = False
 
+            message('Correlation='+str(valmax))
+
             if valmax < previous_correlation: # completely arbitary here
                 raise CalibrationError('Matching error: the pipette is absent or not focused')
 
@@ -556,14 +564,20 @@ class CalibratedUnit(ManipulatorUnit):
 
             message('Pipette identifed at x,y,z='+str(x-x0)+','+str(y-y0)+','+str(z))
 
-            #    Offset is such that the position is (x,y,z0+z) in the reference system
-            self.r0 = array([x-x0, y-y0, z0 + z]) - dot(self.M, u0) - stager0
-
-            # Move pipette to center
-            self.reference_move([0,0,z0+z])
-            self.wait_until_still()
+            self.microscope.relative_move(z)
+            self.microscope.wait_until_still()
+            totalz+=z
 
             # If pipette was outside the scope of the stack, iterate
+
+        # Offset is such that the position is (x,y,z) in the reference system
+        z = self.microscope.position()
+        self.r0 = array([x - x0, y - y0,z]) - dot(self.M, u0) - stager0
+
+        # Move pipette to center
+        if center:
+            self.reference_move([0, 0, z])
+        self.wait_until_still()
 
 class CalibratedStage(CalibratedUnit):
     '''
