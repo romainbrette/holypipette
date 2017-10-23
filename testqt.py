@@ -71,6 +71,7 @@ class TestGui(QtWidgets.QMainWindow):
                 x, y = event.x(), event.y()
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
+                # print self.video.size().width(), self.video.size().height()
                 # displayed image is not necessarily the same size as the original camera image
                 scale = 1.0*self.camera.width / self.video.size().width()
                 xs *= scale
@@ -316,9 +317,8 @@ class Calibrator(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def do_recalibration(self):
-        print('Starting recalibration....')
+        print('Recalibration....')
         calibrated_unit.recalibrate(message)
-        print('Done')
 
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):

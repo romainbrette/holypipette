@@ -1,4 +1,6 @@
 * Replace wait until still by wait until target reached (with deadline)
+* Detect when devices are not on
+* Refactor automatic patch
 * Calibrate without stage
     axes directions
     move Z down until floor, careful when going back
