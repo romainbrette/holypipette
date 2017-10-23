@@ -139,3 +139,17 @@ class ManipulatorUnit(Manipulator):
         else:
             self.dev.wait_until_still([self.axes[axes]])
         sleep(.05)
+
+    def wait_until_reached(self, position, axes = None, precision = 0.5, timeout = 10):
+        """
+        Waits until position is reached within precision, and raises an error if the
+        target is not reached after the time out, unless the manipulator is still moving.
+
+        Parameters
+        ----------
+        position : target position in micrometer
+        axes : axis number of list of axis numbers
+        precision : precision in micrometer
+        timeout : time out in second
+        """
+        self.dev.wait_until_reached(position, axes, precision, timeout)

@@ -136,6 +136,9 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_F:
                 microscope.floor_Z = microscope.position()
                 print("Floor Z: "+str(microscope.floor_Z))
+            # Go to floor Z (coverslip)
+            elif event.key() == Qt.Key_G:
+                microscope.absolute_move(microscope.floor_Z)
             # Reset camera
             elif event.key() == Qt.Key_F1:
                 self.camera.reset()

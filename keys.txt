@@ -13,7 +13,8 @@ S                       Save configuration
 C                       Calibrate (primary calibration)
 R                       Recalibrate (secondary calibration)
 
-F                       Define coverslip Z
+F                       Define coverslip Z (floor)
+G                       Go to coverslip Z with microscope
 
 F1                      Reset camera (stop/start image acquisition)
 

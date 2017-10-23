@@ -11,7 +11,16 @@ TODO:
 from numpy import array
 import time
 
-__all__ = ['Manipulator']
+__all__ = ['Manipulator','ManipulatorError']
+
+
+class ManipulatorError(Exception):
+    def __init__(self, message = 'Device is not calibrated'):
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
 
 class Manipulator(object):
     def __init__(self):
@@ -109,4 +118,32 @@ class Manipulator(object):
         while array(previous_position != new_position).any():
             previous_position = new_position
             new_position = self.position_group(axes)
+            time.sleep(0.1) # 100 us
+
+    def wait_until_reached(self, position, axes = None, precision = 0.5, timeout = 10):
+        """
+        Waits until position is reached within precision, and raises an error if the
+        target is not reached after the time out, unless the manipulator is still moving.
+
+        Parameters
+        ----------
+        position : target position in micrometer
+        axes : axis number of list of axis numbers
+        precision : precision in micrometer
+        timeout : time out in second
+        """
+        axes = array(axes)
+        position = array(position)
+
+        current_position = position
+        previous_position = current_position
+        t0 = time.time()
+        while (abs(current_position-position)>precision).any():
+            if (time.time()-t0>timeout) & (array(previous_position == current_position).all()):
+                raise ManipulatorError("Time out while waiting for manipulator to reach target position.")
+            previous_position = current_position
+            if len(axes) == 1:
+                current_position = array([self.position(axes[0])])
+            else:
+                current_position = self.position_group(axes)
             time.sleep(0.1) # 100 us
