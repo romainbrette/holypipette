@@ -159,46 +159,18 @@ class TestGui(QtWidgets.QMainWindow):
     def save(self):
         # Saves configuration
         print("Saving configuration")
-        cfg = {'stage.M' : calibrated_stage.M,
-               'stage.r0' : calibrated_stage.r0,
-               'unit.M' : calibrated_unit.M,
-               'unit.r0' : calibrated_unit.r0,
-               'microscope.up' : microscope.up_direction,
-               'unit.up' : calibrated_unit.up_direction}
+        cfg = {'stage' : calibrated_stage.save_configuration(),
+               'unit' : calibrated_unit.save_configuration(),
+               'microscope' : microscope.save_configuration()}
         pickle.dump(cfg, open(config_filename, "wb"))
 
     def load(self):
         # Loads configuration
         print("Loading configuration")
         cfg = pickle.load(open(config_filename, "rb"))
-        calibrated_stage.M = cfg['stage.M']
-        calibrated_stage.Minv = pinv(calibrated_stage.M)
-        calibrated_stage.r0 = cfg['stage.r0']
-        calibrated_stage.calibrated = True
-
-        calibrated_unit.M = cfg['unit.M']
-        calibrated_unit.Minv = pinv(calibrated_unit.M)
-        calibrated_unit.r0 = cfg['unit.r0']
-        calibrated_unit.calibrated = True
-        calibrated_unit.up_direction = cfg['unit.up']
-
-        microscope.up_direction = cfg['microscope.up']
-
-    def new_save(self):
-        # Saves configuration
-        print("Saving configuration")
-        cfg = {'stage' : calibrated_stage.save_configuration(),
-               'unit' : calibrated_unit.save_configuration(),
-               'microscope' : microscope.save_configuration()}
-        pickle.dump(cfg, open(config_filename, "wb"))
-
-    def new_load(self):
-        # Loads configuration
-        print("Loading configuration")
-        cfg = pickle.load(open(config_filename, "rb"))
         microscope.load_configuration(cfg['microscope'])
-        calibrated_stage.load_configuration(cfg['calibrated_stage'])
-        calibrated_unit.load_configuration(cfg['calibrated_unit'])
+        calibrated_stage.load_configuration(cfg['stage'])
+        calibrated_unit.load_configuration(cfg['unit'])
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()

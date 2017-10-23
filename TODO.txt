@@ -1,6 +1,5 @@
 * Move: take photos, move and correct?
 * Stack of photos: logarithmic? (dictionary) (actually not necessary: move microscope up)
-* Load/save configuration as dictionaries
 * Refactor taking stack of photos
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
