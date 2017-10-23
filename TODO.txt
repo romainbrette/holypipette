@@ -30,8 +30,10 @@
     In fact: move pipette up along X axis until there is no black on one border, or intensity
     disappears quickly. Then move up along Z axis until template matching works.
 
-** Semiautomatic recalibration:
-    pipette is put in approximate focus, then template matching (requires storing photos of pipette)
+** Automatic recalibration:
+    move to center
+    iterative template matching, with appropriate cropping
+
 * DLL Path in multiclamp
 * Resistance in status bar
 * Safe move: add withdraw with correct direction

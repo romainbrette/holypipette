@@ -509,6 +509,7 @@ class CalibratedUnit(ManipulatorUnit):
         Parameters
         ----------
         stack : stack of photos at different Z positions around focus
+        x0, y0 : position of template on screen
         message : a function to which messages are passed
         '''
         u0 = self.position()
@@ -517,10 +518,25 @@ class CalibratedUnit(ManipulatorUnit):
 
         image = self.camera.snap()
 
+        # Error margins for position estimation
+        template_height, template_width = stack[stack_depth].shape
+        xmargin = template_width/4
+        ymargin = template_height/4
+
+        # First template matching to estimate pipette position on screen
+        xt, yt, _ = templatematching(image, stack[stack_depth])
+
+        # Crop image around estimated position
+        image = image[yt - ymargin:yt + template_height + ymargin,
+                xt - xmargin:xt + template_width + xmargin]
+        dx = xt - xmargin
+        dy = yt - ymargin
+
         valmax = -1
         for i, template in enumerate(stack):  # we look for the best matching template
             xt, yt, val = templatematching(image, template)
-            print(val)
+            xt += dx
+            yt += dy
             if val > valmax:
                 valmax = val
                 x, y, z = xt, yt, stack_depth - i  # note the sign for z
@@ -532,6 +548,10 @@ class CalibratedUnit(ManipulatorUnit):
 
         #    Offset is such that the position is (x,y,z0+z) in the reference system
         self.r0 = array([x-x0, y-y0, z0 + z]) - dot(self.M, u0) - stager0
+
+        # Move pipette to center
+        #self.relative_move([0,0,z0+z])
+        #self.wait_until_still()
 
 class CalibratedStage(CalibratedUnit):
     '''
