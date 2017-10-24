@@ -4,6 +4,7 @@
 * Check compensation movements and quality (matrix)
 * Manipulation folder?
 * Should parameters be a dictionary instead?
+* Should we move the pipette outside the autopatch algo?
 
 * Move: take photos, move and correct?
 * Stack of photos: logarithmic? (dictionary) (actually not necessary: move microscope up)

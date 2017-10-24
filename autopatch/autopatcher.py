@@ -2,6 +2,7 @@
 Automatic patch-clamp algorithm
 '''
 import time
+from numpy import array
 
 __all__ = ['AutoPatcher']
 
@@ -16,11 +17,9 @@ class AutoPatcher(object):
         self.patcher = patcher
         self.pressure = pressure
         self.calibrated_unit = calibrated_unit
-        self.unit = self.calibrated_unit.dev
         self.microscope = microscope
 
-    def run(self):  # Start the patch-clamp procedure
-        print("Starting patch-clamp")
+    def run(self, move_position):  # Start the patch-clamp procedure
         self.patcher.start()
         # Pressure level 1
         self.pressure.set_pressure(param_pressure_near)
@@ -41,7 +40,7 @@ class AutoPatcher(object):
             return
 
         # Move pipette to target
-            self.calibrated_unit.safe_move(self.move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance)
+        self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance)
 
         # Check resistance again
         oldR = R
@@ -65,8 +64,8 @@ class AutoPatcher(object):
         for _ in range(param_max_distance):  # move 15 um down
             # move by 1 um down
             # Cleaner: use reference relative move
-            self.unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
-            self.unit.wait_until_still(2)
+            self.calibrated_unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
+            self.calibrated_unit.wait_until_still(2)
             time.sleep(1)
             oldR = R
             R = self.patcher.resistance()
@@ -125,4 +124,3 @@ class AutoPatcher(object):
         print("Successful break-in, R = " + str(self.patcher.resistance()))
 
         self.patcher.stop()
-        print("Done")

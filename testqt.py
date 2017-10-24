@@ -12,12 +12,13 @@ from os.path import expanduser
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 from numpy import array, arange
-from setup_script import *
 
 from devices import *
 from gui import *
 from vision import *
 from autopatch import *
+
+from setup_script import *
 
 home = expanduser("~")
 config_filename = home+'/config_manipulator.cfg'
@@ -186,9 +187,12 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
 
     @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure
-        print("Starting patch-clamp")
-        autopatcher.run()
-        print("Done")
+        try:
+            print("Starting patch-clamp")
+            autopatcher.run(self.move_position)
+            print("Done")
+        except Exception:
+            print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
     def move_pipette(self):
