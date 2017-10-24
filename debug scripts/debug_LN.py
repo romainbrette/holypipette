@@ -123,18 +123,9 @@ class TestGui(QtWidgets.QMainWindow):
         # Loads configuration
         print("Loading configuration")
         cfg = pickle.load(open(config_filename, "rb"))
-        calibrated_stage.M = cfg['stage.M']
-        calibrated_stage.Minv = pinv(calibrated_stage.M)
-        calibrated_stage.r0 = cfg['stage.r0']
-        calibrated_stage.calibrated = True
-
-        calibrated_unit.M = cfg['unit.M']
-        calibrated_unit.Minv = pinv(calibrated_unit.M)
-        calibrated_unit.r0 = cfg['unit.r0']
-        calibrated_unit.calibrated = True
-        calibrated_unit.up_direction = cfg['unit.up']
-
-        microscope.up_direction = cfg['microscope.up']
+        microscope.load_configuration(cfg['microscope'])
+        calibrated_stage.load_configuration(cfg['stage'])
+        calibrated_unit.load_configuration(cfg['unit'])
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
