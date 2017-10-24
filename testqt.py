@@ -53,7 +53,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
-        self.calibrator = Calibrator()
+        self.calibrator = PipetteHandler()
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
@@ -73,7 +73,6 @@ class TestGui(QtWidgets.QMainWindow):
                 x, y = event.x(), event.y()
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
-                # print self.video.size().width(), self.video.size().height()
                 # displayed image is not necessarily the same size as the original camera image
                 scale = 1.0*self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
@@ -183,7 +182,7 @@ class TestGui(QtWidgets.QMainWindow):
         event.accept()
 
 
-class Calibrator(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
+class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
 
     @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure
@@ -226,8 +225,6 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
             print("Done")
         except Exception:
             print(traceback.format_exc())
-        #except CalibrationError:
-        #    print('Failed')
 
     @QtCore.pyqtSlot()
     def do_motor_ranges(self):
@@ -253,9 +250,6 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
         except Exception:
             print(traceback.format_exc())
 
-#u0 = unit.position()
-#u0_stage = stage.position()
-#z0 = microscope.position()
 
 def message(msg):
     print msg
@@ -271,7 +265,4 @@ gui = TestGui(camera)
 gui.show()
 ret = app.exec_()
 
-#unit.absolute_move(u0)
-#stage.absolute_move(u0_stage)
-#microscope.absolute_move(z0)
 sys.exit(ret)

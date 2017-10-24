@@ -1,12 +1,13 @@
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements
-* Check compensation movements and quality (matrix)
-* Manipulation folder?
+* Refactor calibration: Calibrator; calibrated_unit does not depend on camera
+    => manipulator_unit could then absorb calibrated_unit
+* Refactor calibration: Manipulation folder?
 * Should parameters be a dictionary instead?
 * Should we move the pipette outside the autopatch algo?
 * Refactor automatic patch: cut the run in pieces?
 
+* Check compensation movements and quality (matrix)
 * Move: take photos, move and correct?
-* Stack of photos: logarithmic? (dictionary) (actually not necessary: move microscope up)
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
 * Calibrate without stage
