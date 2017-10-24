@@ -222,6 +222,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.take_photos()
         stack = self.photos
         x0,y0 = self.photo_x0,self.photo_y0
+        pipette_position = self.pipette_position
 
         image = self.camera.snap()
 
@@ -239,28 +240,59 @@ class CalibratedUnit(ManipulatorUnit):
         # Store initial position of unit
         u0 = self.position()
 
+        # Borders
+        width, height = self.camera.width, self.camera.height
+        # We use a margin of 1/4 of the template
+        left_border = -(width/2-template_width*3./4)
+        right_border = (width/2-template_width*3./4)
+        top_border = -(height/2-template_height*3./4)
+        bottom_border = (height/2-template_height*3./4)
+
         try:
             for axis in range(len(self.axes)):
-                distance = 2.  # um
+                distance = 2.  # um (initial distance) # could up to stack_depth
                 ucurrent = 0  # current position of the axis relative to u0
                 zcurrent = 0
+                deltau = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(7): # up to 128 um
+                for k in range(10): # up to 128 um
                     message('Distance '+str(distance))
+                    deltau[axis] = distance
+
+                    # Estimate target position on camera
+                    estimate = self.M[:,axis] * distance
+                    xestimate, yestimate, zestimate = estimate
+                    xestimate, yestimate = int(xestimate), int(yestimate)
+
+                    # Check whether we might be out of field
+                    if (xestimate<left_border) | (xestimate>right_border) | \
+                       (yestimate<top_border) | (yestimate>bottom_border):
+                        message('Estimate move is out of field')
+                        break
+
+                    # Check whether we might reach the floor (with 10% accuracy)
+                    if self.microscope.floor_Z is not None:
+                        if (zestimate - self.microscope.floor_Z) * self.microscope.up_direction < abs(distance) * .1:
+                            message('We reached the coverslip, aborting.')
+                            break
+
+                    # Check whether unit position is reachable
+                    if self.min is not None:
+                        if (u0 + deltau < self.min).any() | (u0 + deltau > self.max).any():
+                            message('Pipette cannot reach next position, aborting.')
+                            break
+
                     # 2) Move axis by a small displacement
                     self.relative_move(distance-ucurrent, axis)
+                    self.wait_until_still(axis)
                     ucurrent = distance
                     #self.absolute_move(u0[axis]+distance, axis)
 
                     # 3) Move focal plane by estimated amount (initially 0)
-                    estimate = self.M[:,axis] * distance
-                    xestimate, yestimate, zestimate = estimate
-                    xestimate, yestimate = int(xestimate), int(yestimate)
                     #self.microscope.absolute_move(zestimate-z0)
                     self.microscope.relative_move(zestimate-zcurrent)
                     zcurrent = zestimate
                     self.microscope.wait_until_still()
-                    self.wait_until_still(axis)
 
                     # Check microscope and axis positions
                     if abs(z0 + zcurrent - self.microscope.position()) > position_tolerance:
@@ -294,10 +326,31 @@ class CalibratedUnit(ManipulatorUnit):
                     self.M[:,axis] = array([x-x0, y-y0, z+zestimate])/distance
                     message('Matrix column:'+str(self.M[:,axis]))
 
+                    # 5bis) Determine pipette up direction
+                    # We only need to it once, and we do it when the displacement is large enough
+                    if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
+                        positive_move = self.M[:, 0]
+                        self.up_direction[0] = up_direction(pipette_position,
+                                                            -positive_move * sign(
+                                                                distance))  # since we did a negative move
+                        message('Axis 0 up direction: ' + str(self.up_direction[0]))
+                        # Now determine microscope up direction
+                        self.microscope.up_direction = sign(self.M[2, 0] * self.up_direction[0])
+                        message('Microscope up direction: ' + str(self.microscope.up_direction))
+                    elif k == 4:
+                        # For other axes, we use microscope up direction
+                        # If microscope up direction is provided, this is what we use too instead of guessing
+                        s = sign(self.M[2, axis] * self.microscope.up_direction)
+                        if s != 0:
+                            self.up_direction[axis] = s
+                        message('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
+                    # If we were actually going up, then we should now invert the direction
+                    if distance * self.up_direction[axis] > 0:
+                        message("Pipette was going up, now inverting direction")
+                        distance = -distance
+
                     # 6) Multiply displacement by 2, and back to 2)
                     distance *=2
-
-                # 7) Stop when predicted move is out of screen
 
                 # Move back (not strictly necessary)
                 self.relative_move(-ucurrent, axis)
@@ -320,8 +373,9 @@ class CalibratedUnit(ManipulatorUnit):
             self.calibrated = True
 
         finally: # If something fails, move back to original position
-            self.absolute_move(u0)
             self.microscope.absolute_move(z0)
+            self.microscope.wait_until_still()
+            self.absolute_move(u0)
 
     def calibrate_with_stage(self, message = lambda str: None):
         '''
@@ -341,6 +395,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.take_photos()
         stack = self.photos
         x0,y0 = self.photo_x0,self.photo_y0
+        pipette_position = self.pipette_position
 
         image = self.camera.snap()
 
