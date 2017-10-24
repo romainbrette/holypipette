@@ -374,6 +374,60 @@ class MultiClampChannel(object):
             self.check_error(fail=True)
         MultiClampChannel.selected_device = self
 
+    def start_patch(self, pulse_amplitude=1e-2, pulse_frequency=1e-2): # Not clear what the units are for frequency
+        '''
+        Initialize the patch clamp procedure (in bath)
+        '''
+        # Set in voltage clamp
+        self.voltage_clamp()
+
+        # Disable resistance metering (because of pulses)
+        self.switch_resistance_meter(False)
+
+        # Disable pulses
+        self.switch_pulses(False)
+
+        # Compensate pipette
+        self.auto_slow_compensation()
+        self.auto_fast_compensation()
+
+        # Set pulse frequency and amplitude
+        self.set_pulses_amplitude(pulse_amplitude)
+        self.set_pulses_frequency(pulse_frequency)
+
+        # Set zap duration
+        self.set_zap_duration(1)  # ms
+
+        # Automatic offset
+        self.auto_pipette_offset()
+
+        # Set holding potential
+        self.switch_holding(True)
+        self.set_holding(0.)
+
+        # Enable resistance metering
+        self.switch_resistance_meter(True)
+
+    def resistance(self):
+        '''
+        Returns resistance
+        '''
+        # Get resistance (assuming resistance metering is on)
+        return self.get_meter_value()
+
+    def stop_patch(self):
+        '''
+        Stops patch clamp procedure
+        '''
+        # Disable resistance metering
+        self.switch_resistance_meter(False)
+        # Disable holding
+        self.switch_holding(False)
+        # Disable pulses
+        self.switch_pulses(False)
+        # Mode I=0
+        self.null_current()
+
     # **** Signal settings ****
 
     @needs_select

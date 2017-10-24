@@ -266,7 +266,7 @@ def message(msg):
 amplifier = MultiClampChannel()
 patcher = MulticlampPatcher(amplifier)
 pressure = OB1()
-autopatcher = AutoPatcher(amplifier, patcher, pressure, calibrated_unit, microscope)
+autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None
 
