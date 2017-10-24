@@ -189,8 +189,10 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
     def do_patch(self): # Start the patch-clamp procedure
         try:
             print("Starting patch-clamp")
-            autopatcher.run(self.move_position)
+            autopatcher.run(self.move_position, message)
             print("Done")
+        except AutopatchError as e:
+            print(str(e))
         except Exception:
             print(traceback.format_exc())
 
