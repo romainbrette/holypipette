@@ -1,4 +1,3 @@
-* Calibrate without stage: test
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements
 * Refactor calibration: Calibrator; calibrated_unit does not depend on camera
     => manipulator_unit could then absorb calibrated_unit
