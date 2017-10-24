@@ -247,15 +247,12 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     def take_photos(self):
         global stack,x0,y0
 
+        print("Taking photos")
         try:
-            print("Taking photos")
-            try:
-                calibrated_unit.take_photos(message)
-            except Exception:
-                print(traceback.format_exc())
-            print("Done")
+            calibrated_unit.take_photos(message)
         except Exception:
             print(traceback.format_exc())
+        print("Done")
 
 
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker

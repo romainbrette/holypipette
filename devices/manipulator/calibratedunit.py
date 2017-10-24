@@ -187,6 +187,15 @@ class CalibratedUnit(ManipulatorUnit):
         self.photo_x0 = x0
         self.photo_y0 = y0
 
+    def pixel_per_um(self):
+        '''
+        Returns the objective magnification in pixel per um, calculated for each manipulator axis.
+        '''
+        p = []
+        for axis in range(len(self.axes)):
+            p.append((self.M[0,axis]**2 + self.M[1,axis]**2)/(1-self.M[2,axis]))
+        return p
+
     def calibrate(self, message = lambda str: None):
         '''
         Automatic calibration of the manipulator using the camera.
@@ -536,6 +545,8 @@ class CalibratedUnit(ManipulatorUnit):
                     raise CalibrationError('Axis has not returned to initial position.')
                 if norm(stageu0 - self.stage.position()) > position_tolerance:
                     raise CalibrationError('Stage has not returned to initial position.')
+
+                # Fix (measure on screen from autorecalibrate and move stage/pipette)
 
             # Compute the (pseudo-)inverse
             self.Minv = pinv(self.M)
