@@ -1,26 +1,23 @@
 '''
 This is a test GUI, to test the functionality.
 '''
-from devices import *
-from vision import *
-from gui import *
-import sys
-import cv2
-import time
-from numpy import array, arange
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import Qt
-import traceback
-import pickle
-from numpy.linalg import pinv
 import inspect
+import pickle
 import signal
-
-# This is a setup script that is specific of the rig
-from setup_script import *
+import sys
+import time
+import traceback
 from os.path import expanduser
 
-from parameters import *
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import Qt
+from numpy import array, arange
+from setup_script import *
+
+from devices import *
+from gui import *
+from vision import *
+from autopatch import *
 
 home = expanduser("~")
 config_filename = home+'/config_manipulator.cfg'
@@ -190,110 +187,7 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
     @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure
         print("Starting patch-clamp")
-        patcher.start()
-        # Pressure level 1
-        pressure.set_pressure(param_pressure_near)
-
-        # Wait for a few seconds
-        time.sleep(4.)
-
-        # Check initial resistance
-        R = patcher.resistance()
-        print("Resistance:" + str(R))
-        if R<param_Rmin:
-            print("Resistance is too low (broken tip?)")
-            patcher.stop()
-            return
-        elif R>param_Rmax:
-            print("Resistance is too high (obstructed?)")
-            patcher.stop()
-            return
-
-        # Move pipette to target
-        calibrated_unit.safe_move(self.move_position + microscope.up_direction*array([0,0,1.])*param_cell_distance)
-
-        # Check resistance again
-        oldR = R
-        R = patcher.resistance()
-        if abs(R - oldR) > param_max_R_increase:
-            print("Pipette is obstructed; R = "+str(R))
-            patcher.stop()
-            return
-
-        # Release pressure
-        print("Releasing pressure")
-        pressure.set_pressure(0)
-
-        # Pipette offset
-        amplifier.auto_pipette_offset()
-        time.sleep(2) # why?
-
-        # Approach and make the seal
-        print("Approaching the cell")
-        success = False
-        for _ in range(param_max_distance): # move 15 um down
-            # move by 1 um down
-            # Cleaner: use reference relative move
-            unit.relative_move(1, axis=2) #*calibrated_unit.up_position[2]
-            unit.wait_until_still(2)
-            time.sleep(1)
-            oldR = R
-            R = patcher.resistance()
-            print("R = "+str(patcher.resistance()))
-            if R>oldR*(1+param_cell_R_increase): # R increases: near cell?
-                time.sleep(10)
-                if R>oldR*(1+param_cell_R_increase):
-                    # Still higher, we are near the cell
-                    print("Sealing, R = "+str(patcher.resistance()))
-                    pressure.set_pressure(param_pressure_sealing)
-                    t0 = time.time()
-                    t = t0
-                    R = patcher.resistance()
-                    while (R<param_gigaseal_R) | (t-t0<param_seal_min_time):
-                        # Wait at least 15s and until we get a Gigaseal
-                        t = time.time()
-                        if t-t0<param_Vramp_duration:
-                            # Ramp to -70 mV in 10 s (default)
-                            amplifier.set_holding(param_Vramp_amplitude*(t-t0)/param_Vramp_duration)
-                        if t-t0>=param_seal_deadline:
-                            # No seal in 90 s
-                            print("Seal unsuccessful")
-                            patcher.stop()
-                            return
-                        R = patcher.resistance()
-                    success = True
-                    break
-        pressure.set_pressure(0)
-        if not success:
-            print("Seal unsuccessful")
-            patcher.stop()
-            return
-
-        print("Seal successful, R = "+str(patcher.resistance()))
-
-        # Go whole-cell
-        print("Breaking in")
-        trials = 0
-        R = patcher.resistance()
-        if R<param_gigaseal_R:
-            print("Seal lost")
-            patcher.stop()
-            return
-
-        while patcher.resistance()>param_max_cell_R: # Success when resistance goes below 300 MOhm
-            if trials==param_breakin_trials:
-                print("Break-in unsuccessful")
-                patcher.stop()
-                return
-            if param_zap:
-                amplifier.zap()
-            pressure.ramp(amplitude=param_pressure_ramp_amplitude, duration=param_pressure_ramp_duration)
-            time.sleep(1.3)
-            trials+=1
-
-        print("Successful break-in, R = "+str(patcher.resistance()))
-
-        patcher.stop()
+        autopatcher.run()
         print("Done")
 
     @QtCore.pyqtSlot()
@@ -368,6 +262,7 @@ def message(msg):
 amplifier = MultiClampChannel()
 patcher = MulticlampPatcher(amplifier)
 pressure = OB1()
+autopatcher = AutoPatcher(amplifier, patcher, pressure, calibrated_unit, microscope)
 stack = None
 x0, y0 = None, None
 
