@@ -222,7 +222,7 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
     def do_auto_recalibration(self):
         print('Automatic recalibration....')
         try:
-            calibrated_unit.auto_recalibrate(message=message, stack=stack, x0=x0, y0=y0)
+            calibrated_unit.auto_recalibrate(message=message)
             print("Done")
         except Exception:
             print(traceback.format_exc())

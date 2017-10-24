@@ -513,7 +513,7 @@ class CalibratedUnit(ManipulatorUnit):
         stager0 = self.stage.reference_position()
         self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
 
-    def auto_recalibrate(self, stack = None, x0 = None, y0 = None, center = True, message = lambda str: None):
+    def auto_recalibrate(self, center = True, message = lambda str: None):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
         The pipette is visually identified using a stack of photos.
@@ -525,8 +525,10 @@ class CalibratedUnit(ManipulatorUnit):
         center : if True, move pipette at the center after recalibration
         message : a function to which messages are passed
         '''
+        stack = self.photos
+        x0,y0 = self.photo_x0,self.photo_y0
+
         u0 = self.position()
-        z0 = self.microscope.position()
         stager0 = self.stage.reference_position()
 
         image = self.camera.snap()
@@ -588,7 +590,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Move pipette to center
         if center:
-            self.reference_move([0, 0, z])
+            self.reference_move(array([0., 0., z]))
         self.wait_until_still()
 
     def save_configuration(self):
@@ -618,8 +620,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.r0 = config.get('r0', self.r0)
         self.pipette_position = config.get('pipette_position', self.pipette_position)
         self.photos = config.get('photos', self.photos)
-        self.photo_x0 = config.get('r0', self.photo_x0)
-        self.photo_y0 = config.get('r0', self.photo_y0)
+        self.photo_x0 = config.get('photo_x0', self.photo_x0)
+        self.photo_y0 = config.get('photo_y0', self.photo_y0)
 
 class CalibratedStage(CalibratedUnit):
     '''
