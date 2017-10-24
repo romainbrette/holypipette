@@ -8,8 +8,9 @@ import sys
 import traceback
 from os.path import expanduser
 
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import Qt
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import Qt, QPoint
+
 from numpy import array, arange
 
 from devices import *
@@ -51,7 +52,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         self.camera = camera
         self.update_status_bar()
-        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback)
+        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback,display_edit=image_edit)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
         self.calibrator = PipetteHandler()
@@ -151,6 +152,11 @@ class TestGui(QtWidgets.QMainWindow):
             # Take photos around current point, assuming tip in focus
             elif event.key() == Qt.Key_P:
                 self.photo_signal.emit()
+            # Track paramecium
+            elif event.key() == Qt.Key_T:
+                image_editor.show_paramecium = not image_editor.show_paramecium
+                if image_editor.show_paramecium:
+                    print('Paramecium tracking is on')
         except Exception:
             print(traceback.format_exc())
 
@@ -252,8 +258,33 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
 
 
+class ImageEditor(object): # adds stuff on the image, including paramecium tracker
+    def __init__(self):
+        self.show_paramecium = False
+        self.x = None
+        self.y = None
+
+    def point_paramecium(self, img):
+        painter = QtGui.QPainter(img)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.drawEllipse(QPoint(self.x, self.y), 50, 50)
+        painter.end()
+
+    def edit_image(self, img):
+        if self.show_paramecium:
+            self.point_paramecium(img)
+        else:
+            draw_cross(img)
+
+image_editor = ImageEditor()
+
 def message(msg):
     print msg
+
+def image_edit(img):
+    image_editor.edit_image(img)
 
 amplifier = MultiClampChannel()
 pressure = OB1()

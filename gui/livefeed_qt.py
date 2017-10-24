@@ -6,7 +6,7 @@ import numpy as np
 
 from devices.camera.umanagercamera import Lumenera
 
-__all__ = ['LiveFeedQt']
+__all__ = ['LiveFeedQt', 'draw_cross']
 
 def draw_cross(pixmap):
     painter = QtGui.QPainter(pixmap)
