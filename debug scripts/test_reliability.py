@@ -1,7 +1,8 @@
 '''
 Tests the reliability of pattern matching.
-
 Apparently precision is a pixel in x,y.
+
+TODO: same thing, but with a photo stack
 '''
 from devices import *
 from vision import *
