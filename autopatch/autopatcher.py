@@ -48,6 +48,7 @@ class AutoPatcher(object):
 
             # Move pipette to target
             self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance)
+            self.calibrated_unit.wait_until_still()
 
             # Check resistance again
             oldR = R
@@ -123,3 +124,4 @@ class AutoPatcher(object):
 
         finally:
             self.amplifier.stop_patch()
+            self.pressure.set_pressure(param_pressure_near)
