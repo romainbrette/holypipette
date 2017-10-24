@@ -17,7 +17,7 @@ from devices import *
 from gui import *
 from vision import *
 from autopatch import *
-
+import cv2
 
 import time
 from setup_script import *
@@ -52,7 +52,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         self.camera = camera
         self.update_status_bar()
-        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback,display_edit=image_edit)
+        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback,image_edit=image_edit)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
         self.calibrator = PipetteHandler()
@@ -261,22 +261,17 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
         self.show_paramecium = False
-        self.x = None
-        self.y = None
 
     def point_paramecium(self, img):
-        painter = QtGui.QPainter(img)
-        pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
-        pen.setWidth(2)
-        painter.setPen(pen)
-        painter.drawEllipse(QPoint(self.x, self.y), 50, 50)
-        painter.end()
+        x,y = where_is_paramecium(img)
+        if x is not None:
+            cv2.circle(img, (x,y), 50, (0, 0, 255))
+        return img
 
     def edit_image(self, img):
         if self.show_paramecium:
-            self.point_paramecium(img)
-        else:
-            draw_cross(img)
+            img = self.point_paramecium(img)
+        return img
 
 image_editor = ImageEditor()
 
@@ -284,7 +279,7 @@ def message(msg):
     print msg
 
 def image_edit(img):
-    image_editor.edit_image(img)
+    return image_editor.edit_image(img)
 
 amplifier = MultiClampChannel()
 pressure = OB1()
