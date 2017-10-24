@@ -245,15 +245,10 @@ class Calibrator(QtCore.QObject): # This could be more general, for each pipette
 
         try:
             print("Taking photos")
-            # Store current position
-            pipette_position = pipette_cardinal(crop_center(camera.snap()))
-            z0 = microscope.position()
-            z = z0+arange(-stack_depth,stack_depth+1) # +- 5 um around current position
-            image = camera.snap()
-            stack = microscope.stack(camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
-            time.sleep(0.5)
-            image = camera.snap()
-            x0, y0, _ = templatematching(image, stack[stack_depth])
+            try:
+                calibrated_unit.take_photos(message)
+            except Exception:
+                print(traceback.format_exc())
             print("Done")
         except Exception:
             print(traceback.format_exc())

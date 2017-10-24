@@ -76,6 +76,11 @@ class CalibratedUnit(ManipulatorUnit):
         self.calibrated = False
         self.up_direction = [-1 for _ in range(len(unit.axes))] # Default up direction, determined during calibration
 
+        self.pipette_position = None
+        self.photos = None
+        self.photo_x0 = None
+        self.photo_y0 = None
+
         # Matrices for passing to the camera/microscope system
         self.M = zeros((3,len(unit.axes))) # unit to camera
         self.Minv = zeros((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
@@ -159,6 +164,29 @@ class CalibratedUnit(ManipulatorUnit):
         # Final move
         self.reference_move(r - withdraw * p) # Or relative move in manipulator coordinates, first axis (faster)
 
+    def take_photos(self, message = lambda str: None):
+        '''
+        Take photos of the pipette. It is assumed that the pipette is centered and in focus.
+        '''
+        self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
+        message("Pipette cardinal position: "+str(self.pipette_position))
+
+        z0 = self.microscope.position()
+        z = z0 + arange(-stack_depth, stack_depth + 1)  # +- stack_depth um around current position
+        stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position))
+        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
+
+        # Check microscope position
+        if abs(z0-self.microscope.position())>position_tolerance:
+            raise CalibrationError('Microscope has not returned to its initial position.')
+        sleep(sleep_time)
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, stack[stack_depth])
+
+        self.photos = stack
+        self.photo_x0 = x0
+        self.photo_y0 = y0
+
     def calibrate(self, message = lambda str: None):
         '''
         Automatic calibration of the manipulator using the camera.
@@ -186,25 +214,17 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
-        # 0) Determine pipette cardinal position (N, S, E, W etc)
-        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
-        message("Pipette cardinal position: "+str(pipette_position))
-
-        # 1) Take a stack of photos on different focal planes, spaced by 1 um
         # Store initial position
         z0 = self.microscope.position()
-        z = z0+arange(-stack_depth,stack_depth+1)
-        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
-        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
-        # Check microscope position
-        if abs(z0-self.microscope.position())>position_tolerance:
-            raise CalibrationError('Microscope has not returned to its initial position.')
+        # 0) Determine pipette cardinal position (N, S, E, W etc)
+        # 1) Take a stack of photos on different focal planes, spaced by 1 um
+        self.take_photos()
+        stack = self.photos
+        x0,y0 = self.photo_x0,self.photo_y0
 
-        # Initial position of template in image
-        sleep(sleep_time)
         image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[stack_depth])
+
         # Error margins for position estimation
         template_height, template_width = stack[stack_depth].shape
         xmargin = template_width/4
@@ -313,25 +333,17 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
-        # 0) Determine pipette cardinal position (N, S, E, W etc)
-        pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
-        message("Pipette cardinal position: "+str(pipette_position))
-
-        # 1) Take a stack of photos on different focal planes, spaced by 1 um
-        # Store current position
+        # Store initial position
         z0 = self.microscope.position()
-        z = z0+arange(-stack_depth,stack_depth+1) # +- 5 um around current position
-        stack = self.microscope.stack(self.camera, z, preprocessing = lambda img:crop_cardinal(crop_center(img),pipette_position))
-        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
-        # Check microscope position
-        if abs(z0-self.microscope.position())>position_tolerance:
-            raise CalibrationError('Microscope has not returned to its initial position.')
+        # 0) Determine pipette cardinal position (N, S, E, W etc)
+        # 1) Take a stack of photos on different focal planes, spaced by 1 um
+        self.take_photos()
+        stack = self.photos
+        x0,y0 = self.photo_x0,self.photo_y0
 
-        # Initial position of template in image
-        sleep(sleep_time)
         image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[stack_depth])
+
         # Error margins for position estimation
         template_height, template_width = stack[stack_depth].shape
         xmargin = template_width/4
@@ -585,7 +597,12 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         config = {'up_direction' : self.up_direction,
                   'M' : self.M,
-                  'r0' : self.r0}
+                  'r0' : self.r0,
+                  'pipette_position' : self.pipette_position,
+                  'photos' : self.photos,
+                  'photo_x0' : self.photo_x0,
+                  'photo_y0' : self.photo_y0}
+
         return config
 
     def load_configuration(self, config):
@@ -599,6 +616,10 @@ class CalibratedUnit(ManipulatorUnit):
             self.Minv = pinv(self.M)
             self.calibrated = True
         self.r0 = config.get('r0', self.r0)
+        self.pipette_position = config.get('pipette_position', self.pipette_position)
+        self.photos = config.get('photos', self.photos)
+        self.photo_x0 = config.get('r0', self.photo_x0)
+        self.photo_y0 = config.get('r0', self.photo_y0)
 
 class CalibratedStage(CalibratedUnit):
     '''
