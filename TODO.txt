@@ -1,16 +1,18 @@
+* Refactor automatic patch
+* Refactor calibration: calibrate => calibrate without stage, then compensation movements
+* Refactor taking stack of photos
+* Check compensation movements and quality (matrix)
+
+
 * Move: take photos, move and correct?
 * Stack of photos: logarithmic? (dictionary) (actually not necessary: move microscope up)
-* Refactor taking stack of photos
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
-* Refactor automatic patch
 * Calibrate without stage
     axes directions
     move Z down until floor, careful when going back
     stop when out of screen
-* Refactor calibration: calibrate => calibrate without stage, then compensation movements
-* Check compensation movements (matrix)
-* Check whether best match is with the Z border (+- 8)
+* In calibration: check whether best match is with the Z border (+- 8) => error
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * Paramecium stuff
