@@ -196,8 +196,7 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
-        if not self.stage.calibrated:
-            self.stage.calibrate(message=message)
+        self.stage.calibrate(message=message)
 
         if self.fixed:
             self.calibrate_without_stage(message)
@@ -219,7 +218,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
-        self.take_photos()
+        self.take_photos(message)
         stack = self.photos
         x0,y0 = self.photo_x0,self.photo_y0
         pipette_position = self.pipette_position
@@ -392,7 +391,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # 0) Determine pipette cardinal position (N, S, E, W etc)
         # 1) Take a stack of photos on different focal planes, spaced by 1 um
-        self.take_photos()
+        self.take_photos(message)
         stack = self.photos
         x0,y0 = self.photo_x0,self.photo_y0
         pipette_position = self.pipette_position

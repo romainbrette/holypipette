@@ -5,7 +5,6 @@ import inspect
 import pickle
 import signal
 import sys
-import time
 import traceback
 from os.path import expanduser
 
@@ -18,6 +17,8 @@ from gui import *
 from vision import *
 from autopatch import *
 
+
+import time
 from setup_script import *
 
 home = expanduser("~")
@@ -202,14 +203,14 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def do_calibration(self):
         print('Starting calibration....')
-        t1 = time.time()
         try:
-            calibrated_unit.calibrate(message)
+            t1 = time.time()
+            calibrated_unit.calibrate_without_stage(message)
             #calibrated_stage.calibrate()
+            t2 = time.time()
+            print t2 - t1, 's'
         except Exception:
             print(traceback.format_exc())
-        t2 = time.time()
-        print t2 - t1, 's'
         print('Done')
 
     @QtCore.pyqtSlot()
