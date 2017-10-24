@@ -238,6 +238,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Store initial position of unit
         u0 = self.position()
+        stager0 = self.stage.reference_position()
 
         # Borders
         width, height = self.camera.width, self.camera.height
@@ -367,7 +368,7 @@ class CalibratedUnit(ManipulatorUnit):
 
             # 8) Calculate conversion factor and offset.
             #    Offset is such that the initial position is (0,0,z0) in the reference system
-            self.r0 = array([0,0,z0])-dot(self.M, u0)
+            self.r0 = array([0,0,z0])-dot(self.M, u0) - stager0
 
             self.calibrated = True
 
