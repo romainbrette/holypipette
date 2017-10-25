@@ -40,7 +40,7 @@ class AutoPatcher(object):
 
             # Check initial resistance
             R = self.amplifier.resistance()
-            message("Resistance:" + str(R))
+            message("Resistance:" + str(R/1e6))
             if R < param_Rmin:
                 raise AutopatchError("Resistance is too low (broken tip?)")
             elif R > param_Rmax:
@@ -54,7 +54,7 @@ class AutoPatcher(object):
             oldR = R
             R = self.amplifier.resistance()
             if abs(R - oldR) > param_max_R_increase:
-                raise AutopatchError("Pipette is obstructed; R = " + str(R))
+                raise AutopatchError("Pipette is obstructed; R = " + str(R/1e6))
 
             # Release pressure
             message("Releasing pressure")
@@ -75,12 +75,12 @@ class AutoPatcher(object):
                 time.sleep(1)
                 oldR = R
                 R = self.amplifier.resistance()
-                message("R = " + str(self.amplifier.resistance()))
+                message("R = " + str(self.amplifier.resistance()/1e6))
                 if R > oldR * (1 + param_cell_R_increase):  # R increases: near cell?
                     time.sleep(10)
                     if R > oldR * (1 + param_cell_R_increase):
                         # Still higher, we are near the cell
-                        message("Sealing, R = " + str(self.amplifier.resistance()))
+                        message("Sealing, R = " + str(self.amplifier.resistance()/1e6))
                         self.pressure.set_pressure(param_pressure_sealing)
                         t0 = time.time()
                         t = t0
@@ -102,7 +102,7 @@ class AutoPatcher(object):
             if not success:
                 raise AutopatchError("Seal unsuccessful")
 
-            print("Seal successful, R = " + str(self.amplifier.resistance()))
+            print("Seal successful, R = " + str(self.amplifier.resistance()/1e6))
 
             # Go whole-cell
             message("Breaking in")
@@ -120,7 +120,7 @@ class AutoPatcher(object):
                 time.sleep(1.3)
                 trials += 1
 
-            message("Successful break-in, R = " + str(self.amplifier.resistance()))
+            message("Successful break-in, R = " + str(self.amplifier.resistance()/1e6))
 
         finally:
             self.amplifier.stop_patch()

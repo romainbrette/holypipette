@@ -1,4 +1,4 @@
-* Refine calibration:
+* Refine calibration: on stage too, and without_stage (redo?)
     After calibration ends, autorecalibrate and fix. (add (x,y,z)/distance)
     This can be done on each axis.
 

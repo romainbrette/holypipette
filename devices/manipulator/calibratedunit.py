@@ -547,7 +547,9 @@ class CalibratedUnit(ManipulatorUnit):
                     raise CalibrationError('Stage has not returned to initial position.')
 
                 # Measure position on screen (should be centered but there might be a drift)
+                sleep(sleep_time)
                 x,y,z = self.locate_pipette(message, match_threshold)
+
                 # Adjust the matrix
                 self.M[:,axis]-= array([x,y,z])/distance
                 # Move the stage and focus to recenter
@@ -555,6 +557,11 @@ class CalibratedUnit(ManipulatorUnit):
                 self.stage.reference_relative_move(-array([x,y,0])) # compensatory move
                 self.microscope.wait_until_still()
                 self.stage.wait_until_still()
+
+                # Update initial positions
+                stageu0 = self.stage.position()
+                stager0 = self.stage.reference_position()
+                z0 = self.microscope.position()
 
             # Compute the (pseudo-)inverse
             self.Minv = pinv(self.M)
@@ -796,7 +803,7 @@ class CalibratedStage(CalibratedUnit):
         u0 = self.position()
 
         # 1) Move each axis by a small displacement (50 um)
-        distance = 100. # in um
+        distance = 40. # in um
         for axis in range(len(self.axes)):  # normally just two axes
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)

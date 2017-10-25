@@ -157,6 +157,9 @@ class TestGui(QtWidgets.QMainWindow):
                 image_editor.show_paramecium = not image_editor.show_paramecium
                 if image_editor.show_paramecium:
                     print('Paramecium tracking is on')
+            # Withdraw
+            elif event.key() == Qt.Key_W:
+                pass
         except Exception:
             print(traceback.format_exc())
 
@@ -211,8 +214,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         print('Starting calibration....')
         try:
             t1 = time.time()
-            calibrated_unit.calibrate_without_stage(message)
-            #calibrated_stage.calibrate()
+            calibrated_stage.calibrate()
+            calibrated_unit.calibrate_with_stage(message)
             t2 = time.time()
             print t2 - t1, 's'
         except Exception:
@@ -283,6 +286,8 @@ pressure = OB1()
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None
+
+pressure.set_pressure(25)
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)
