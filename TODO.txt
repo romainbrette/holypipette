@@ -2,6 +2,7 @@
     After calibration ends, autorecalibrate and fix. (add (x,y,z)/distance)
     This can be done on each axis.
 
+* Refactor calibration and auto_recalibrate: use locate_pipette
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements
 * Refactor calibration: Calibrator; calibrated_unit does not depend on camera
     => manipulator_unit could then absorb calibrated_unit

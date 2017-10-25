@@ -426,11 +426,14 @@ class CalibratedUnit(ManipulatorUnit):
 
         try:
             for axis in range(len(self.axes)):
-                distance = -2.*self.up_direction[axis]  # 2 um going down
+                distance = -1.*self.up_direction[axis]  # 2 um going down
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
                 for k in range(calibration_moves):
+                    # 1) Multiply displacement by 2
+                    distance *=2
+
                     message('Distance '+str(distance))
                     old_deltau = deltau.copy()
                     deltau[axis] = distance
@@ -527,9 +530,6 @@ class CalibratedUnit(ManipulatorUnit):
                         message("Pipette was going up, now inverting direction")
                         distance = -distance
 
-                    # 6) Multiply displacement by 2, and back to 2
-                    distance *=2
-
                 # Move back (not strictly necessary)
                 # First move microscope up to avoid collisions
                 self.microscope.relative_move(-estimate[2])
@@ -546,7 +546,15 @@ class CalibratedUnit(ManipulatorUnit):
                 if norm(stageu0 - self.stage.position()) > position_tolerance:
                     raise CalibrationError('Stage has not returned to initial position.')
 
-                # Fix (measure on screen from autorecalibrate and move stage/pipette)
+                # Measure position on screen (should be centered but there might be a drift)
+                x,y,z = self.locate_pipette(message, match_threshold)
+                # Adjust the matrix
+                self.M[:,axis]-= array([x,y,z])/distance
+                # Move the stage and focus to recenter
+                self.microscope.relative_move(z)
+                self.stage.reference_relative_move(array([x,y,0]))
+                self.microscope.wait_until_still()
+                self.stage.wait_until_still()
 
             # Compute the (pseudo-)inverse
             self.Minv = pinv(self.M)
@@ -579,6 +587,56 @@ class CalibratedUnit(ManipulatorUnit):
         stager0 = self.stage.reference_position()
         self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
 
+    def locate_pipette(self, message = lambda str: None, threshold = 0):
+        '''
+        Locates the pipette on screen, using photos previously taken.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        threshold : correlation threshold
+
+        Returns
+        -------
+        x,y,z : position on screen relative to center
+        '''
+        stack = self.photos
+        x0, y0 = self.photo_x0, self.photo_y0
+
+        image = self.camera.snap()
+
+        # Error margins for position estimation
+        template_height, template_width = stack[stack_depth].shape
+        xmargin = template_width / 4
+        ymargin = template_height / 4
+
+        # First template matching to estimate pipette position on screen
+        xt, yt, _ = templatematching(image, stack[stack_depth])
+
+        image = self.camera.snap()
+        # Crop image around estimated position
+        image = image[yt - ymargin:yt + template_height + ymargin,
+                xt - xmargin:xt + template_width + xmargin]
+        dx = xt - xmargin
+        dy = yt - ymargin
+
+        valmax = -1
+        for i, template in enumerate(stack):  # we look for the best matching template
+            xt, yt, val = templatematching(image, template)
+            xt += dx
+            yt += dy
+            if val > valmax:
+                valmax = val
+                x, y, z = xt, yt, stack_depth - i  # note the sign for z
+
+        message('Correlation=' + str(valmax))
+        if valmax < threshold:
+            raise CalibrationError('Matching error: the pipette is absent or not focused')
+
+        message('Pipette identifed at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
+
+        return x-x0,y-y0,z
+
     def auto_recalibrate(self, center = True, message = lambda str: None):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
@@ -586,8 +644,6 @@ class CalibratedUnit(ManipulatorUnit):
 
         Parameters
         ----------
-        stack : stack of photos at different Z positions around focus
-        x0, y0 : position of template on screen
         center : if True, move pipette at the center after recalibration
         message : a function to which messages are passed
         '''
