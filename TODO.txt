@@ -1,6 +1,7 @@
-* Refine calibration: on stage too, and without_stage (redo?)
-    After calibration ends, autorecalibrate and fix. (add (x,y,z)/distance)
-    This can be done on each axis.
+* Refine calibration:
+    it seems the correction doesn't really seem to work... why?
+    second pass with maximum movements
+    on stage too, and without_stage (redo?)
 
 * Refactor calibration and auto_recalibrate: use locate_pipette
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements

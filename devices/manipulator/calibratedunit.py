@@ -386,7 +386,7 @@ class CalibratedUnit(ManipulatorUnit):
             self.microscope.wait_until_still()
             self.absolute_move(u0)
 
-    def calibrate_with_stage(self, message = lambda str: None):
+    def calibrate_with_stage(self, message = lambda str: None, second_pass = False):
         '''
         Automatic calibration of the manipulator using the camera.
         It is assumed that the pipette or some element attached to the unit is in the center of the image.
@@ -395,6 +395,7 @@ class CalibratedUnit(ManipulatorUnit):
         Parameters
         ----------
         message : a function to which messages are passed
+        second_pass : if True, calibrate only on the largest movements
         '''
         # Store initial position
         z0 = self.microscope.position()
@@ -430,9 +431,16 @@ class CalibratedUnit(ManipulatorUnit):
                 deltau = zeros(3)  # position of manipulator axes, relative to initial position
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
-                for k in range(calibration_moves):
+                if second_pass:
+                    k_range = [calibration_moves[-1]]
+                else:
+                    k_range = range(calibration_moves)
+                for k in k_range:
                     # 1) Multiply displacement by 2
-                    distance *=2
+                    if second_pass:
+                        distance *= 2 >> (k-1)
+                    else:
+                        distance *=2
 
                     message('Distance '+str(distance))
                     old_deltau = deltau.copy()
@@ -578,6 +586,10 @@ class CalibratedUnit(ManipulatorUnit):
             self.microscope.wait_until_still()
             self.absolute_move(u0)
             self.stage.absolute_move(stageu0)
+
+        if not second_pass:
+            message("Second calibration (fine tuning)")
+            self.calibrate_with_stage(message, second_pass=True)
 
     def recalibrate(self, message = lambda str: None):
         '''
