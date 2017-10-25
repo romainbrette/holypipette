@@ -552,7 +552,7 @@ class CalibratedUnit(ManipulatorUnit):
                 self.M[:,axis]-= array([x,y,z])/distance
                 # Move the stage and focus to recenter
                 self.microscope.relative_move(z)
-                self.stage.reference_relative_move(array([x,y,0]))
+                self.stage.reference_relative_move(-array([x,y,0])) # compensatory move
                 self.microscope.wait_until_still()
                 self.stage.wait_until_still()
 
