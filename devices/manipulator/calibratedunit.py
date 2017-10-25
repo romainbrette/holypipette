@@ -212,6 +212,77 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             self.calibrate_with_stage(message)
 
+    def new_calibrate(self, message = lambda str: None):
+        '''
+        Automatic calibration.
+        Starts without moving the stage, then move the stage.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
+
+        '''
+        Initial operations
+        1) Take photos
+        2) Calculate image borders
+
+        For each axis:
+        1) Start with distance = depth of photo stack
+        2) Move axis and wait
+        3) Locate pipette
+        4) Calculate up direction of axis and microscope
+        5) Calculate matrix column
+
+        6) Distance*2
+        7) Estimate movement on image: if out of borders, break
+        8) Move axis and wait
+        9) Autofocus and wait
+        10) Locate pipette
+        11) Calculate matrix column (in fact only z is necessary)
+        12) Repeat (6)
+
+        13) Move back (focus, wait, pipette, wait)
+        14) Locate pipette
+        15) Adjust matrix
+        16) Update initial position on screen
+
+        Stage compensation:
+        For each axis:
+        0) Limit distance = Z0 - floor_Z - margin (eg 100 um)
+        1) Start with distance = 2*previous distance
+        2) Estimate movement
+        3) Move axis
+        4) Move stage by compensating movement
+        5) Wait for stage and axis
+        6) Autofocus and wait
+        7) Locate pipette
+        8) Calculate matrix column
+        9) Distance*2 and repeat (2) until limit
+
+        10) Move back (focus, wait, pipette and stage, wait)
+        11) Locate pipette
+        12) Adjust matrix
+
+        Fine-tuning:
+        For each axis:
+        1) Move axis
+        2) Move stage by compensating movement
+        3) Wait for stage and axis
+        4) Autofocus and wait
+        5) Locate pipette
+        6) Calculate matrix column
+
+        Refactor:
+        * move axis + optional move stage + autofocus + locate pipette
+        * matrix column calculation, from initial positions and axis movement
+        * stage compensation merged into initial stuff
+        * fine tuning
+
+        Alternatively, we calculate the matrix only on the last movement (not sequence of movements)
+        '''
+        pass
+
     def calibrate_without_stage(self, message = lambda str: None):
         '''
         Automatic calibration of the manipulator using the camera.
