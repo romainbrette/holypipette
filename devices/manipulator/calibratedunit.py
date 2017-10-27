@@ -503,13 +503,13 @@ class CalibratedUnit(ManipulatorUnit):
                 previous_estimate = zeros(3)
                 message('Calibrating axis '+str(axis))
                 if second_pass:
-                    k_range = [calibration_moves[-1]]
+                    k_range = [calibration_moves-1]
                 else:
                     k_range = range(calibration_moves)
                 for k in k_range:
                     # 1) Multiply displacement by 2
                     if second_pass:
-                        distance *= 2 >> (k-1)
+                        distance *= 2 << k
                     else:
                         distance *=2
 
@@ -657,6 +657,8 @@ class CalibratedUnit(ManipulatorUnit):
             self.microscope.wait_until_still()
             self.absolute_move(u0)
             self.stage.absolute_move(stageu0)
+            self.stage.wait_until_still()
+            self.wait_until_still()
 
         if not second_pass:
             message("Second calibration (fine tuning)")
