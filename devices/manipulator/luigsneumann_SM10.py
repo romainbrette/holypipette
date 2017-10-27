@@ -80,9 +80,9 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         self.port.open()
 
         # Initialize ramp length of all axes at 210 ms
-        for axis in range(1,10):
-            self.set_ramp_length(axis,3)
-            time.sleep(.05)
+        #for axis in range(1,10):
+        #    self.set_ramp_length(axis,3)
+        #    time.sleep(.05)
 
     def send_command(self, ID, data, nbytes_answer):
         '''

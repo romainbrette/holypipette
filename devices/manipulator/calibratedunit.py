@@ -28,7 +28,7 @@ verbose = True
 position_tolerance = 0.5 # in um
 sleep_time = 1. # Sleep time before taking pictures after a pipette move, because the pipette might vibrate
 stack_depth = 8 # Depth in um of the vertical stack of photos (+- stack_depth)
-calibration_moves = 12 # Number of calibration moves: total distance is 2^calibration_moves
+calibration_moves = 13 # Number of calibration moves: total distance is 2^calibration_moves
 
 class CalibrationError(Exception):
     def __init__(self, message = 'Device is not calibrated'):

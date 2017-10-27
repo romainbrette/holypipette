@@ -26,6 +26,15 @@ class AutoPatcher(object):
         self.calibrated_unit = calibrated_unit
         self.microscope = calibrated_unit.microscope
 
+    def switch_zap(self, message = lambda str: None):
+        global param_zap
+
+        param_zap = not param_zap
+        if param_zap:
+            message('Zap on')
+        else:
+            message('Zap off')
+
     def run(self, move_position, message = lambda str: None):
         '''
         Runs the automatic patch-clamp algorithm, including manipulator movements.
@@ -56,10 +65,6 @@ class AutoPatcher(object):
             if abs(R - oldR) > param_max_R_increase:
                 raise AutopatchError("Pipette is obstructed; R = " + str(R/1e6))
 
-            # Release pressure
-            message("Releasing pressure")
-            self.pressure.set_pressure(0)
-
             # Pipette offset
             self.amplifier.auto_pipette_offset()
             time.sleep(2)  # why?
@@ -67,16 +72,19 @@ class AutoPatcher(object):
             # Approach and make the seal
             print("Approaching the cell")
             success = False
+            oldR = R
             for _ in range(param_max_distance):  # move 15 um down
                 # move by 1 um down
                 # Cleaner: use reference relative move
                 self.calibrated_unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
                 self.calibrated_unit.wait_until_still(2)
                 time.sleep(1)
-                oldR = R
                 R = self.amplifier.resistance()
                 message("R = " + str(self.amplifier.resistance()/1e6))
                 if R > oldR * (1 + param_cell_R_increase):  # R increases: near cell?
+                    # Release pressure
+                    message("Releasing pressure")
+                    self.pressure.set_pressure(0)
                     time.sleep(10)
                     if R > oldR * (1 + param_cell_R_increase):
                         # Still higher, we are near the cell
