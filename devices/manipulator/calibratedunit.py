@@ -102,18 +102,35 @@ class CalibratedUnit(ManipulatorUnit):
         u = self.position() # position vector in manipulator unit system
         return dot(self.M, u) + self.r0 + self.stage.reference_position()
 
-    def reference_move(self, r):
+    def reference_move(self, r, safe = False):
         '''
         Moves the unit to position r in reference camera system, without moving the stage.
 
         Parameters
         ----------
         r : XYZ position vector in um
+        safe : if True, moves the Z axis first or last, so as to avoid touching the coverslip
         '''
         if not self.calibrated:
             raise CalibrationError
         u = dot(self.Minv, r-self.stage.reference_position()-self.r0)
-        self.absolute_move(u)
+        if safe:
+            z0 = self.position(axis=2)
+            z = u[2]
+            if (z-z0)*self.up_direction[2]>0: # going up
+                # Go up first
+                self.absolute_move(z,axis=2)
+                self.wait_until_still(2)
+                self.absolute_move(u)
+            else: # going down
+                # Go down first
+                uprime = u.copy()
+                u[2] = z0
+                self.absolute_move(uprime)
+                self.wait_until_still()
+                self.absolute_move(z,axis=2)
+        else:
+            self.absolute_move(u)
 
     def reference_relative_move(self, r):
         '''
@@ -157,12 +174,12 @@ class CalibratedUnit(ManipulatorUnit):
             # TODO: check whether the intermediate move is accessible
 
             # Intermediate move
-            self.reference_move(r + alpha * p)
+            self.reference_move(r + alpha * p, safe = True)
             # We need to wait here!
             self.wait_until_still()
 
         # Final move
-        self.reference_move(r - withdraw * p) # Or relative move in manipulator coordinates, first axis (faster)
+        self.reference_move(r - withdraw * p, safe = True) # Or relative move in manipulator coordinates, first axis (faster)
 
     def take_photos(self, message = lambda str: None):
         '''

@@ -1,7 +1,4 @@
 * Refine calibration:
-    it seems the correction doesn't really seem to work... why?
-    second pass with maximum movements: test
-    on without_stage too (redo?)
     maybe disable setting ramp length?
 ** write new_calibrate
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements

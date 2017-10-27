@@ -207,7 +207,10 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def move_pipette(self):
-        calibrated_unit.safe_move(self.move_position)
+        try:
+            calibrated_unit.safe_move(self.move_position)
+        except Exception:
+            print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
     def do_calibration(self):
