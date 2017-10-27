@@ -21,5 +21,6 @@ G                       Go to coverslip Z with microscope
 
 F1                      Reset camera (stop/start image acquisition)
 
-Esc                     Quit
+*                       Landmark point
 
+Esc                     Quit

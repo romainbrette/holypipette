@@ -35,6 +35,7 @@ signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
+    manual_calibrate_signal = QtCore.pyqtSignal()
     recalibrate_signal = QtCore.pyqtSignal()
     auto_recalibrate_signal = QtCore.pyqtSignal()
     motor_ranges_signal = QtCore.pyqtSignal()
@@ -58,6 +59,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrator = PipetteHandler()
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
+        self.manual_calibrate_signal.connect(self.calibrator.manual_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.move_signal.connect(self.calibrator.move_pipette)
@@ -119,7 +121,11 @@ class TestGui(QtWidgets.QMainWindow):
                 self.update_status_bar()
             # Calibration
             elif event.key() == Qt.Key_C:
-                self.calibrate_signal.emit()
+                if event.modifiers() == Qt.ShiftModifier:
+                    self.manual_calibrate_signal.emit()
+                    # Manual calibration based on landmark points
+                else:
+                    self.calibrate_signal.emit()
             # Quit
             elif event.key() == Qt.Key_Escape:
                 self.close()
@@ -163,6 +169,12 @@ class TestGui(QtWidgets.QMainWindow):
             # Withdraw
             elif event.key() == Qt.Key_W:
                 pass
+            # Landmark point
+            elif event.key() == Qt.Key_multiply:
+                landmark_u.append(calibrated_unit.position())
+                landmark_rs.append(calibrated_stage.reference_position())
+                # r is the position on screen, and focal plane
+                landmark_r.append(array([self.camera.width()/2, self.camera.height()/2, self.microscope.position()]))
         except Exception:
             print(traceback.format_exc())
 
@@ -229,6 +241,16 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         print('Done')
 
     @QtCore.pyqtSlot()
+    def manual_calibration(self):
+        print('Manual calibration....')
+        try:
+            calibrated_unit.manual_calibration((landmark_r, landmark_u, landmark_rs), message)
+        except Exception:
+            print(traceback.format_exc())
+        print('Done')
+
+
+    @QtCore.pyqtSlot()
     def do_recalibration(self):
         print('Recalibration')
         calibrated_unit.recalibrate(message)
@@ -292,6 +314,9 @@ pressure = OB1()
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None
+landmark_u = [] # Landmark points
+landmark_r = []
+landmark_rs = []
 
 pressure.set_pressure(25)
 

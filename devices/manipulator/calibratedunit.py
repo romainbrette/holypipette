@@ -746,6 +746,9 @@ class CalibratedUnit(ManipulatorUnit):
 
         return x-x0,y-y0,z
 
+    def manual_calibration(self, landmarks, message = lambda str: None):
+        pass
+
     def auto_recalibrate(self, center = True, message = lambda str: None):
         '''
         Recalibrates the unit by shifting the reference frame (r0).

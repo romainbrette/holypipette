@@ -1,5 +1,8 @@
-* Refine calibration:
-    maybe disable setting ramp length?
+* Semiautomatic calibration:
+    user goes to 4 points, reposition pipette, possibly automatically (template matching)
+
+* Pipette change and move back
+
 ** write new_calibrate
 * Refactor calibration: calibrate => calibrate without stage, then compensation movements
 * Refactor calibration: Calibrator; calibrated_unit does not depend on camera
@@ -15,8 +18,6 @@
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
 * In calibration: check whether best match is with the Z border (+- 8) => error
-* Semiautomatic calibration:
-    user goes to 4 points, reposition pipette, possibly automatically (template matching)
 * Paramecium stuff
     1) Approach above coverslip
     2) Move right above
