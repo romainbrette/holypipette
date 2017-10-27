@@ -170,11 +170,14 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_W:
                 pass
             # Landmark point
-            elif event.key() == Qt.Key_multiply:
+            elif event.key() == Qt.Key_Asterisk:
+                print("Landmark")
                 landmark_u.append(calibrated_unit.position())
                 landmark_rs.append(calibrated_stage.reference_position())
                 # r is the position on screen, and focal plane
-                landmark_r.append(array([self.camera.width()/2, self.camera.height()/2, self.microscope.position()]))
+                print landmark_r
+                position = array([self.camera.width/2, self.camera.height/2, microscope.position()])
+                landmark_r.append(position)
         except Exception:
             print(traceback.format_exc())
 
@@ -244,7 +247,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     def manual_calibration(self):
         print('Manual calibration....')
         try:
-            calibrated_unit.manual_calibration((landmark_r, landmark_u, landmark_rs), message)
+            calibrated_unit.manual_calibration((landmark_r[-4:], landmark_u[-4:], landmark_rs[-4:]), message)
         except Exception:
             print(traceback.format_exc())
         print('Done')

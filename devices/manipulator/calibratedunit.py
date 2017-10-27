@@ -752,15 +752,20 @@ class CalibratedUnit(ManipulatorUnit):
         The stage must be properly calibrated.
         '''
         landmark_r, landmark_u, landmark_rs = landmarks
+        message('landmark r: ' + str(landmark_r))
+
         # r is the reference position (screen + focal plane)
         r0 = landmark_r[0]
         r = array([(r-r0) for r in landmark_r[1:]]).T
+        rs0 = landmark_rs[0]
+        rs = array([(rs-rs0) for rs in landmark_rs[1:]]).T
         u0 = landmark_u[0]
         u = array([(u-u0) for u in landmark_u[1:]]).T
 
         message('r: '+str(r))
+        message('rs: ' + str(rs))
         message('u: '+str(u))
-        self.M = dot(r,inv(u))
+        self.M = dot(r-rs,inv(u))
         message('Matrix: ' + str(self.M))
 
         # 4) Recompute the matrix and the (pseudo) inverse
@@ -769,7 +774,7 @@ class CalibratedUnit(ManipulatorUnit):
         # 5) Calculate conversion factor.
 
         # Offset
-        self.r0 = r0-dot(self.M, u0)
+        self.r0 = r0-rs0-dot(self.M, u0)
 
 
     def auto_recalibrate(self, center = True, message = lambda str: None):
