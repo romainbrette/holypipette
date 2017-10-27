@@ -4,12 +4,12 @@ Parameters for the automatic patch-clamp algorithm
 # Pressure parameters
 param_pressure_near = 15 #25
 param_pressure_sealing = -30
-param_pressure_ramp_amplitude = -230.
+param_pressure_ramp_amplitude = -300 #-230.
 param_pressure_ramp_duration = 1.15
 
 # Normal resistance range
-param_Rmin = 5e6
-param_Rmax = 10e6
+param_Rmin = 2e6
+param_Rmax = 11e6
 
 # Initial distance above the target cell
 param_cell_distance = 10
