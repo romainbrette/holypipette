@@ -747,7 +747,30 @@ class CalibratedUnit(ManipulatorUnit):
         return x-x0,y-y0,z
 
     def manual_calibration(self, landmarks, message = lambda str: None):
-        pass
+        '''
+        Calibrates the unit based on 4 landmarks.
+        The stage must be properly calibrated.
+        '''
+        landmark_r, landmark_u, landmark_rs = landmarks
+        # r is the reference position (screen + focal plane)
+        r0 = landmark_r[0]
+        r = array([(r-r0) for r in landmark_r[1:]]).T
+        u0 = landmark_u[0]
+        u = array([(u-u0) for u in landmark_u[1:]]).T
+
+        message('r: '+str(r))
+        message('u: '+str(u))
+        self.M = dot(r,inv(u))
+        message('Matrix: ' + str(self.M))
+
+        # 4) Recompute the matrix and the (pseudo) inverse
+        self.Minv = pinv(self.M)
+
+        # 5) Calculate conversion factor.
+
+        # Offset
+        self.r0 = r0-dot(self.M, u0)
+
 
     def auto_recalibrate(self, center = True, message = lambda str: None):
         '''
