@@ -200,6 +200,13 @@ class CalibratedUnit(ManipulatorUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[stack_depth])
 
+        # Calculate minimum correlation with stack images
+        image = stack[len(stack)/2] # Focused image
+        min_match = min([templatematching(image, template)[2] for template in stack])
+        # We accept matches with matching correlation up to twice worse
+        self.match_threshold = 1-(1-min_match)*2
+        message('Matching threshold: '+str(self.match_threshold))
+
         self.photos = stack
         self.photo_x0 = x0
         self.photo_y0 = y0
@@ -229,6 +236,8 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             self.calibrate_with_stage(message)
 
+    # ***** REFACTORING OF CALIBRATION ****
+
     def new_calibrate(self, message = lambda str: None):
         '''
         Automatic calibration.
@@ -238,19 +247,47 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
+        # *** 1) Take photos ***
+
+        # Take a stack of photos on different focal planes, spaced by 1 um
+        self.take_photos(message)
+        stack = self.photos
+        # Position of the upper left corner of the template in the image
+        x0,y0 = self.photo_x0,self.photo_y0
+        # Pipette cardinal position (N, S, E, W etc)
+        pipette_position = self.pipette_position
+        match_threshold = self.match_threshold
+
+        # *** 2) Calculate image borders ***
+
+        template_height, template_width = stack[stack_depth].shape
+        width, height = self.camera.width, self.camera.height
+        # We use a margin of 1/4 of the template
+        left_border = -(width/2-(template_width*3)/4)
+        right_border = (width/2-(template_width*3)/4)
+        top_border = -(height/2-(template_height*3)/4)
+        bottom_border = (height/2-(template_height*3)/4)
+
+        # *** 3) Calculate the correlation threshold for template matching ***
+
+        # Calculate minimum correlation with stack images
+        image = stack[len(stack)/2] # Focused image
+        min_match = min([templatematching(image, template)[2] for template in stack])
+        # We accept matches with matching correlation up to twice worse
+        match_threshold = 1-(1-min_match)*2
+        message('Matching threshold: '+str(match_threshold))
+
 
         '''
-        Initial operations
-        1) Take photos
-        2) Calculate image borders
-
         For each axis:
         1) Start with distance = depth of photo stack
         2) Move axis and wait
         3) Locate pipette
         4) Calculate up direction of axis and microscope
         5) Calculate matrix column
+        '''
 
+        '''
         6) Distance*2
         7) Estimate movement on image: if out of borders, break
         8) Move axis and wait
