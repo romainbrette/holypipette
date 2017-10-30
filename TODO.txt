@@ -1,6 +1,6 @@
+* Calibrate stage
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
-
 * Pipette change and move back
 
 ** write new_calibrate

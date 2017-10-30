@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange, vstack, sign
+from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, clip
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -233,7 +233,8 @@ class CalibratedUnit(ManipulatorUnit):
         if self.fixed:
             self.calibrate_without_stage(message)
         else:
-            self.calibrate_with_stage(message)
+            #self.calibrate_with_stage(message)
+            self.new_calibrate(message)
 
     # ***** REFACTORING OF CALIBRATION ****
     def locate_pipette(self, message = lambda str: None, threshold = None):
@@ -290,7 +291,7 @@ class CalibratedUnit(ManipulatorUnit):
 
     def move_and_track(self, distance, axis, move_stage = False, message = lambda str: None):
         '''
-        Move along one axis and track the pipette with microscope and optionally the stage.
+        Moves along one axis and track the pipette with microscope and optionally the stage.
 
         Arguments
         ---------
@@ -318,7 +319,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Locate pipette
         sleep(sleep_time)
-        x, y, z = self.locate_pipette(message)
+        _, _, z = self.locate_pipette(message)
 
         # Focus and locate again
         self.microscope.relative_move(z)
@@ -327,20 +328,65 @@ class CalibratedUnit(ManipulatorUnit):
 
         return x,y,z
 
+    def move_back(self, z0, u0, us0=None, message = lambda str: None):
+        '''
+        Moves back up to original position, refocus and locate pipette
+        '''
+        # Move back
+        self.microscope.absolute_move(z0)
+        self.microscope.wait_until_still()
+        self.absolute_move(u0)
+        if us0 is not None: # stage moves too
+            self.stage.absolute_move(us0)
+            self.stage.wait_until_still()
+        self.wait_until_still()
+
+        # Locate pipette
+        sleep(sleep_time)
+        _, _, z = self.locate_pipette(message)
+
+        # Focus and locate again
+        self.microscope.relative_move(z)
+        self.microscope.wait_until_still()
+        x, y, z = self.locate_pipette(message)
+
+        return x,y,z
+
+    def calculate_up_directions(self, message = lambda str: None):
+        '''
+        Calculates up directions for all axes and microscope from the matrix.
+        '''
+        # Determine up direction for the first axis (assumed to be the main axis)
+        positive_move = self.M[:, 0] # move of 1 um along first axis
+        self.up_direction[0] = up_direction(self.pipette_position,positive_move) # not sure about the sign
+        message('Axis 0 up direction: ' + str(self.up_direction[0]))
+
+        # Determine microscope up direction
+        self.microscope.up_direction = sign(self.M[2, 0] * self.up_direction[0])
+        message('Microscope up direction: ' + str(self.microscope.up_direction))
+
+        # Determine up direction of other axes
+        for axis in range(1,len(self.axes)):
+            # We use microscope up direction
+            s = sign(self.M[2, axis] * self.microscope.up_direction)
+            if s != 0:
+                self.up_direction[axis] = s
+            message('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
+
     def new_calibrate(self, message = lambda str: None):
         '''
         Automatic calibration.
-        Starts without moving the stage, then move the stage.
+        Starts without moving the stage, then moves the stage.
 
         Parameters
         ----------
         message : a function to which messages are passed
         '''
-        # *** 1) Take photos ***
+        # *** Take photos ***
         # Take a stack of photos on different focal planes, spaced by 1 um
         self.take_photos(message)
 
-        # *** 2) Calculate image borders ***
+        # *** Calculate image borders ***
 
         template_height, template_width = self.photos[stack_depth].shape
         width, height = self.camera.width, self.camera.height
@@ -350,62 +396,72 @@ class CalibratedUnit(ManipulatorUnit):
         top_border = -(height/2-(template_height*3)/4)
         bottom_border = (height/2-(template_height*3)/4)
 
-        '''
-        For each axis:
-        1) Start with distance = depth of photo stack
-        2) Move axis and wait
-        3) Locate pipette
-        4) Calculate up direction of axis and microscope
-        5) Calculate matrix column
-        '''
-        # First pass: move each axis once and estimate matrix
+        # *** Store initial position ***
+        z0 = self.microscope.position()
+        u0 = self.position()
+        us0 = self.stage.position()
+
+        # *** First pass: move each axis once and estimate matrix ***
         distance = stack_depth
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
-            z = self.microscope.position()+z
+            z+= self.microscope.position()
             self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
             oldx, oldy, oldz = x, y, z
-            # Optionally: move back
         message('Matrix:' + str(self.M))
 
-        # *** I'M HERE ***
+        # *** Calculate up directions ***
+        self.calculate_up_directions(message)
 
-        # Calculate up directions
+        # Move back to initial position
+        oldx, oldy, oldz = self.move_back(z0, u0, None, message)  # The pipette could have moved
+
+        # *** Estimate the matrix using increasingly large movements ***
         for axis in range(len(self.axes)):
-            # 5bis) Determine pipette up direction
-            # We only need to it once, and we do it when the displacement is large enough
-            if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
-                positive_move = self.M[:, 0]
-                self.up_direction[0] = up_direction(pipette_position,
-                                                    -positive_move * sign(
-                                                        distance))  # since we did a negative move
-                message('Axis 0 up direction: ' + str(self.up_direction[0]))
-                # Now determine microscope up direction
-                self.microscope.up_direction = sign(self.M[2, 0] * self.up_direction[0])
-                message('Microscope up direction: ' + str(self.microscope.up_direction))
-            elif k == 4:
-                # For other axes, we use microscope up direction
-                # If microscope up direction is provided, this is what we use too instead of guessing
-                s = sign(self.M[2, axis] * self.microscope.up_direction)
-                if s != 0:
-                    self.up_direction[axis] = s
-                message('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
+            message('Calibrating axis ' + str(axis))
+            final_move = False
+            while (not final_move) & (distance<300): # just for testing
+                distance *= 2
+                message('Distance ' + str(distance))
+                # Estimate final position on screen
+                xe, ye, ze = -self.M[:, axis] * distance * self.up_direction[axis]
+
+                # Check whether we might be out of field
+                xe_clipped = clip(xe, left_border, right_border)
+                ye_clipped = clip(ye, top_border, bottom_border)
+                if (xe!=xe_clipped) | (ye!=ye_clipped):
+                    final_move = True
+                    message('Next move is out of field')
+
+                # Check whether we might reach the floor (with 100 um largin)
+                if (oldz+ze - self.microscope.floor_Z) * self.microscope.up_direction < 100.:
+                    final_move = True
+                    message('We reached the coverslip.')
+                    ze_clipped = self.microscope.floor_Z-oldz + 100.*self.microscope.up_direction
+
+                # If final move: recalculate distance
+                if final_move:
+                    distance = (distance/2)*min(xe_clipped*1./xe, ye_clipped*1./ye, ze_clipped*1./ze)
+
+                # Move pipette down
+                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis, message)
+
+                # Update matrix
+                z += self.microscope.position()
+                self.M[:, axis] = -array([x - oldx, y - oldy, z - oldz]) / distance*self.up_direction[axis]
+                oldx, oldy, oldz = x, y, z
+
+            # Move back to initial position
+            u = self.position(axis)
+            x, y, z = self.move_back(z0, u0, None, message)
+            # Update matrix
+            z += self.microscope.position()
+            self.M[:, axis] = array([x - oldx, y - oldy, z - oldz]) / (u0-u)
+            oldx, oldy, oldz = x, y, z
+            message('Matrix:' + str(self.M))
 
         '''
-        6) Distance*2
-        7) Estimate movement on image: if out of borders, break
-        8) Move axis and wait
-        9) Autofocus and wait
-        10) Locate pipette
-        11) Calculate matrix column (in fact only z is necessary)
-        12) Repeat (6)
-
-        13) Move back (focus, wait, pipette, wait)
-        14) Locate pipette
-        15) Adjust matrix
-        16) Update initial position on screen
-
         Stage compensation:
         For each axis:
         0) Limit distance = Z0 - floor_Z - margin (eg 100 um)
@@ -422,25 +478,16 @@ class CalibratedUnit(ManipulatorUnit):
         10) Move back (focus, wait, pipette and stage, wait)
         11) Locate pipette
         12) Adjust matrix
-
-        Fine-tuning:
-        For each axis:
-        1) Move axis
-        2) Move stage by compensating movement
-        3) Wait for stage and axis
-        4) Autofocus and wait
-        5) Locate pipette
-        6) Calculate matrix column
-
-        Refactor:
-        * move axis + optional move stage + autofocus + locate pipette
-        * matrix column calculation, from initial positions and axis movement
-        * stage compensation merged into initial stuff
-        * fine tuning
-
-        Alternatively, we calculate the matrix only on the last movement (not sequence of movements)
         '''
-        pass
+
+        # *** Compute the (pseudo-)inverse ***
+        self.Minv = pinv(self.M)
+
+        # *** Calculate offset ***0
+        #    Offset is such that the initial position is the position on screen in the reference system
+        self.r0 = array([x, y, z0+z]) - dot(self.M, u0) - self.stage.reference_position()
+
+        self.calibrated = True
 
     def calibrate_without_stage(self, message = lambda str: None):
         '''
