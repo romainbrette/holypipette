@@ -346,7 +346,7 @@ class MultiClampChannel(object):
                    for key, value in self.identification.iteritems()):
                 multiclamps.append(multiclamp)
         if len(multiclamps) == 0:
-            raise RuntimeError('No device identified via {} found'.format(self.identification))
+            raise RuntimeError('No device identified via {} found. Multiclamp commander not running?'.format(self.identification))
         elif len(multiclamps) > 1:
             raise RuntimeError('{} devices identified via {} found'.format(len(multiclamps),
                                                                            self.identification))

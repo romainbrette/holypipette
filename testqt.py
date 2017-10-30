@@ -235,8 +235,9 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         print('Starting calibration....')
         try:
             t1 = time.time()
-            calibrated_stage.calibrate()
-            calibrated_unit.calibrate_with_stage(message)
+            #calibrated_stage.calibrate()
+            #calibrated_unit.calibrate_with_stage(message)
+            calibrated_unit.calibrate(message)
             t2 = time.time()
             print t2 - t1, 's'
         except Exception:

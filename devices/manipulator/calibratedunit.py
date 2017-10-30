@@ -228,7 +228,8 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
-        self.stage.calibrate(message=message)
+        if not self.stage.calibrated: # could be redone anyway
+            self.stage.calibrate(message=message)
 
         if self.fixed:
             self.calibrate_without_stage(message)
@@ -309,7 +310,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Move the stage to compensate
         if move_stage:
-            self.stage.reference_relative_move(-estimate[:2])
+            self.stage.reference_relative_move(-estimate)
             self.stage.wait_until_still()
 
         # Autofocus
@@ -358,7 +359,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         # Determine up direction for the first axis (assumed to be the main axis)
         positive_move = self.M[:, 0] # move of 1 um along first axis
-        self.up_direction[0] = up_direction(self.pipette_position,positive_move) # not sure about the sign
+        self.up_direction[0] = up_direction(self.pipette_position,-positive_move) # not sure about the sign
         message('Axis 0 up direction: ' + str(self.up_direction[0]))
 
         # Determine microscope up direction
@@ -368,7 +369,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Determine up direction of other axes
         for axis in range(1,len(self.axes)):
             # We use microscope up direction
-            s = sign(self.M[2, axis] * self.microscope.up_direction)
+            s = -sign(self.M[2, axis] * self.microscope.up_direction)
             if s != 0:
                 self.up_direction[axis] = s
             message('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
@@ -402,11 +403,12 @@ class CalibratedUnit(ManipulatorUnit):
         us0 = self.stage.position()
 
         # *** First pass: move each axis once and estimate matrix ***
-        distance = stack_depth
+        distance = stack_depth*1.
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
             z+= self.microscope.position()
+            print x,y,z
             self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
             oldx, oldy, oldz = x, y, z
         message('Matrix:' + str(self.M))
@@ -416,6 +418,13 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Move back to initial position
         oldx, oldy, oldz = self.move_back(z0, u0, None, message)  # The pipette could have moved
+        oldz+=self.microscope.position()
+
+        # Calculate floor (min Z)
+        if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
+            floor = z0-300.*self.microscope.up_direction
+        else:
+            floor = self.microscope.floor_Z
 
         # *** Estimate the matrix using increasingly large movements ***
         for axis in range(len(self.axes)):
@@ -435,17 +444,20 @@ class CalibratedUnit(ManipulatorUnit):
                     message('Next move is out of field')
 
                 # Check whether we might reach the floor (with 100 um largin)
-                if (oldz+ze - self.microscope.floor_Z) * self.microscope.up_direction < 100.:
+                if (oldz+ze - floor) * self.microscope.up_direction < 100.:
                     final_move = True
                     message('We reached the coverslip.')
-                    ze_clipped = self.microscope.floor_Z-oldz + 100.*self.microscope.up_direction
+                    ze_clipped = floor-oldz + 100.*self.microscope.up_direction
+                else:
+                    ze_clipped = ze
 
                 # If final move: recalculate distance
                 if final_move:
                     distance = (distance/2)*min(xe_clipped*1./xe, ye_clipped*1./ye, ze_clipped*1./ze)
 
                 # Move pipette down
-                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis, message)
+                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
+                                              move_stage=False, message=message)
 
                 # Update matrix
                 z += self.microscope.position()
