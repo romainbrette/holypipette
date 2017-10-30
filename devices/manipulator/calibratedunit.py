@@ -228,8 +228,8 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         '''
-        if not self.stage.calibrated: # could be redone anyway
-            self.stage.calibrate(message=message)
+        #if not self.stage.calibrated: # could be redone anyway
+        self.stage.calibrate(message=message)
 
         if self.fixed:
             self.calibrate_without_stage(message)
@@ -320,12 +320,12 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Locate pipette
         sleep(sleep_time)
-        _, _, z = self.locate_pipette(message)
+        _, _, z = self.locate_pipette()
 
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
-        x, y, z = self.locate_pipette(message)
+        x, y, z = self.locate_pipette()
 
         return x,y,z
 
@@ -344,12 +344,12 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Locate pipette
         sleep(sleep_time)
-        _, _, z = self.locate_pipette(message)
+        _, _, z = self.locate_pipette()
 
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
-        x, y, z = self.locate_pipette(message)
+        x, y, z = self.locate_pipette()
 
         return x,y,z
 
@@ -397,9 +397,6 @@ class CalibratedUnit(ManipulatorUnit):
         top_border = -(height/2-(template_height*3)/4)
         bottom_border = (height/2-(template_height*3)/4)
 
-        print left_border, right_border, top_border, bottom_border
-        print width, height
-
         # *** Store initial position ***
         z0 = self.microscope.position()
         u0 = self.position()
@@ -407,7 +404,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # *** First pass: move each axis once and estimate matrix ***
         self.M = 0*self.M # Erase current matrix
-        distance = stack_depth*1.
+        distance = stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
@@ -431,105 +428,60 @@ class CalibratedUnit(ManipulatorUnit):
             floor = self.microscope.floor_Z
 
         # *** Estimate the matrix using increasingly large movements ***
+        min_distance = distance
         for axis in range(len(self.axes)):
             message('Calibrating axis ' + str(axis))
-            final_move = False
-            distance = stack_depth * 1.
-            while (not final_move) & (distance<300): # just for testing
+            distance = min_distance * 1.
+            oldrs = self.stage.reference_position()
+            move_stage = False
+            while (distance<2000): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
                 # Estimate final position on screen
-                xe, ye, ze = -self.M[:, axis] * distance * self.up_direction[axis]
+                dxe, dye, dze = -self.M[:, axis] * distance * self.up_direction[axis]
+                xe, ye, ze = oldx+dxe, oldy+dye, oldz+dze
 
                 # Check whether we might be out of field
-                xe_clipped = clip(xe, left_border, right_border)
-                ye_clipped = clip(ye, top_border, bottom_border)
-                if (xe!=xe_clipped) | (ye!=ye_clipped):
-                    final_move = True
+                if (xe<left_border) | (xe>right_border) | (ye<top_border) | (ye>bottom_border):
                     message('Next move is out of field')
+                    if not self.fixed:
+                        move_stage = True # Move the stage to recenter
+                    else:
+                        break
 
                 # Check whether we might reach the floor (with 100 um largin)
                 if (oldz+ze - floor) * self.microscope.up_direction < 100.:
-                    final_move = True
                     message('We reached the coverslip.')
-                    ze_clipped = floor-oldz + 100.*self.microscope.up_direction
-                else:
-                    ze_clipped = ze
-
-                # If final move: recalculate distance
-                if final_move:
-                    distance = distance*min(xe_clipped*1./xe, ye_clipped*1./ye, ze_clipped*1./ze)
-                    message('Clipped distance: '+str(distance))
+                    break
 
                 # Move pipette down
                 x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
-                                              move_stage=False, message=message)
+                                              move_stage=move_stage, message=message)
+                rs = self.stage.reference_position()
 
                 # Update matrix
                 z += self.microscope.position()
-                self.M[:, axis] = -array([x - oldx, y - oldy, z - oldz]) / distance*self.up_direction[axis]
+                self.M[:, axis] = -(array([x - oldx, y - oldy, z - oldz])+oldrs-rs) / distance*self.up_direction[axis]
                 oldx, oldy, oldz = x, y, z
+                oldrs = rs
 
             # Move back to initial position
             u = self.position(axis)
-            x, y, z = self.move_back(z0, u0, None, message)
+            x, y, z = self.move_back(z0, u0, us0, message)
+            rs = self.stage.reference_position()
             # Update matrix
             z += self.microscope.position()
-            self.M[:, axis] = array([x - oldx, y - oldy, z - oldz]) / (u0-u)
+            self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
             oldx, oldy, oldz = x, y, z
-            message("Axis column: "+str(self.M[:, axis]))
 
         message('Matrix:' + str(self.M))
-
-        # *** Calculate maximum distance ***
-        max_distance = (z - floor) * self.microscope.up_direction - 100. # a 100 um margin
-        min_distance = distance # initial distance
-
-        if False:
-            message('Compensating movements with stage')
-            # *** Estimate the matrix with stage compensation ***
-            for axis in range(len(self.axes)):
-                message('Calibrating axis ' + str(axis))
-                final_move = False
-                distance = min_distance
-                oldrs = rs0 = self.stage.reference_position()
-                while (not final_move) & (distance<300): # just for testing
-                    distance=min(distance*2,max_distance)
-                    if distance==max_distance:
-                        final_move = True
-                    message('Distance ' + str(distance))
-
-                    # Estimate final position on screen
-                    xe, ye, ze = -self.M[:, axis] * distance * self.up_direction[axis]
-
-                    # Move pipette down
-                    x, y, z = self.move_and_track(-distance * self.up_direction[axis], axis,
-                                                  move_stage=True, message=message)
-                    rs = self.stage.reference_position()
-
-                    # Update matrix
-                    z += self.microscope.position()
-                    self.M[:, axis] = -(array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / distance * self.up_direction[axis]
-                    oldx, oldy, oldz = x, y, z
-                    oldrs = rs
-
-                # Move back to initial position
-                u = self.position(axis)
-                x, y, z = self.move_back(z0, u0, rs0, message)
-                # Update matrix
-                z += self.microscope.position()
-                self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0 - u)
-                oldx, oldy, oldz = x, y, z
-                message("Axis column: " + str(self.M[:, axis]))
-
-            message('Matrix:' + str(self.M))
 
         # *** Compute the (pseudo-)inverse ***
         self.Minv = pinv(self.M)
 
         # *** Calculate offset ***0
         #    Offset is such that the initial position is the position on screen in the reference system
-        self.r0 = array([x, y, z0+z]) - dot(self.M, u0) - self.stage.reference_position()
+        self.r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
 
         self.calibrated = True
 
