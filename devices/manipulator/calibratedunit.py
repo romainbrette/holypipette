@@ -286,7 +286,7 @@ class CalibratedUnit(ManipulatorUnit):
         if valmax < threshold:
             raise CalibrationError('Matching error: the pipette is absent or not focused')
 
-        message('Pipette identifed at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
+        message('Pipette identified at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
 
         return x-x0,y-y0,z
 
@@ -359,7 +359,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         # Determine up direction for the first axis (assumed to be the main axis)
         positive_move = self.M[:, 0] # move of 1 um along first axis
-        self.up_direction[0] = up_direction(self.pipette_position,-positive_move) # not sure about the sign
+        self.up_direction[0] = up_direction(self.pipette_position,positive_move)
         message('Axis 0 up direction: ' + str(self.up_direction[0]))
 
         # Determine microscope up direction
@@ -369,7 +369,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Determine up direction of other axes
         for axis in range(1,len(self.axes)):
             # We use microscope up direction
-            s = -sign(self.M[2, axis] * self.microscope.up_direction)
+            s = sign(self.M[2, axis] * self.microscope.up_direction)
             if s != 0:
                 self.up_direction[axis] = s
             message('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
@@ -397,12 +397,16 @@ class CalibratedUnit(ManipulatorUnit):
         top_border = -(height/2-(template_height*3)/4)
         bottom_border = (height/2-(template_height*3)/4)
 
+        print left_border, right_border, top_border, bottom_border
+        print width, height
+
         # *** Store initial position ***
         z0 = self.microscope.position()
         u0 = self.position()
         us0 = self.stage.position()
 
         # *** First pass: move each axis once and estimate matrix ***
+        self.M = 0*self.M # Erase current matrix
         distance = stack_depth*1.
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
@@ -430,6 +434,7 @@ class CalibratedUnit(ManipulatorUnit):
         for axis in range(len(self.axes)):
             message('Calibrating axis ' + str(axis))
             final_move = False
+            distance = stack_depth * 1.
             while (not final_move) & (distance<300): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
@@ -453,7 +458,8 @@ class CalibratedUnit(ManipulatorUnit):
 
                 # If final move: recalculate distance
                 if final_move:
-                    distance = (distance/2)*min(xe_clipped*1./xe, ye_clipped*1./ye, ze_clipped*1./ze)
+                    distance = distance*min(xe_clipped*1./xe, ye_clipped*1./ye, ze_clipped*1./ze)
+                    message('Clipped distance: '+str(distance))
 
                 # Move pipette down
                 x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
@@ -471,7 +477,9 @@ class CalibratedUnit(ManipulatorUnit):
             z += self.microscope.position()
             self.M[:, axis] = array([x - oldx, y - oldy, z - oldz]) / (u0-u)
             oldx, oldy, oldz = x, y, z
-            message('Matrix:' + str(self.M))
+            message("Axis column: "+str(self.M[:, axis]))
+
+        message('Matrix:' + str(self.M))
 
         '''
         Stage compensation:
@@ -565,7 +573,7 @@ class CalibratedUnit(ManipulatorUnit):
                     # Check whether we might be out of field
                     if (xestimate<left_border) | (xestimate>right_border) | \
                        (yestimate<top_border) | (yestimate>bottom_border):
-                        message('Estimate move is out of field')
+                        message('Estimated move is out of field')
                         break
 
                     # Check whether we might reach the floor (with 10% accuracy)
@@ -629,8 +637,7 @@ class CalibratedUnit(ManipulatorUnit):
                     if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
                         positive_move = self.M[:, 0]
                         self.up_direction[0] = up_direction(pipette_position,
-                                                            -positive_move * sign(
-                                                                distance))  # since we did a negative move
+                                                            positive_move)
                         message('Axis 0 up direction: ' + str(self.up_direction[0]))
                         # Now determine microscope up direction
                         self.microscope.up_direction = sign(self.M[2, 0] * self.up_direction[0])
@@ -810,7 +817,7 @@ class CalibratedUnit(ManipulatorUnit):
                     # We only need to it once, and we do it when the displacement is large enough
                     if (k == 4) & (axis == 0) & (self.microscope.up_direction is None):
                         positive_move = self.M[:,0]
-                        self.up_direction[0] = up_direction(pipette_position, -positive_move*sign(distance)) # since we did a negative move
+                        self.up_direction[0] = up_direction(pipette_position, positive_move)
                         message('Axis 0 up direction: '+str(self.up_direction[0]))
                         # Now determine microscope up direction
                         self.microscope.up_direction = sign(self.M[2,0]*self.up_direction[0])

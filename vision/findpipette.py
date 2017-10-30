@@ -31,4 +31,4 @@ def up_direction(pipette_position, positive_move):
     '''
     y,x = cardinal_points[pipette_position] # position of pipette in square (0..2, 0..2)
     pipette_vector = array((1,1)) - array((x,y))
-    return sign(dot(pipette_vector,positive_move[:2]))
+    return -sign(dot(pipette_vector,positive_move[:2]))
