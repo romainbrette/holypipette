@@ -481,24 +481,48 @@ class CalibratedUnit(ManipulatorUnit):
 
         message('Matrix:' + str(self.M))
 
-        '''
-        Stage compensation:
-        For each axis:
-        0) Limit distance = Z0 - floor_Z - margin (eg 100 um)
-        1) Start with distance = 2*previous distance
-        2) Estimate movement
-        3) Move axis
-        4) Move stage by compensating movement
-        5) Wait for stage and axis
-        6) Autofocus and wait
-        7) Locate pipette
-        8) Calculate matrix column
-        9) Distance*2 and repeat (2) until limit
+        # *** Calculate maximum distance ***
+        max_distance = (z - floor) * self.microscope.up_direction - 100. # a 100 um margin
+        min_distance = distance # initial distance
 
-        10) Move back (focus, wait, pipette and stage, wait)
-        11) Locate pipette
-        12) Adjust matrix
-        '''
+        if False:
+            message('Compensating movements with stage')
+            # *** Estimate the matrix with stage compensation ***
+            for axis in range(len(self.axes)):
+                message('Calibrating axis ' + str(axis))
+                final_move = False
+                distance = min_distance
+                oldrs = rs0 = self.stage.reference_position()
+                while (not final_move) & (distance<300): # just for testing
+                    distance=min(distance*2,max_distance)
+                    if distance==max_distance:
+                        final_move = True
+                    message('Distance ' + str(distance))
+
+                    # Estimate final position on screen
+                    xe, ye, ze = -self.M[:, axis] * distance * self.up_direction[axis]
+
+                    # Move pipette down
+                    x, y, z = self.move_and_track(-distance * self.up_direction[axis], axis,
+                                                  move_stage=True, message=message)
+                    rs = self.stage.reference_position()
+
+                    # Update matrix
+                    z += self.microscope.position()
+                    self.M[:, axis] = -(array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / distance * self.up_direction[axis]
+                    oldx, oldy, oldz = x, y, z
+                    oldrs = rs
+
+                # Move back to initial position
+                u = self.position(axis)
+                x, y, z = self.move_back(z0, u0, rs0, message)
+                # Update matrix
+                z += self.microscope.position()
+                self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0 - u)
+                oldx, oldy, oldz = x, y, z
+                message("Axis column: " + str(self.M[:, axis]))
+
+            message('Matrix:' + str(self.M))
 
         # *** Compute the (pseudo-)inverse ***
         self.Minv = pinv(self.M)
