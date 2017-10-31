@@ -1,5 +1,7 @@
 *** Pipette change and move back
 
+* Calibration in reference system
+
 * Microscope stack: with slow move
 * Measure template matching error
 * Analyze matrices

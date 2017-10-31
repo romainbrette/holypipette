@@ -511,6 +511,137 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.calibrated = True
 
+    def calibrate2(self, message = lambda str: None):
+        '''
+        Automatic calibration.
+        Second algorithm: moves along axes of the reference system.
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
+        # *** Calibrate the stage ***
+        self.stage.calibrate(message=message)
+
+        # *** Take photos ***
+        # Take a stack of photos on different focal planes, spaced by 1 um
+        self.take_photos(message)
+
+        # *** Calculate image borders ***
+
+        template_height, template_width = self.photos[stack_depth].shape
+        width, height = self.camera.width, self.camera.height
+        # We use a margin of 1/4 of the template
+        left_border = -(width/2-(template_width*3)/4)
+        right_border = (width/2-(template_width*3)/4)
+        top_border = -(height/2-(template_height*3)/4)
+        bottom_border = (height/2-(template_height*3)/4)
+
+        # *** Store initial position ***
+        z0 = self.microscope.position()
+        u0 = self.position()
+        us0 = self.stage.position()
+
+        # *** First pass: move each axis once and estimate matrix ***
+        self.Minv = 0*self.Minv # Erase current matrix
+        distance = stack_depth*.5
+        oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
+        for axis in range(len(self.axes)):
+            x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
+            z+= self.microscope.position()
+            print x,y,z
+            self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
+            oldx, oldy, oldz = x, y, z
+        message('Matrix:' + str(self.M))
+
+        # *** Calculate up directions ***
+        self.calculate_up_directions(message)
+
+        # Move back to initial position
+        oldx, oldy, oldz = self.move_back(z0, u0, None, message)  # The pipette could have moved
+        oldz+=self.microscope.position()
+
+        # Calculate floor (min Z)
+        if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
+            floor = z0-300.*self.microscope.up_direction
+        else:
+            floor = self.microscope.floor_Z
+
+        # *** Estimate the matrix using increasingly large movements ***
+        min_distance = distance
+        for axis in range(3):
+            message('Calibrating axis ' + str(axis))
+            distance = min_distance * 1.
+            oldrs = self.stage.reference_position()
+            move_stage = False
+            while (distance<4000): # just for testing
+                distance *= 2
+                message('Distance ' + str(distance))
+
+                # Check whether the next position might be unreachable
+                future_position = self.position(axis) - distance*self.up_direction[axis]
+                if (future_position<self.min[axis]) | (future_position>self.max[axis]):
+                    message("Next move cannot be performed (end position)")
+                    break
+
+                # Check whether we might reach the floor (with 100 um margin)
+                if (axis == 2) & ((oldz- distance*self.up_direction[axis] - floor) * self.microscope.up_direction < 100.):
+                    message('We reached the coverslip.')
+                    break
+
+                # **** I'M HERE ****
+
+                # Move pipette
+                move = zeros(3)
+                if (axis == 2):
+                    # move pipette down
+                    move[axis] = -distance*self.microscope.up_direction[axis]
+                else:
+                    move[axis] = distance # we should move in a direction that does not collide with the objective
+                self.reference_relative_move(move)
+                self.wait_until_still()
+                if (axis==2):
+                    self.microscope.relative_move(move[2])
+                    self.microscope.wait_until_still()
+                else:
+                    self.stage.reference_relative_move(-move)
+                    self.stage.wait_until_still()
+
+                x,y,z = self.locate_pipette()
+
+                # Update matrix
+                z += self.microscope.position()
+                r = array([x,y,z])-array([oldx,oldy,oldz])
+                self.Minv[:, axis] = dot(self.Minv,move+r) / move[axis]
+
+                # Adjust
+                self.stage.reference_relative_move(-array([x,y,0]))
+                self.microscope.relative_move(z)
+                x,y,z = self.locate_pipette()
+
+                oldx, oldy, oldz = x, y, z
+
+            # Move back to initial position
+            u = self.position(axis)
+            x, y, z = self.move_back(z0, u0, us0, message)
+            rs = self.stage.reference_position()
+            # Update matrix
+            z += self.microscope.position()
+            #self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
+            oldx, oldy, oldz = x, y, z
+
+        message('Matrix:' + str(self.M))
+
+        # *** Compute the (pseudo-)inverse ***
+        self.M = pinv(self.Minv)
+
+        # *** Calculate offset ***0
+        #    Offset is such that the initial position is the position on screen in the reference system
+        self.r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
+
+        self.calibrated = True
+
+
     def recalibrate(self, message = lambda str: None):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
