@@ -155,7 +155,7 @@ class CalibratedUnit(ManipulatorUnit):
             position = self.min[0]
         self.absolute_move(position, axis=0)
 
-    def safe_move(self, r, withdraw = 0.):
+    def safe_move(self, r, withdraw = 0., recalibrate = False):
         '''
         Moves the device to position x (an XYZ vector) in a way that minimizes
         interaction with tissue.
@@ -168,6 +168,7 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         r : target position in um, an (X,Y,Z) vector
         withdraw : in um; if not 0, the pipette is withdrawn by this value from the target position x
+        recalibrate : if True, pipette is recalibrated 1 mm before its target
         '''
         if not self.calibrated:
             raise CalibrationError
@@ -187,6 +188,36 @@ class CalibratedUnit(ManipulatorUnit):
             self.reference_move(r + alpha * p, safe = True)
             # We need to wait here!
             self.wait_until_still()
+
+        # Recalibrate 1 mm before target
+        if recalibrate:
+            end_position = dot(self.Minv,r-self.stage.reference_position()-self.r0)
+            position = self.position()
+            distance = norm(end_position-position)
+            if distance>1000:
+                print("Recalibrate")
+                # Intermediate move 1 mm before target
+                ref_position = self.reference_position()
+                intermediate = r+(1000./distance)*(ref_position-r)
+                intermediate_unit = intermediate-self.stage.reference_position()
+                # First move the microscope up
+                z0 = self.microscope.position()
+                self.microscope.absolute_move(intermediate[2])
+                self.microscope.wait_until_still()
+                # Move stage
+                us0 = self.stage.position()
+                self.stage.reference_move(-intermediate_unit)
+                self.stage.wait_until_still()
+                # Move pipette
+                self.reference_move(array([0,0,intermediate[2]]), safe = True)
+                self.wait_until_still()
+                # Recalibrate
+                self.auto_recalibrate()
+                # Move stage and microscope back
+                self.stage.absolute_move(us0)
+                self.stage.wait_until_still()
+                self.microscope.absolute_move(z0)
+                self.microscope.wait_until_still()
 
         # Final move
         self.reference_move(r - withdraw * p, safe = True) # Or relative move in manipulator coordinates, first axis (faster)
@@ -574,22 +605,9 @@ class CalibratedUnit(ManipulatorUnit):
             distance = min_distance * 1.
             oldrs = self.stage.reference_position()
             move_stage = False
-            while (distance<4000): # just for testing
+            while (distance<300): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
-
-                # Check whether the next position might be unreachable
-                future_position = self.position(axis) - distance*self.up_direction[axis]
-                if (future_position<self.min[axis]) | (future_position>self.max[axis]):
-                    message("Next move cannot be performed (end position)")
-                    break
-
-                # Check whether we might reach the floor (with 100 um margin)
-                if (axis == 2) & ((oldz- distance*self.up_direction[axis] - floor) * self.microscope.up_direction < 100.):
-                    message('We reached the coverslip.')
-                    break
-
-                # **** I'M HERE ****
 
                 # Move pipette
                 move = zeros(3)
@@ -598,14 +616,28 @@ class CalibratedUnit(ManipulatorUnit):
                     move[axis] = -distance*self.microscope.up_direction[axis]
                 else:
                     move[axis] = distance # we should move in a direction that does not collide with the objective
+
+                next_u = self.position()+dot(self.Minv, move)
+                next_us = self.stage.position()-dot(self.stage.Minv, move)
+
+                # Check whether we might reach the floor (with 100 um margin)
+                if (next_u[2] - floor) * self.microscope.up_direction < 100.:
+                    message('We reached the coverslip.')
+                    break
+
+                # Check whether we might exceed the limits
+                if (next_u < self.min).any() | (next_u > self.max).any() | \
+                   (next_us < self.stage.min).any() | (next_us > self.stage.max).any():
+                    message('Next position is not reachable')
+                    break
+
                 self.reference_relative_move(move)
                 self.wait_until_still()
                 if (axis==2):
                     self.microscope.relative_move(move[2])
                     self.microscope.wait_until_still()
-                else:
-                    self.stage.reference_relative_move(-move)
-                    self.stage.wait_until_still()
+                self.stage.reference_relative_move(-move)
+                self.stage.wait_until_still()
 
                 x,y,z = self.locate_pipette()
 
@@ -622,12 +654,8 @@ class CalibratedUnit(ManipulatorUnit):
                 oldx, oldy, oldz = x, y, z
 
             # Move back to initial position
-            u = self.position(axis)
             x, y, z = self.move_back(z0, u0, us0, message)
-            rs = self.stage.reference_position()
-            # Update matrix
             z += self.microscope.position()
-            #self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
             oldx, oldy, oldz = x, y, z
 
         message('Matrix:' + str(self.M))

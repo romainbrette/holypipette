@@ -16,6 +16,6 @@ print D.max()
 #normalizedImg = zeros((800, 800))
 #normalizedImg = cv2.normalize(D,  normalizedImg, 0, 255, cv2.NORM_MINMAX)
 
-plt.imshow(D, cmap = 'gray')
+plt.imshow(img[0], cmap = 'gray')
 plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
 plt.show()
