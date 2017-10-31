@@ -226,7 +226,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         p = []
         for axis in range(len(self.axes)):
-            p.append((self.M[0,axis]**2 + self.M[1,axis]**2)/(1-self.M[2,axis]))
+            p.append(((self.M[0,axis]**2 + self.M[1,axis]**2)/(1-self.M[2,axis]**2))**.5)
         return p
 
     def analyze_calibration(self):
@@ -234,11 +234,11 @@ class CalibratedUnit(ManipulatorUnit):
         Analyzes calibration matrices.
         '''
         # Objective magnification
-        print("Magnification for each axis: "+str(self.pixel_per_um()))
+        print("Magnification for each axis: "+str(self.pixel_per_um()[:2]))
         # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
         for axis in range(len(self.axes)):
             compensating_move = -dot(self.stage.Minv,self.M[:,axis])
-            length = (sum(compensating_move[:2]**2)+self.M[:,axis]**2)**.5
+            length = (sum(compensating_move[:2]**2)+self.M[2,axis]**2)**.5
             print("Precision of axis "+str(axis)+": "+str(abs(1-length)))
         # Analysis of template matching in photos (leave one out)
 

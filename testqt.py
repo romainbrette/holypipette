@@ -126,7 +126,6 @@ class TestGui(QtWidgets.QMainWindow):
                     # Manual calibration based on landmark points
                 else:
                     self.calibrate_signal.emit()
-                    calibrated_unit.analyze_calibration()
             # Quit
             elif event.key() == Qt.Key_Escape:
                 self.close()
@@ -188,11 +187,11 @@ class TestGui(QtWidgets.QMainWindow):
                     position1 = axes_end[-2][0]
                     position2 = axes_end[-1][0]
                     calibrated_stage.min = [min(a,b) for a,b in zip(position1, position2)]
-                    calibrated_stage.max = [min(a,b) for a,b in zip(position1, position2)]
+                    calibrated_stage.max = [max(a,b) for a,b in zip(position1, position2)]
                     position1 = axes_end[-2][1]
                     position2 = axes_end[-1][1]
                     calibrated_unit.min = [min(a,b) for a,b in zip(position1, position2)]
-                    calibrated_unit.max = [min(a,b) for a,b in zip(position1, position2)]
+                    calibrated_unit.max = [max(a,b) for a,b in zip(position1, position2)]
                     print calibrated_stage.min,calibrated_stage.max,calibrated_unit.min,calibrated_unit.max
         except Exception:
             print(traceback.format_exc())
@@ -212,6 +211,7 @@ class TestGui(QtWidgets.QMainWindow):
         microscope.load_configuration(cfg['microscope'])
         calibrated_stage.load_configuration(cfg['stage'])
         calibrated_unit.load_configuration(cfg['unit'])
+        calibrated_unit.analyze_calibration()
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
@@ -256,6 +256,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             calibrated_unit.calibrate(message)
             t2 = time.time()
             print t2 - t1, 's'
+            calibrated_unit.analyze_calibration()
         except Exception:
             print(traceback.format_exc())
         print('Done')
