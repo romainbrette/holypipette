@@ -229,6 +229,15 @@ class CalibratedUnit(ManipulatorUnit):
             p.append((self.M[0,axis]**2 + self.M[1,axis]**2)/(1-self.M[2,axis]))
         return p
 
+    def analyze_calibration(self):
+        '''
+        Analyzes calibration matrices.
+        '''
+        # Objective magnification
+        print self.pixel_per_um()
+        # Microscope Z vs. pipette Z
+        # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
+
     # ***** REFACTORING OF CALIBRATION ****
     def locate_pipette(self, message = lambda str: None, threshold = None):
         '''

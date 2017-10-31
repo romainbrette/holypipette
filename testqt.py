@@ -126,6 +126,7 @@ class TestGui(QtWidgets.QMainWindow):
                     # Manual calibration based on landmark points
                 else:
                     self.calibrate_signal.emit()
+                    calibrated_unit.analyze_calibration()
             # Quit
             elif event.key() == Qt.Key_Escape:
                 self.close()
@@ -145,6 +146,7 @@ class TestGui(QtWidgets.QMainWindow):
             # Load configuration
             elif event.key() == Qt.Key_L:
                 self.load()
+                calibrated_unit.analyze_calibration()
             # Floor Z (coverslip)
             elif event.key() == Qt.Key_F:
                 microscope.floor_Z = microscope.position()
