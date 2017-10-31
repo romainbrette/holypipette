@@ -621,7 +621,9 @@ class CalibratedUnit(ManipulatorUnit):
                   'pipette_position' : self.pipette_position,
                   'photos' : self.photos,
                   'photo_x0' : self.photo_x0,
-                  'photo_y0' : self.photo_y0}
+                  'photo_y0' : self.photo_y0,
+                  'min' : self.min,
+                  'max' : self.max}
 
         return config
 
@@ -640,6 +642,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.photos = config.get('photos', self.photos)
         self.photo_x0 = config.get('photo_x0', self.photo_x0)
         self.photo_y0 = config.get('photo_y0', self.photo_y0)
+        self.min = config.get('min', self.min)
+        self.max = config.get('max', self.max)
 
 class CalibratedStage(CalibratedUnit):
     '''
