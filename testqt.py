@@ -168,7 +168,7 @@ class TestGui(QtWidgets.QMainWindow):
                     print('Paramecium tracking is on')
             # Withdraw
             elif event.key() == Qt.Key_W:
-                pass
+                calibrated_unit.withdraw()
             # Landmark point
             elif event.key() == Qt.Key_Asterisk:
                 print("Landmark")

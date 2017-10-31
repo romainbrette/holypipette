@@ -145,6 +145,16 @@ class CalibratedUnit(ManipulatorUnit):
         u = dot(self.Minv, r)
         self.relative_move(u)
 
+    def withdraw(self):
+        '''
+        Withdraw the pipette to the upper end position
+        '''
+        if self.up_direction[0]>0:
+            position = self.max[0]
+        else:
+            position = self.min[0]
+        self.absolute_move(position, axis=0)
+
     def safe_move(self, r, withdraw = 0.):
         '''
         Moves the device to position x (an XYZ vector) in a way that minimizes

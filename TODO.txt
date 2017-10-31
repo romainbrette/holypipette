@@ -1,13 +1,14 @@
+*** Pipette change and move back
+
 * Microscope stack: with slow move
 * Measure template matching error
 * Analyze matrices
 * Crop around tip
 * Locate pipette by movement
-* Estimate motor ranges
+* Estimate motor ranges automatically
 * Calibrate stage
 * Semiautomatic calibration:
     user goes to 4 points, reposition pipette, possibly automatically (template matching)
-* Pipette change and move back
 
 * Refactor calibration: Calibrator; calibrated_unit does not depend on camera
     => manipulator_unit could then absorb calibrated_unit
