@@ -453,13 +453,13 @@ class CalibratedUnit(ManipulatorUnit):
             distance = min_distance * 1.
             oldrs = self.stage.reference_position()
             move_stage = False
-            while True: #(distance<2000): # just for testing
+            while (distance<4000): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
 
                 # Check whether the next position might be unreachable
                 future_position = self.position(axis) - distance*self.up_direction[axis]
-                if (future_position<self.min) | (future_position>self.max):
+                if (future_position<self.min[axis]) | (future_position>self.max[axis]):
                     message("Next move cannot be performed (end position)")
                     break
 
@@ -475,8 +475,8 @@ class CalibratedUnit(ManipulatorUnit):
                     else:
                         break
 
-                # Check whether we might reach the floor (with 100 um largin)
-                if (oldz+ze - floor) * self.microscope.up_direction < 100.:
+                # Check whether we might reach the floor (with 100 um margin)
+                if (ze - floor) * self.microscope.up_direction < 100.:
                     message('We reached the coverslip.')
                     break
 
