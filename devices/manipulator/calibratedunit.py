@@ -234,9 +234,13 @@ class CalibratedUnit(ManipulatorUnit):
         Analyzes calibration matrices.
         '''
         # Objective magnification
-        print self.pixel_per_um()
-        # Microscope Z vs. pipette Z
+        print("Magnification for each axis: "+str(self.pixel_per_um()))
         # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
+        for axis in range(len(self.axes)):
+            compensating_move = -dot(self.stage.Minv,self.M[:,axis])
+            length = (sum(compensating_move[:2]**2)+self.M[:,axis]**2)**.5
+            print("Precision of axis "+str(axis)+": "+str(abs(1-length)))
+        # Analysis of template matching in photos (leave one out)
 
     # ***** REFACTORING OF CALIBRATION ****
     def locate_pipette(self, message = lambda str: None, threshold = None):
