@@ -15,6 +15,7 @@ R                       Recalibrate (secondary calibration)
 Shift-R                 Recalibrate automatically
 
 P                       Take photos of pipette
+E                       End points of axes
 
 F                       Define coverslip Z (floor)
 G                       Go to coverslip Z with microscope

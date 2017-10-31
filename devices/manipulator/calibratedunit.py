@@ -430,9 +430,16 @@ class CalibratedUnit(ManipulatorUnit):
             distance = min_distance * 1.
             oldrs = self.stage.reference_position()
             move_stage = False
-            while (distance<2000): # just for testing
+            while True: #(distance<2000): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
+
+                # Check whether the next position might be unreachable
+                future_position = self.position(axis) - distance*self.up_direction[axis]
+                if (future_position<self.min) | (future_position>self.max):
+                    message("Next move cannot be performed (end position)")
+                    break
+
                 # Estimate final position on screen
                 dxe, dye, dze = -self.M[:, axis] * distance * self.up_direction[axis]
                 xe, ye, ze = oldx+dxe, oldy+dye, oldz+dze

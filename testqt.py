@@ -178,6 +178,20 @@ class TestGui(QtWidgets.QMainWindow):
                 print landmark_r
                 position = array([self.camera.width/2, self.camera.height/2, microscope.position()])
                 landmark_r.append(position)
+            # End position of the axes
+            elif event.key() == Qt.Key_E:
+                print("End position of axes")
+                axes_end.append((calibrated_stage.position(), calibrated_unit.position()))
+                if len(axes_end)>=2:
+                    position1 = axes_end[-2][0]
+                    position2 = axes_end[-1][0]
+                    calibrated_stage.min = [min(a,b) for a,b in zip(position1, position2)]
+                    calibrated_stage.max = [min(a,b) for a,b in zip(position1, position2)]
+                    position1 = axes_end[-2][1]
+                    position2 = axes_end[-1][1]
+                    calibrated_unit.min = [min(a,b) for a,b in zip(position1, position2)]
+                    calibrated_unit.max = [min(a,b) for a,b in zip(position1, position2)]
+                    print calibrated_stage.min,calibrated_stage.max,calibrated_unit.min,calibrated_unit.max
         except Exception:
             print(traceback.format_exc())
 
@@ -321,6 +335,7 @@ x0, y0 = None, None
 landmark_u = [] # Landmark points
 landmark_r = []
 landmark_rs = []
+axes_end = [] # End points of axes
 
 pressure.set_pressure(25)
 

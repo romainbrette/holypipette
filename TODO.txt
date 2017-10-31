@@ -1,3 +1,6 @@
+* Microscope stack: with slow move
+* Measure template matching error
+* Analyze matrices
 * Crop around tip
 * Locate pipette by movement
 * Estimate motor ranges
@@ -14,8 +17,6 @@
 * Should we move the pipette outside the autopatch algo?
 * Refactor automatic patch: cut the run in pieces?
 
-* Check compensation movements and quality (matrix)
-* Move: take photos, move and correct?
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
 * In calibration: check whether best match is with the Z border (+- 8) => error

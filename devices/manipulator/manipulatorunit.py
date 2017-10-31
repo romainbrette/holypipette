@@ -20,9 +20,9 @@ class ManipulatorUnit(Manipulator):
         Manipulator.__init__(self)
         self.dev = dev
         self.axes = axes
-        # Motor ranges in um
-        self.min = None
-        self.max = None
+        # Motor ranges in um; by default +- one meter
+        self.min = -ones(len(axes))*1e6
+        self.max = ones(len(axes))*1e6
 
     def position(self, axis = None):
         '''
