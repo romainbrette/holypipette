@@ -199,7 +199,7 @@ class TestGui(QtWidgets.QMainWindow):
                 # Stack of photos, full field
                 # Move a little bit
                 for k in range(10):
-                    print("Stack n°{}".format(k))
+                    print("Stack {}".format(k))
                     z = microscope.position() + arange(-stack_depth,stack_depth+1)
                     microscope.stack(camera, z, save = 'stack{}.'.format(k))
                     calibrated_stage.relative_move(10, axis = 0)
