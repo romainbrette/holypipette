@@ -193,6 +193,18 @@ class TestGui(QtWidgets.QMainWindow):
                     calibrated_unit.min = [min(a,b) for a,b in zip(position1, position2)]
                     calibrated_unit.max = [max(a,b) for a,b in zip(position1, position2)]
                     print calibrated_stage.min,calibrated_stage.max,calibrated_unit.min,calibrated_unit.max
+            # Image analysis
+            elif event.key() == Qt.Key_A:
+                print("Taking photos for subsequent image analysis")
+                # Stack of photos, full field
+                # Move a little bit
+                for k in range(10):
+                    print("Stack n°{}".format(k))
+                    z = microscope.position() + arange(-stack_depth,stack_depth+1)
+                    microscope.stack(camera, z, save = 'stack{}.'.format(k))
+                    calibrated_stage.relative_move(10, axis = 0)
+                    calibrated_stage.wait_until_still(0)
+                print("Done")
         except Exception:
             print(traceback.format_exc())
 

@@ -78,7 +78,7 @@ class Microscope(Manipulator):
         self.dev.wait_until_still([self.axis])
         sleep(.05)
 
-    def stack(self, camera, z, preprocessing=lambda img:img, save = True):
+    def stack(self, camera, z, preprocessing=lambda img:img, save = None):
         '''
         Take a stack of images at the positions given in the z list
 
@@ -99,7 +99,8 @@ class Microscope(Manipulator):
             time.sleep(.1) # Just make sure the camera is in sync
             img = preprocessing(camera.snap())
             images.append(img)
-            cv2.imwrite('./screenshots/series{}.jpg'.format(k), img)
+            if save is not None:
+                cv2.imwrite('./screenshots/'+save+'{}.jpg'.format(k), img)
             k+=1
         self.absolute_move(position)
         self.wait_until_still()

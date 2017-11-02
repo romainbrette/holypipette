@@ -231,7 +231,8 @@ class CalibratedUnit(ManipulatorUnit):
 
         z0 = self.microscope.position()
         z = z0 + arange(-stack_depth, stack_depth + 1)  # +- stack_depth um around current position
-        stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position))
+        stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position),
+                                      save = 'series')
         # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
         # Check microscope position

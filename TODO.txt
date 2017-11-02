@@ -1,3 +1,7 @@
+* Image analysis:
+    take full field stack of images at n positions.
+    take images of pipette at +-1 for each axis, including near the coverslip.
+
 * Move for patch: first move 1 mm away, recalibrate, then go.
 
 * Pipette change and move back
