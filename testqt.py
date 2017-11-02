@@ -255,8 +255,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     def move_pipette(self):
         try:
             calibrated_unit.safe_move(self.move_position, recalibrate=False) # just for testing here
-            calibrated_unit.auto_recalibrate(center=False)
-            calibrated_unit.reference_move(self.move_position)
+            #calibrated_unit.auto_recalibrate(center=False)
+            #calibrated_unit.reference_move(self.move_position)
         except Exception:
             print(traceback.format_exc())
 
@@ -280,10 +280,11 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         print('Manual calibration....')
         try:
             calibrated_unit.manual_calibration((landmark_r[-4:], landmark_u[-4:], landmark_rs[-4:]), message)
+            calibrated_unit.analyze_calibration()
         except Exception:
             print(traceback.format_exc())
         print('Done')
-
+C
 
     @QtCore.pyqtSlot()
     def do_recalibration(self):
@@ -328,7 +329,7 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
     def point_paramecium(self, img):
         x,y = where_is_paramecium(img)
         if x is not None:
-            cv2.circle(img, (x,y), 50, (0, 0, 255))
+            cv2.circle(img, (int(x),int(y)), 50, (0, 0, 255))
         return img
 
     def edit_image(self, img):

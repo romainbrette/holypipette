@@ -713,7 +713,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # 5) Calculate conversion factor.
 
-        # Offset
+        # Offset (doesn't seem to be right)
         self.r0 = r0-rs0-dot(self.M, u0)
 
     def auto_recalibrate(self, center = True, message = lambda str: None):

@@ -1,5 +1,7 @@
+* Safe move: mvt in plane should also be safe, it's not
+* Multiple calibrations (objective and immersion)
+
 * Image analysis:
-    take full field stack of images at n positions.
     take images of pipette at +-1 for each axis, including near the coverslip.
 
 * Move for patch: first move 1 mm away, recalibrate, then go.
