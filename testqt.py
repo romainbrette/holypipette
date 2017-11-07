@@ -41,6 +41,7 @@ class TestGui(QtWidgets.QMainWindow):
     motor_ranges_signal = QtCore.pyqtSignal()
     move_signal = QtCore.pyqtSignal()
     patch_signal = QtCore.pyqtSignal()
+    break_signal = QtCore.pyqtSignal()
     photo_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
@@ -64,6 +65,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.move_signal.connect(self.calibrator.move_pipette)
         self.patch_signal.connect(self.calibrator.do_patch)
+        self.break_signal.connect(self.calibrator.break_in)
         self.photo_signal.connect(self.calibrator.take_photos)
         self.auto_recalibrate_signal.connect(self.calibrator.do_auto_recalibration)
         self.calibration_thread.start()
@@ -139,6 +141,9 @@ class TestGui(QtWidgets.QMainWindow):
                     self.auto_recalibrate_signal.emit()
                 else:
                     self.recalibrate_signal.emit()
+            # Break in
+            elif event.key() == Qt.Key_B:
+                self.break_signal.emit()
             # Save configuration
             elif event.key() == Qt.Key_S:
                 self.save()
@@ -241,6 +246,17 @@ class TestGui(QtWidgets.QMainWindow):
 class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
 
     @QtCore.pyqtSlot()
+    def break_in(self): # Breaking in
+        try:
+            print("Breaking in")
+            autopatcher.break_in(message)
+            print("Done")
+        except AutopatchError as e:
+            print(str(e))
+        except Exception:
+            print(traceback.format_exc())
+
+    @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure
         try:
             print("Starting patch-clamp")
@@ -284,7 +300,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         except Exception:
             print(traceback.format_exc())
         print('Done')
-C
+
 
     @QtCore.pyqtSlot()
     def do_recalibration(self):

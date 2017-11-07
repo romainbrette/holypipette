@@ -2,14 +2,14 @@
 Parameters for the automatic patch-clamp algorithm
 '''
 # Pressure parameters
-param_pressure_near = 15 #25
+param_pressure_near = 25
 param_pressure_sealing = -30
-param_pressure_ramp_amplitude = -300 #-230.
+param_pressure_ramp_amplitude = -230.
 param_pressure_ramp_duration = 1.15
 
 # Normal resistance range
 param_Rmin = 2e6
-param_Rmax = 11e6
+param_Rmax = 25e6
 
 # Initial distance above the target cell
 param_cell_distance = 10
@@ -34,13 +34,13 @@ param_Vramp_duration = 10.
 param_Vramp_amplitude = -.070
 
 # Maximum time for seal formation
-param_seal_deadline = 90.
+param_seal_deadline = 120. #90.
 
 # Maximum cell resistance
 param_max_cell_R = 300e6
 
 # Optional zap
-param_zap = True
+param_zap = False
 
 # Number of trials for break-in
-param_breakin_trials = 4
+param_breakin_trials = 8

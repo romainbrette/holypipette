@@ -35,6 +35,29 @@ class AutoPatcher(object):
         else:
             message('Zap off')
 
+    def break_in(self, message = lambda str: None):
+        '''
+        Breaks in. The pipette must be in cell-attached mode
+        '''
+        message("Breaking in")
+
+        trials = 0
+        R = self.amplifier.resistance()
+        if R < param_gigaseal_R:
+            raise AutopatchError("Seal lost")
+
+        while self.amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
+            message('Essai '+str(trials))
+            if trials == param_breakin_trials:
+                raise AutopatchError("Break-in unsuccessful")
+            if param_zap:
+                self.amplifier.zap()
+            self.pressure.ramp(amplitude=param_pressure_ramp_amplitude, duration=param_pressure_ramp_duration)
+            time.sleep(1.3)
+            trials += 1
+
+        message("Successful break-in, R = " + str(self.amplifier.resistance() / 1e6))
+
     def run(self, move_position, message = lambda str: None):
         '''
         Runs the automatic patch-clamp algorithm, including manipulator movements.
@@ -113,22 +136,7 @@ class AutoPatcher(object):
             print("Seal successful, R = " + str(self.amplifier.resistance()/1e6))
 
             # Go whole-cell
-            message("Breaking in")
-            trials = 0
-            R = self.amplifier.resistance()
-            if R < param_gigaseal_R:
-                raise AutopatchError("Seal lost")
-
-            while self.amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
-                if trials == param_breakin_trials:
-                    raise AutopatchError("Break-in unsuccessful")
-                if param_zap:
-                    self.amplifier.zap()
-                    self.pressure.ramp(amplitude=param_pressure_ramp_amplitude, duration=param_pressure_ramp_duration)
-                time.sleep(1.3)
-                trials += 1
-
-            message("Successful break-in, R = " + str(self.amplifier.resistance()/1e6))
+            self.break_in(message)
 
         finally:
             self.amplifier.stop_patch()
