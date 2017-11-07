@@ -3,7 +3,7 @@ Parameters for the automatic patch-clamp algorithm
 '''
 # Pressure parameters
 param_pressure_near = 25
-param_pressure_sealing = -30
+param_pressure_sealing = -20
 param_pressure_ramp_amplitude = -230.
 param_pressure_ramp_duration = 1.15
 
