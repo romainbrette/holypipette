@@ -298,14 +298,16 @@ class CalibratedUnit(ManipulatorUnit):
             z = -depth+len(stack)/2
             valmax = -1
             while z<depth+len(stack)/2:
+                message('Depth: '+str(z))
                 self.microscope.absolute_move(z0 + z)
                 self.microscope.wait_until_still()
-                z+=len(stack)
-                x,y,z,c = self.locate_pipette(message=message, threshold=threshold, depth=None, return_correlation=True)
+                x,y,zt,c = self.locate_pipette(message=message, threshold=threshold, depth=None, return_correlation=True)
                 if c>valmax:
-                    xm,ym,zm,valmax = x,y,z,c
+                    xm,ym,zm,valmax = x,y,z+zt,c
+                z += len(stack)
             self.microscope.absolute_move(z0)
             self.microscope.wait_until_still()
+            message('Pipette identified at depth '+str(zm))
             if return_correlation:
                 return xm,ym,zm,valmax
             else:
@@ -758,8 +760,9 @@ class CalibratedUnit(ManipulatorUnit):
         center : if True, move stage and focus to center the pipette
         message : a function to which messages are passed
         '''
-        x,y,z = self.locate_pipette(message=message,depth=30) # 30 um
+        x,y,z = self.locate_pipette(message=message,depth=50) # 50 um
         z+= self.microscope.position()
+        message('Pipette at z='+str(z))
 
         u0 = self.position()
         stager0 = self.stage.reference_position()

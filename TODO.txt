@@ -1,7 +1,7 @@
 1) Automatic recalibration when moving
+    * autorecalibrate at a safe distance of the cell (50 um?)
     * recalibrate function, which moves stage/microscope and then moves back
       based on extension of locate_pipette which may move stage and microscope (as in calibration in fact)
-    * autorecalibrate by moving the focus at different positions and doing template matching
 2) Pipette change: move down until contrast goes up above 4 sigmas or so (take initial photos and estimate variance);
     or mean intensity varies by that much
 3) Multiple calibrations (objective and immersion)
