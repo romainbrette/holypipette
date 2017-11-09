@@ -275,7 +275,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Analysis of template matching in photos (leave one out)
 
     # ***** REFACTORING OF CALIBRATION ****
-    def locate_pipette(self, message = lambda str: None, threshold = None):
+    def locate_pipette(self, message = lambda str: None, threshold = None, depth = None, return_correlation = False):
         '''
         Locates the pipette on screen, using photos previously taken.
 
@@ -283,12 +283,34 @@ class CalibratedUnit(ManipulatorUnit):
         ----------
         message : a function to which messages are passed
         threshold : correlation threshold
+        depth : maximum distance in z to search; if None, only uses the depth of the photo stack
+        return_correlation : if True, returns the best correlation in the template matching
 
         Returns
         -------
         x,y,z : position on screen relative to center
         '''
         stack = self.photos
+
+        if depth is not None:
+            # Move the focus so as explore a larger depth
+            z0 = self.microscope.position()
+            z = -depth+len(stack)/2
+            valmax = -1
+            while z<depth+len(stack)/2:
+                self.microscope.absolute_move(z0 + z)
+                self.microscope.wait_until_still()
+                z+=len(stack)
+                x,y,z,c = self.locate_pipette(message=message, threshold=threshold, depth=None, return_correlation=True)
+                if c>valmax:
+                    xm,ym,zm,valmax = x,y,z,c
+            self.microscope.absolute_move(z0)
+            self.microscope.wait_until_still()
+            if return_correlation:
+                return xm,ym,zm,valmax
+            else:
+                return xm,ym,zm
+
         x0, y0 = self.photo_x0, self.photo_y0
         if threshold is None:
             threshold = 1-(1-self.min_photo_match)*2
@@ -325,7 +347,10 @@ class CalibratedUnit(ManipulatorUnit):
 
         message('Pipette identified at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
 
-        return x-x0,y-y0,z
+        if return_correlation:
+            return x-x0,y-y0,z,valmax
+        else:
+            return x-x0,y-y0,z
 
     def move_and_track(self, distance, axis, move_stage = False, message = lambda str: None):
         '''
@@ -730,75 +755,22 @@ class CalibratedUnit(ManipulatorUnit):
 
         Parameters
         ----------
-        center : if True, move pipette at the center after recalibration
+        center : if True, move stage and focus to center the pipette
         message : a function to which messages are passed
         '''
-        stack = self.photos
-        x0,y0 = self.photo_x0,self.photo_y0
+        x,y,z = self.locate_pipette(message=message,depth=30) # 30 um
+        z+= self.microscope.position()
 
         u0 = self.position()
         stager0 = self.stage.reference_position()
 
-        image = self.camera.snap()
-
-        # Error margins for position estimation
-        template_height, template_width = stack[stack_depth].shape
-        xmargin = template_width/4
-        ymargin = template_height/4
-
-        # First template matching to estimate pipette position on screen
-        xt, yt, _ = templatematching(image, stack[stack_depth])
-
-        # Crop image around estimated position
-        image = image[yt - ymargin:yt + template_height + ymargin,
-                xt - xmargin:xt + template_width + xmargin]
-        dx = xt - xmargin
-        dy = yt - ymargin
-
-        valmax = -1
-        out_of_scope = True
-
-        previous_correlation = -1
-        totalz = 0 # Total movement in Z
-        while out_of_scope & (abs(totalz)<50.): # no more than 50 micron
-            image = self.camera.snap()
-            image = image[yt - ymargin:yt + template_height + ymargin,
-                    xt - xmargin:xt + template_width + xmargin]
-
-            for i, template in enumerate(stack):  # we look for the best matching template
-                xt, yt, val = templatematching(image, template)
-                xt += dx
-                yt += dy
-                if val > valmax:
-                    valmax = val
-                    x, y, z = xt, yt, stack_depth - i  # note the sign for z
-                    if (i==0) | (i==len(stack)-1): # probably outside the stack
-                        out_of_scope = True
-                    else:
-                        out_of_scope = False
-
-            message('Correlation='+str(valmax))
-
-            if valmax < previous_correlation: # completely arbitary here
-                raise CalibrationError('Matching error: the pipette is absent or not focused')
-
-            previous_correlation = valmax
-
-            message('Pipette identifed at x,y,z='+str(x-x0)+','+str(y-y0)+','+str(z))
-
-            self.microscope.relative_move(z)
-            self.microscope.wait_until_still()
-            totalz+=z
-
-            # If pipette was outside the scope of the stack, iterate
-
         # Offset is such that the position is (x,y,z) in the reference system
-        z = self.microscope.position()
-        self.r0 = array([x - x0, y - y0,z]) - dot(self.M, u0) - stager0
+        self.r0 = array([x,y,z]) - dot(self.M, u0) - stager0
 
-        # Move pipette to center
+        # Move to center pipette
         if center:
-            self.reference_move(array([0., 0., z]))
+            self.microscope.absolute_move(z)
+            self.stage.reference_relative_move(-array([x,y]))
         self.wait_until_still()
 
     def save_configuration(self):

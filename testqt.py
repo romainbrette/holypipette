@@ -301,7 +301,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print('Done')
 
-
     @QtCore.pyqtSlot()
     def do_recalibration(self):
         print('Recalibration')
@@ -311,7 +310,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     def do_auto_recalibration(self):
         print('Automatic recalibration....')
         try:
-            calibrated_unit.auto_recalibrate(message=message)
+            calibrated_unit.auto_recalibrate(message=message, center = False)
             print("Done")
         except Exception:
             print(traceback.format_exc())
