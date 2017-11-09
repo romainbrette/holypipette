@@ -362,6 +362,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
+        sleep(sleep_time)
         x, y, z = self.locate_pipette()
 
         return x,y,z
@@ -397,6 +398,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
+        sleep(sleep_time)
         x, y, z = self.locate_pipette()
 
         return x,y,z
