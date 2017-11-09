@@ -357,10 +357,13 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Locate pipette
         sleep(sleep_time)
-        _, _, z = self.locate_pipette()
+        x, y, z = self.locate_pipette()
 
-        # Focus and locate again
+        # Focus, move stage and locate again
         self.microscope.relative_move(z)
+        if move_stage:
+            self.stage.reference_relative_move(-array([x,y]))
+            self.stage.wait_until_still()
         self.microscope.wait_until_still()
         sleep(sleep_time)
         x, y, z = self.locate_pipette()
@@ -527,6 +530,8 @@ class CalibratedUnit(ManipulatorUnit):
 
             # Move back to initial position
             u = self.position(axis)
+            message('Moving back over '+str(u0[axis]-u)+' um')
+            oldrs = self.stage.reference_position() # Normally not necessary
             x, y, z = self.move_back(z0, u0, us0, message)
             rs = self.stage.reference_position()
             # Update matrix
