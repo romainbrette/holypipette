@@ -4,7 +4,8 @@ Parameters for the automatic patch-clamp algorithm
 # Pressure parameters
 param_pressure_near = 25
 param_pressure_sealing = -20
-param_pressure_ramp_amplitude = -230.
+param_pressure_ramp_increment = -25 # minimum ramp amplitude
+param_pressure_ramp_max = -300.
 param_pressure_ramp_duration = 1.15
 
 # Normal resistance range
@@ -41,6 +42,3 @@ param_max_cell_R = 300e6
 
 # Optional zap
 param_zap = False
-
-# Number of trials for break-in
-param_breakin_trials = 8

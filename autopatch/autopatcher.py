@@ -41,20 +41,20 @@ class AutoPatcher(object):
         '''
         message("Breaking in")
 
-        trials = 0
         R = self.amplifier.resistance()
         if R < param_gigaseal_R:
             raise AutopatchError("Seal lost")
 
+        pressure = 0
         while self.amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
             message('Essai '+str(trials))
-            if trials == param_breakin_trials:
+            pressure+= param_pressure_ramp_increment
+            if pressure > param_pressure_ramp_max:
                 raise AutopatchError("Break-in unsuccessful")
             if param_zap:
                 self.amplifier.zap()
-            self.pressure.ramp(amplitude=param_pressure_ramp_amplitude, duration=param_pressure_ramp_duration)
+            self.pressure.ramp(amplitude=pressure, duration=param_pressure_ramp_duration)
             time.sleep(1.3)
-            trials += 1
 
         message("Successful break-in, R = " + str(self.amplifier.resistance() / 1e6))
 
