@@ -2,7 +2,7 @@
 Parameters for the automatic patch-clamp algorithm
 '''
 # Pressure parameters
-param_pressure_near = 25
+param_pressure_near = 30
 param_pressure_sealing = -20
 param_pressure_ramp_increment = -25 # minimum ramp amplitude
 param_pressure_ramp_max = -300.
@@ -19,7 +19,7 @@ param_cell_distance = 10
 param_max_R_increase = 1e6
 
 # Maximum length of movement during approach
-param_max_distance = 15
+param_max_distance = 20
 
 # Proportional increase in resistance indicating cell presence
 param_cell_R_increase = .15

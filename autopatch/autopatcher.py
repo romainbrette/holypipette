@@ -46,10 +46,12 @@ class AutoPatcher(object):
             raise AutopatchError("Seal lost")
 
         pressure = 0
+        trials = 0
         while self.amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
+            trials+=1
             message('Essai '+str(trials))
             pressure+= param_pressure_ramp_increment
-            if pressure > param_pressure_ramp_max:
+            if abs(pressure) > abs(param_pressure_ramp_max):
                 raise AutopatchError("Break-in unsuccessful")
             if param_zap:
                 self.amplifier.zap()
@@ -67,6 +69,11 @@ class AutoPatcher(object):
             # Pressure level 1
             self.pressure.set_pressure(param_pressure_near)
 
+            # Move pipette to target
+            self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance,
+                                           recalibrate=True)
+            self.calibrated_unit.wait_until_still()
+
             # Wait for a few seconds
             time.sleep(4.)
 
@@ -78,15 +85,11 @@ class AutoPatcher(object):
             elif R > param_Rmax:
                 raise AutopatchError("Resistance is too high (obstructed?)")
 
-            # Move pipette to target
-            self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance)
-            self.calibrated_unit.wait_until_still()
-
             # Check resistance again
-            oldR = R
-            R = self.amplifier.resistance()
-            if abs(R - oldR) > param_max_R_increase:
-                raise AutopatchError("Pipette is obstructed; R = " + str(R/1e6))
+            #oldR = R
+            #R = self.amplifier.resistance()
+            #if abs(R - oldR) > param_max_R_increase:
+            #    raise AutopatchError("Pipette is obstructed; R = " + str(R/1e6))
 
             # Pipette offset
             self.amplifier.auto_pipette_offset()

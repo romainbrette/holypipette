@@ -201,7 +201,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Recalibrate 100 um before target; only if distance is greater than 500 um
         if recalibrate & (length>500):
-            self.reference_move(r + 100 * p * self.up_direction[0],safe=True)
+            self.reference_move(r + 50 * p * self.up_direction[0],safe=True)
             self.wait_until_still()
             z0 = self.microscope.position()
             self.focus()
