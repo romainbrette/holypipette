@@ -181,7 +181,7 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError
 
         # Calculate length of the move
-        length = norm(r-self.reference_position())
+        length = norm(dot(self.Minv,r-self.reference_position()))
 
         p = self.M[:,0] # this is the vector for the first manipulator axis
         uprime = self.reference_position() # I should call this uprime but rprime
