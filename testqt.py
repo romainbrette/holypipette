@@ -270,7 +270,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def move_pipette(self):
         try:
-            calibrated_unit.safe_move(self.move_position, recalibrate=False) # just for testing here
+            calibrated_unit.safe_move(self.move_position, recalibrate=True) # just for testing here
             #calibrated_unit.auto_recalibrate(center=False)
             #calibrated_unit.reference_move(self.move_position)
         except Exception:

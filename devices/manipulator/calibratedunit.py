@@ -155,6 +155,13 @@ class CalibratedUnit(ManipulatorUnit):
             position = self.min[0]
         self.absolute_move(position, axis=0)
 
+    def focus(self):
+        '''
+        Move the microscope so as to put the pipette tip in focus
+        '''
+        self.microscope.absolute_move(self.reference_position()[2])
+        self.microscope.wait_until_still()
+
     def safe_move(self, r, withdraw = 0., recalibrate = False):
         '''
         Moves the device to position x (an XYZ vector) in a way that minimizes
@@ -173,8 +180,11 @@ class CalibratedUnit(ManipulatorUnit):
         if not self.calibrated:
             raise CalibrationError
 
+        # Calculate length of the move
+        length = norm(r-self.reference_position())
+
         p = self.M[:,0] # this is the vector for the first manipulator axis
-        uprime = self.reference_position()
+        uprime = self.reference_position() # I should call this uprime but rprime
 
         # First we check whether movement is up or down
         if (r[2] - uprime[2])*self.microscope.up_direction<0:
@@ -189,38 +199,18 @@ class CalibratedUnit(ManipulatorUnit):
             # We need to wait here!
             self.wait_until_still()
 
-        # Recalibrate 1 mm before target
-        if recalibrate:
-            end_position = dot(self.Minv,r-self.stage.reference_position()-self.r0)
-            position = self.position()
-            distance = norm(end_position-position)
-            if distance>1000:
-                print("Recalibrate")
-                # Intermediate move 1 mm before target
-                ref_position = self.reference_position()
-                intermediate = r+(1000./distance)*(ref_position-r)
-                intermediate_unit = intermediate-self.stage.reference_position()
-                # First move the microscope up
-                z0 = self.microscope.position()
-                self.microscope.absolute_move(intermediate[2])
-                self.microscope.wait_until_still()
-                # Move stage
-                us0 = self.stage.position()
-                self.stage.reference_move(-intermediate_unit)
-                self.stage.wait_until_still()
-                # Move pipette
-                self.reference_move(array([0,0,intermediate[2]]), safe = True)
-                self.wait_until_still()
-                # Recalibrate
-                self.auto_recalibrate()
-                # Move stage and microscope back
-                self.stage.absolute_move(us0)
-                self.stage.wait_until_still()
-                self.microscope.absolute_move(z0)
-                self.microscope.wait_until_still()
+        # Recalibrate 100 um before target; only if distance is greater than 500 um
+        if recalibrate & (length>500):
+            self.reference_move(r + 100 * p * self.up_direction[0],safe=True)
+            self.wait_until_still()
+            z0 = self.microscope.position()
+            self.focus()
+            self.auto_recalibrate(center=False)
+            self.microscope.absolute_move(z0)
+            self.microscope.wait_until_still()
 
         # Final move
-        self.reference_move(r - withdraw * p, safe = True) # Or relative move in manipulator coordinates, first axis (faster)
+        self.reference_move(r + withdraw * p * self.up_direction[0], safe = True) # Or relative move in manipulator coordinates, first axis (faster)
 
     def take_photos(self, message = lambda str: None):
         '''
@@ -266,12 +256,14 @@ class CalibratedUnit(ManipulatorUnit):
         Analyzes calibration matrices.
         '''
         # Objective magnification
-        print("Magnification for each axis: "+str(self.pixel_per_um()[:2]))
+        print("Magnification for each axis of the pipette: "+str(self.pixel_per_um()[:2]))
+        print("Magnification for each axis of the stage: "+str(self.stage.pixel_per_um()))
         # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
         for axis in range(len(self.axes)):
             compensating_move = -dot(self.stage.Minv,self.M[:,axis])
             length = (sum(compensating_move[:2]**2)+self.M[2,axis]**2)**.5
             print("Precision of axis "+str(axis)+": "+str(abs(1-length)))
+        # Angle
         # Analysis of template matching in photos (leave one out)
 
     # ***** REFACTORING OF CALIBRATION ****
