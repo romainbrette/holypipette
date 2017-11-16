@@ -35,6 +35,7 @@ signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
+    stage_calibrate_signal = QtCore.pyqtSignal()
     manual_calibrate_signal = QtCore.pyqtSignal()
     recalibrate_signal = QtCore.pyqtSignal()
     auto_recalibrate_signal = QtCore.pyqtSignal()
@@ -61,6 +62,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibrator = PipetteHandler()
         self.calibrator.moveToThread(self.calibration_thread)
         self.calibrate_signal.connect(self.calibrator.do_calibration)
+        self.stage_calibrate_signal.connect(self.calibrator.stage_calibrate)
         self.manual_calibrate_signal.connect(self.calibrator.manual_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
@@ -130,6 +132,8 @@ class TestGui(QtWidgets.QMainWindow):
                 if event.modifiers() == Qt.ShiftModifier:
                     self.manual_calibrate_signal.emit()
                     # Manual calibration based on landmark points
+                elif event.modifiers() == Qt.ControlModifier:
+                    self.stage_calibrate_signal.emit()
                 else:
                     self.calibrate_signal.emit()
             # Quit
@@ -300,6 +304,19 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             #calibrated_stage.calibrate()
             #calibrated_unit.calibrate_with_stage(message)
             calibrated_unit.calibrate(message)
+            t2 = time.time()
+            print t2 - t1, 's'
+            calibrated_unit.analyze_calibration()
+        except Exception:
+            print(traceback.format_exc())
+        print('Done')
+
+    @QtCore.pyqtSlot()
+    def stage_calibrate(self):
+        print('Starting stage calibration....')
+        try:
+            t1 = time.time()
+            calibrated_stage.calibrate(message)
             t2 = time.time()
             print t2 - t1, 's'
             calibrated_unit.analyze_calibration()

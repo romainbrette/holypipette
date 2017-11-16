@@ -13,6 +13,8 @@ W                       Withdraw pipette
 L                       Load configuration
 S                       Save configuration
 C                       Calibrate (primary calibration)
+Shift-C                 Manual calibration based on landmarks
+Ctrl-C                  Calibration of the stage only
 R                       Recalibrate (secondary calibration)
 Shift-R                 Recalibrate automatically
 
