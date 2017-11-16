@@ -277,20 +277,22 @@ class CalibratedUnit(ManipulatorUnit):
         self.reference_move(array([0,0,self.microscope.position()])+ withdraw * self.M[:,0] * self.up_direction[0])
         self.wait_until_still()
 
-        # Take photos to analyze the mean contrast
+        # Take photos to analyze the mean contrast (not exactly)
         images=[]
         for _ in range(10):
             images.append(std(self.camera.snap()))
             sleep(0.1)
         I0 = mean(images)
-        sigma = I0*.05
-        message('Mean intensity: '+str(I0)+" +- "+str(sigma))
+        sigma = I0*.2 # allow for a 20% change
+        message('Contrast: '+str(I0)+" +- "+str(sigma))
 
-        # Move by steps of 50 um until the contrast changes
+        # Move by steps of 100 um until the contrast changes
         found = False
-        for i in range(100): # 5 mm maximum
+        for i in range(50): # 5 mm maximum
             message('Moving down, i='+str(i))
-            self.relative_move(-50.*self.up_direction[0],0)
+            #self.relative_move(-50.*self.up_direction[0],0)
+            # absolute move just to ensure it's fast
+            self.absolute_move(self.position(0)-100. * self.up_direction[0], 0)
             self.wait_until_still(0)
             I = std(self.camera.snap())
             if abs(I-I0)>sigma:
@@ -298,7 +300,7 @@ class CalibratedUnit(ManipulatorUnit):
                 break
 
         if found:
-            message('Pipette found!')
+            message('Pipette found! with change = '+str(abs(I-I0)/I0))
         else:
             message('Pipette not found')
 
