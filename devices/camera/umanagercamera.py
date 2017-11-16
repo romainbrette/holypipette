@@ -64,16 +64,16 @@ class uManagerCamera(Camera):
         self.lock.release()
 
         # Check that the image is not frozen
-        now = time()
-        if self.comparison_time is None:
-            self.comparison_time = now
-            self.comparison_frame = frame
-        elif (now - self.comparison_time) > 1:
-            if np.all(self.comparison_frame == frame):
-                print('Camera image is *exactly* the same as 1s ago -- resetting camera!')
-                self.reset()
-            self.comparison_time = now
-            self.comparison_frame = frame
+        # now = time()
+        # if self.comparison_time is None:
+        #     self.comparison_time = now
+        #     self.comparison_frame = frame
+        # elif (now - self.comparison_time) > 1:
+        #     if np.all(self.comparison_frame == frame):
+        #         print('Camera image is *exactly* the same as 1s ago -- resetting camera!')
+        #         self.reset()
+        #     self.comparison_time = now
+        #     self.comparison_frame = frame
 
         if frame.dtype == 'uint16':
             frame = cv2.convertScaleAbs(frame, alpha=2 ** -2)

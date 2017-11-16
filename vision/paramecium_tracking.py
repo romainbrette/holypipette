@@ -6,13 +6,14 @@ import cv2
 
 __all__ = ["where_is_paramecium"]
 
-def where_is_paramecium(frame): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um = 5.): # Locate paramecium
     '''
     Locate paramecium in an image.
 
     Arguments
     ---------
     frame : the image
+    pixel_per_um : number of pixels per um
 
     Returns
     -------
@@ -30,7 +31,7 @@ def where_is_paramecium(frame): # Locate paramecium
     for cnt in contours:
         try:
             M = cv2.moments(cnt)
-            if (cv2.arcLength(cnt, True) > 90) & bool(M['m00']):
+            if (cv2.arcLength(cnt, True) > 35*pixel_per_um) & bool(M['m00']):
                 (x, y), radius = cv2.minEnclosingCircle(cnt)
                 cx = int(M['m10'] / M['m00'])
                 cy = int(M['m01'] / M['m00'])
@@ -40,7 +41,7 @@ def where_is_paramecium(frame): # Locate paramecium
                 theta = atan2((u20-u02), 2*u11)/2
                 radius = int(radius)
                 dist = ((x - width/2) ** 2 + (y - height/2) ** 2) ** 0.5
-                if (radius < 55) & (radius > 25) & (dist<distmin):
+                if (radius < 20*pixel_per_um) & (radius > 10*pixel_per_um) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
                     angle = theta # not used here

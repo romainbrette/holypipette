@@ -358,7 +358,7 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         self.show_paramecium = False
 
     def point_paramecium(self, img):
-        x,y = where_is_paramecium(img)
+        x,y = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0])
         if x is not None:
             cv2.circle(img, (int(x),int(y)), 50, (0, 0, 255))
         return img
