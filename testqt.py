@@ -151,9 +151,6 @@ class TestGui(QtWidgets.QMainWindow):
                     self.auto_recalibrate_signal.emit()
                 else:
                     self.recalibrate_signal.emit()
-            # Break in
-            elif event.key() == Qt.Key_B:
-                self.break_signal.emit()
             # Save configuration
             elif event.key() == Qt.Key_S:
                 self.save()
@@ -292,7 +289,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
-    def move_pipette_back(self): # Move pipette back under the microscope
+    def pipette_back(self): # Move pipette back under the microscope
         try:
             print("Moving the pipette back under the microscope")
             calibrated_unit.move_new_pipette_back(message=message)

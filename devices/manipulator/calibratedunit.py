@@ -277,23 +277,23 @@ class CalibratedUnit(ManipulatorUnit):
         self.reference_move(array([0,0,self.microscope.position()])+ withdraw * self.M[:,0] * self.up_direction[0])
         self.wait_until_still()
 
-        # Take photos to analyze the mean luminance
+        # Take photos to analyze the mean contrast
         images=[]
         for _ in range(10):
-            images.append(mean(self.camera.snap()))
+            images.append(std(self.camera.snap()))
             sleep(0.1)
         I0 = mean(images)
-        sigma = std(images)
+        sigma = I0*.05
         message('Mean intensity: '+str(I0)+" +- "+str(sigma))
 
-        # Move by steps of 50 um until the luminance changes
+        # Move by steps of 50 um until the contrast changes
         found = False
         for i in range(100): # 5 mm maximum
             message('Moving down, i='+str(i))
             self.relative_move(-50.*self.up_direction[0],0)
             self.wait_until_still(0)
-            I = mean(self.camera.snap())
-            if abs(I-I0)>4*sigma:
+            I = std(self.camera.snap())
+            if abs(I-I0)>sigma:
                 found = True
                 break
 
