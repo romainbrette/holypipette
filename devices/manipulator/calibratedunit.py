@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arccos
+from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -263,10 +263,9 @@ class CalibratedUnit(ManipulatorUnit):
             compensating_move = -dot(self.stage.Minv,self.M[:,axis])
             length = (sum(compensating_move[:2]**2)+self.M[2,axis]**2)**.5
             print("Precision of axis "+str(axis)+": "+str(abs(1-length)))
-        # Angles
-        for axis in range(len(self.axes)):
-            angle = 90 - 180/pi * arccos(self.M[2,axis] / norm(self.M[:,axis]))
-            print('Angle of axis'+str(axis)+": "+str(angle))
+            # Angles
+            angle = abs(180/pi * arcsin(self.M[2,axis] / length))
+            print('Angle of axis '+str(axis)+": "+str(angle))
         # Analysis of template matching in photos (leave one out)
 
     # ***** REFACTORING OF CALIBRATION ****
