@@ -9,6 +9,7 @@ Click                   Move pipette
 Shift-click             Move pipette and patch
 Ctrl-click              Patch without moving the pipette
 W                       Withdraw pipette
+B                       Move pipette back
 
 L                       Load configuration
 S                       Save configuration

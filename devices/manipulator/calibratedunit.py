@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin
+from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin, mean, std
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -267,6 +267,40 @@ class CalibratedUnit(ManipulatorUnit):
             angle = abs(180/pi * arcsin(self.M[2,axis] / length))
             print('Angle of axis '+str(axis)+": "+str(angle))
         # Analysis of template matching in photos (leave one out)
+
+    def move_new_pipette_back(self, message = lambda str: None):
+        '''
+        Moves a new (uncalibrated) pipette back under the microscope
+        '''
+        # First move it 2 mm before target position
+        withdraw = 2000.
+        self.reference_move(array([0,0,self.microscope.position()])+ withdraw * self.M[:,0] * self.up_direction[0])
+        self.wait_until_still()
+
+        # Take photos to analyze the mean luminance
+        images=[]
+        for _ in range(10):
+            images.append(mean(self.camera.snap()))
+            sleep(0.1)
+        I0 = mean(images)
+        sigma = std(images)
+        message('Mean intensity: '+str(I0)+" +- "+str(sigma))
+
+        # Move by steps of 50 um until the luminance changes
+        found = False
+        for i in range(100): # 5 mm maximum
+            message('Moving down, i='+str(i))
+            self.relative_move(-50.*self.up_direction[0],0)
+            self.wait_until_still(0)
+            I = mean(self.camera.snap())
+            if abs(I-I0)>4*sigma:
+                found = True
+                break
+
+        if found:
+            message('Pipette found!')
+        else:
+            message('Pipette not found')
 
     # ***** REFACTORING OF CALIBRATION ****
     def locate_pipette(self, message = lambda str: None, threshold = None, depth = None, return_correlation = False):

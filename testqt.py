@@ -35,6 +35,7 @@ signal.signal(signal.SIGABRT, signal_handler)
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
+    pipette_back_signal = QtCore.pyqtSignal()
     stage_calibrate_signal = QtCore.pyqtSignal()
     manual_calibrate_signal = QtCore.pyqtSignal()
     recalibrate_signal = QtCore.pyqtSignal()
@@ -66,6 +67,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.manual_calibrate_signal.connect(self.calibrator.manual_calibration)
         self.motor_ranges_signal.connect(self.calibrator.do_motor_ranges)
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
+        self.pipette_back_signal.connect(self.calibrator.pipette_back)
         self.move_signal.connect(self.calibrator.move_pipette)
         self.patch_signal.connect(self.calibrator.do_patch)
         self.patch_nomove_signal.connect(self.calibrator.patch_without_move)
@@ -183,6 +185,9 @@ class TestGui(QtWidgets.QMainWindow):
             # Withdraw
             elif event.key() == Qt.Key_W:
                 calibrated_unit.withdraw()
+            # Move pipette back after a change
+            elif event.key() == Qt.Key_B:
+                self.pipette_back_signal.emit()
             # Landmark point
             elif event.key() == Qt.Key_Asterisk:
                 print("Landmark")
@@ -283,6 +288,15 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print("Done")
         except AutopatchError as e:
             print(str(e))
+        except Exception:
+            print(traceback.format_exc())
+
+    @QtCore.pyqtSlot()
+    def move_pipette_back(self): # Move pipette back under the microscope
+        try:
+            print("Moving the pipette back under the microscope")
+            calibrated_unit.move_new_pipette_back(message=message)
+            print("Done")
         except Exception:
             print(traceback.format_exc())
 
