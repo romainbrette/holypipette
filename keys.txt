@@ -12,6 +12,7 @@ W                       Withdraw pipette
 
 L                       Load configuration
 S                       Save configuration
+
 C                       Calibrate (primary calibration)
 Shift-C                 Manual calibration based on landmarks
 Ctrl-C                  Calibration of the stage only
@@ -23,6 +24,8 @@ E                       End points of axes
 
 F                       Define coverslip Z (floor)
 G                       Go to coverslip Z with microscope
+
+T                       Track paramecium
 
 F1                      Reset camera (stop/start image acquisition)
 
