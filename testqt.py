@@ -41,6 +41,7 @@ class TestGui(QtWidgets.QMainWindow):
     motor_ranges_signal = QtCore.pyqtSignal()
     move_signal = QtCore.pyqtSignal()
     patch_signal = QtCore.pyqtSignal()
+    patch_nomove_signal = QtCore.pyqtSignal()
     break_signal = QtCore.pyqtSignal()
     photo_signal = QtCore.pyqtSignal()
 
@@ -65,6 +66,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.recalibrate_signal.connect(self.calibrator.do_recalibration)
         self.move_signal.connect(self.calibrator.move_pipette)
         self.patch_signal.connect(self.calibrator.do_patch)
+        self.patch_nomove_signal.connect(self.calibrator.patch_without_move)
         self.break_signal.connect(self.calibrator.break_in)
         self.photo_signal.connect(self.calibrator.take_photos)
         self.auto_recalibrate_signal.connect(self.calibrator.do_auto_recalibration)
@@ -88,6 +90,8 @@ class TestGui(QtWidgets.QMainWindow):
                 self.calibrator.move_position = array([xs, ys, microscope.position()])
                 if event.modifiers() == Qt.ShiftModifier:
                     self.patch_signal.emit()
+                elif event.modifiers() == Qt.ControlModifier:
+                    self.patch_nomove_signal.emit()
                 else:
                     self.move_signal.emit()
             except Exception:
@@ -266,6 +270,18 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(str(e))
         except Exception:
             print(traceback.format_exc())
+
+    @QtCore.pyqtSlot()
+    def patch_without_move(self): # Start the patch-clamp procedure
+        try:
+            print("Starting patch-clamp, no pipette movement")
+            autopatcher.run(move_position=None, message=message)
+            print("Done")
+        except AutopatchError as e:
+            print(str(e))
+        except Exception:
+            print(traceback.format_exc())
+
 
     @QtCore.pyqtSlot()
     def move_pipette(self):

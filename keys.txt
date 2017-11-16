@@ -7,6 +7,7 @@ Alt+arrows              Move by 2.5 um
 
 Click                   Move pipette
 Shift-click             Move pipette and patch
+Ctrl-click              Patch without moving the pipette
 W                       Withdraw pipette
 
 L                       Load configuration

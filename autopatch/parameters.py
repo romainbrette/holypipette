@@ -2,7 +2,7 @@
 Parameters for the automatic patch-clamp algorithm
 '''
 # Pressure parameters
-param_pressure_near = 30
+param_pressure_near = 20
 param_pressure_sealing = -20
 param_pressure_ramp_increment = -25 # minimum ramp amplitude
 param_pressure_ramp_max = -300.
@@ -35,7 +35,7 @@ param_Vramp_duration = 10.
 param_Vramp_amplitude = -.070
 
 # Maximum time for seal formation
-param_seal_deadline = 120. #90.
+param_seal_deadline = 90.
 
 # Maximum cell resistance
 param_max_cell_R = 300e6

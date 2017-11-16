@@ -11,10 +11,7 @@
 * Image analysis:
     take images of pipette at +-1 for each axis, including near the coverslip.
 
-* Move for patch: first move 1 mm away, recalibrate, then go.
-
 * Calibration in reference system
-
 * Microscope stack: with slow move
 * Crop around tip
 * Locate pipette by movement

@@ -60,7 +60,7 @@ class AutoPatcher(object):
 
         message("Successful break-in, R = " + str(self.amplifier.resistance() / 1e6))
 
-    def run(self, move_position, message = lambda str: None):
+    def run(self, move_position = None, message = lambda str: None):
         '''
         Runs the automatic patch-clamp algorithm, including manipulator movements.
         '''
@@ -69,15 +69,17 @@ class AutoPatcher(object):
             # Pressure level 1
             self.pressure.set_pressure(param_pressure_near)
 
-            # Move pipette to target
-            self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance,
-                                           recalibrate=True)
-            self.calibrated_unit.wait_until_still()
+            if move_position is not None:
+                # Move pipette to target
+                self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * array([0, 0, 1.]) * param_cell_distance,
+                                               recalibrate=True)
+                self.calibrated_unit.wait_until_still()
 
-            # Wait for a few seconds
-            time.sleep(4.)
+                # Wait for a few seconds
 
             # Check initial resistance
+            self.amplifier.auto_pipette_offset()
+            time.sleep(4.)
             R = self.amplifier.resistance()
             message("Resistance:" + str(R/1e6))
             if R < param_Rmin:
