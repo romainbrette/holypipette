@@ -6,9 +6,25 @@ import numpy as np
 
 from devices.camera.umanagercamera import Lumenera
 
-__all__ = ['LiveFeedQt', 'draw_cross']
+__all__ = ['LiveFeedQt', 'draw_cross', 'draw_bar']
+
+def draw_bar(pixmap, barsize = None):
+    '''
+    Draws a horizontal bar (showing scale)
+    '''
+    painter = QtGui.QPainter(pixmap)
+    pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
+    pen.setWidth(2)
+    painter.setPen(pen)
+    c_x, c_y = pixmap.width()/10, pixmap.height()*9/10
+    painter.drawLine(c_x, c_y, c_x + barsize, c_y)
+    painter.end()
+
 
 def draw_cross(pixmap):
+    '''
+    Draws a cross at the center
+    '''
     painter = QtGui.QPainter(pixmap)
     pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
     pen.setWidth(2)

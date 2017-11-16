@@ -11,7 +11,7 @@ from os.path import expanduser
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPoint
 
-from numpy import array, arange
+from numpy import array, arange, mean
 
 from devices import *
 from gui import *
@@ -54,7 +54,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         self.camera = camera
         self.update_status_bar()
-        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback,image_edit=image_edit)
+        self.video = LiveFeedQt(self.camera,mouse_callback=self.mouse_callback,image_edit=image_edit, display_edit=display_edit)
         self.setCentralWidget(self.video)
         self.calibration_thread = QtCore.QThread()
         self.calibrator = PipetteHandler()
@@ -359,6 +359,10 @@ def message(msg):
 
 def image_edit(img):
     return image_editor.edit_image(img)
+
+def display_edit(img):
+    draw_cross(img)
+    draw_bar(img, int(calibrated_stage.pixel_per_um()[0]*10))
 
 amplifier = MultiClampChannel()
 pressure = OB1()
