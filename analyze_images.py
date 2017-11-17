@@ -53,11 +53,16 @@ def calculate_matching_precision():
 
 stack = img[0]
 
-D = 2.*stack[8]-stack[7]*1.-stack[9]*1. # z-laplacian
-print D.max()
+for j in range(1,len(stack)-1):
+    D = 2.*stack[j]-stack[j-1]*1.-stack[j+1]*1. # z-laplacian
+    #print D.max()
 
-normalizedImg = zeros((800, 800))
-normalizedImg = cv2.normalize(abs(D),  normalizedImg, 0, 255, cv2.NORM_MINMAX)
+    normalizedImg = zeros((800, 800))
+    normalizedImg = cv2.normalize(abs(D),  normalizedImg, 0, 255, cv2.NORM_MINMAX)
+
+    i = argmax(normalizedImg)
+    x,y = i%normalizedImg.shape[1], i/normalizedImg.shape[1]
+    print x,y
 
 #plt.imshow(stack[8], cmap = 'gray')
 plt.imshow(normalizedImg, cmap = 'gray')
