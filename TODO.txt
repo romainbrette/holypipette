@@ -1,8 +1,14 @@
-2) Pipette change: move down until contrast goes up above 4 sigmas or so (take initial photos and estimate variance);
-    or mean intensity varies by that much
-3) Multiple calibrations (objective and immersion)
-4) Pressure wobble (see latest papers)
+*** Two electrodes
+*** Multiple calibrations (objective and immersion)
 
+* Paramecium tracking
+* Paramecium stuff: maybe all this automatically from tracking?
+    1) Approach above coverslip
+    2) Move right above
+    3) Go down (slowly?)
+    save floor Z
+
+* Pressure wobble (see latest papers)
 * Automatic recalibration when moving
     * recalibrate function, which moves stage/microscope and then moves back
       based on extension of locate_pipette which may move stage and microscope (as in calibration in fact)
@@ -27,12 +33,6 @@
 * Replace wait until still by wait until target reached (with deadline)
 * Detect when devices are not on
 * In calibration: check whether best match is with the Z border (+- 8) => error
-* Paramecium stuff
-    1) Approach above coverslip
-    2) Move right above
-    3) Go down (slowly?)
-    save floor Z
-* Paramecium tracking
 
 * Adjust speeds for horizontal moves
 * Motor ranges using Home and Setting Home direction
