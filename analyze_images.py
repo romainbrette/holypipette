@@ -25,37 +25,41 @@ print direction
 for k in range(17):
     stack.append(crop_cardinal(crop_center(img[0][k]), direction))
 
-# First template matching to estimate pipette position on screen
-x0, y0, _ = templatematching(img[0][8], stack[8])
+def calculate_matching_precision():
+    # First template matching to estimate pipette position on screen
+    x0, y0, _ = templatematching(img[0][8], stack[8])
 
-# Calculate best match
-for i in range(1,2):
-    xl, yl, zl = [], [], []
-    for j in range(16):
-        print i,j
-        valmax = -1
-        for k, template in enumerate(stack):  # we look for the best matching template
-            xt, yt, val = templatematching(img[i][j], template)
-            xt -= x0
-            yt -= y0
-            if val > valmax:
-                valmax = val
-                x, y, z = xt, yt, k  # note the sign for z
-        print x,y,z-j
-        xl.append(x*1.)
-        yl.append(y*1.)
-        zl.append(z*1.-j)
-    xl,yl,zl=array(xl),array(yl),array(zl)
-    print xl,yl,zl
-    print mean(xl),mean(yl),mean(zl)
-    print std(xl),std(yl),std(zl)
+    # Calculate best match
+    for i in range(1,2):
+        xl, yl, zl = [], [], []
+        for j in range(16):
+            print i,j
+            valmax = -1
+            for k, template in enumerate(stack):  # we look for the best matching template
+                xt, yt, val = templatematching(img[i][j], template)
+                xt -= x0
+                yt -= y0
+                if val > valmax:
+                    valmax = val
+                    x, y, z = xt, yt, k  # note the sign for z
+            print x,y,z-j
+            xl.append(x*1.)
+            yl.append(y*1.)
+            zl.append(z*1.-j)
+        xl,yl,zl=array(xl),array(yl),array(zl)
+        print xl,yl,zl
+        print mean(xl),mean(yl),mean(zl)
+        print std(xl),std(yl),std(zl)
 
-#D = img[1]*1.-img[0]*1.
-#print D.max()
+stack = img[0]
 
-#normalizedImg = zeros((800, 800))
-#normalizedImg = cv2.normalize(D,  normalizedImg, 0, 255, cv2.NORM_MINMAX)
+D = 2.*stack[8]-stack[7]*1.-stack[9]*1. # z-laplacian
+print D.max()
 
-#plt.imshow(img[0], cmap = 'gray')
-#plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-#plt.show()
+normalizedImg = zeros((800, 800))
+normalizedImg = cv2.normalize(abs(D),  normalizedImg, 0, 255, cv2.NORM_MINMAX)
+
+#plt.imshow(stack[8], cmap = 'gray')
+plt.imshow(normalizedImg, cmap = 'gray')
+plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+plt.show()
