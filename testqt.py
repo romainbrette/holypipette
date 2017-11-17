@@ -389,6 +389,12 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         x,y = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0])
         if x is not None:
             cv2.circle(img, (int(x),int(y)), 50, (0, 0, 255))
+            # and track
+            xs = x - img.shape[1] / 2
+            ys = y - img.shape[0] / 2
+            gain = 0.5
+            calibrated_stage.reference_relative_move(-gain*array([xs,ys,0]))
+
         return img
 
     def edit_image(self, img):

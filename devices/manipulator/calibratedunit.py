@@ -419,7 +419,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Focus, move stage and locate again
         self.microscope.relative_move(z)
         if move_stage:
-            self.stage.reference_relative_move(-array([x,y]))
+            self.stage.reference_relative_move(-array([x,y,0]))
             self.stage.wait_until_still()
         self.microscope.wait_until_still()
         sleep(sleep_time)
