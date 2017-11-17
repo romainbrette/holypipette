@@ -40,7 +40,7 @@ def where_is_paramecium(frame, pixel_per_um = 5.): # Locate paramecium
                 u11 = int(M['m11'] / M['m00'] - cx * cy)
                 theta = atan2((u20-u02), 2*u11)/2
                 radius = int(radius)
-                dist = ((x - width/2) ** 2 + (y - height/2) ** 2) ** 0.5
+                dist = ((x - width/2/ratio) ** 2 + (y - height/2/ratio) ** 2) ** 0.5
                 if (radius < 20*pixel_per_um) & (radius > 10*pixel_per_um) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
