@@ -257,6 +257,9 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def break_in(self): # Breaking in
+        if (amplifier is None) | (pressure is None):
+            print("Amplifier or pressure controller not available. Aborting.")
+            return
         try:
             print("Breaking in")
             autopatcher.break_in(message)
@@ -268,6 +271,9 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def do_patch(self): # Start the patch-clamp procedure
+        if (amplifier is None) | (pressure is None):
+            print("Amplifier or pressure controller not available. Aborting.")
+            return
         try:
             print("Starting patch-clamp")
             autopatcher.run(self.move_position, message)
@@ -279,6 +285,9 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def patch_without_move(self): # Start the patch-clamp procedure
+        if (amplifier is None) | (pressure is None):
+            print("Amplifier or pressure controller not available. Aborting.")
+            return
         try:
             print("Starting patch-clamp, no pipette movement")
             autopatcher.run(move_position=None, message=message)
@@ -414,8 +423,18 @@ def display_edit(img):
     draw_cross(img)
     draw_bar(img, int(calibrated_stage.pixel_per_um()[0]*10))
 
-amplifier = MultiClampChannel()
-pressure = OB1()
+# Start amplifier and pressure controller
+# If not available, run anyway without them
+amplifier, pressure = None, None
+try:
+    amplifier = MultiClampChannel()
+except Exception:
+    print(traceback.format_exc())
+try:
+    pressure = OB1()
+except Exception:
+    print(traceback.format_exc())
+
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None

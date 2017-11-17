@@ -31,7 +31,6 @@
 * Refactor automatic patch: cut the run in pieces?
 
 * Replace wait until still by wait until target reached (with deadline)
-* Detect when devices are not on
 * In calibration: check whether best match is with the Z border (+- 8) => error
 
 * Adjust speeds for horizontal moves
