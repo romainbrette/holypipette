@@ -9,7 +9,7 @@ Also ranges should be taken into account
 Should this be in devices/*? Maybe in a separate calibration folder
 """
 from manipulatorunit import *
-from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin, mean, std
+from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin, mean, std, mgrid
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
 from time import sleep
@@ -266,7 +266,6 @@ class CalibratedUnit(ManipulatorUnit):
             # Angles
             angle = abs(180/pi * arcsin(self.M[2,axis] / length))
             print('Angle of axis '+str(axis)+": "+str(angle))
-        # Analysis of template matching in photos (leave one out)
 
     def move_new_pipette_back(self, message = lambda str: None):
         '''

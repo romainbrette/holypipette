@@ -11,7 +11,7 @@ from os.path import expanduser
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPoint
 
-from numpy import array, arange, mean, cos, sin
+from numpy import array, arange, mean, cos, sin, mgrid
 
 from devices import *
 from gui import *
@@ -410,6 +410,14 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         return img
 
     def edit_image(self, img):
+        # Draws the centroid of the image
+        xy = mgrid[0:img.shape[0], 0:img.shape[1]]
+        yc = sum(xy[0] * img) / sum(img)
+        xc = sum(xy[1] * img) / sum(img)
+        cv2.line(img,(xc-5,yc),(xc+5,yc),(0, 0, 255))
+        cv2.line(img,(xc,yc-5),(xc,yc-5),(0, 0, 255))
+
+        # Tracks paramecium
         if self.show_paramecium:
             img = self.point_paramecium(img)
         return img
