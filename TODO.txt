@@ -1,5 +1,6 @@
 *** Multiple calibrations (objective and immersion)
 
+* it looks like photos are not stored during calibration
 * Selected manipulator in status bar
 * Paramecium stuff: maybe all this automatically from tracking?
     1) Approach above coverslip

@@ -546,7 +546,7 @@ class CalibratedUnit(ManipulatorUnit):
             distance = min_distance * 1.
             oldrs = self.stage.reference_position()
             move_stage = False
-            while (distance<4000): # just for testing
+            while (distance<2000): # just for testing
                 distance *= 2
                 message('Distance ' + str(distance))
 
