@@ -6,7 +6,7 @@ import cv2
 
 __all__ = ["where_is_paramecium"]
 
-def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -15,10 +15,12 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False): # Locat
     frame : the image
     pixel_per_um : number of pixels per um
     return_angle : if True, return the angle of the cell
+    previous_x : previous x position of the cell
+    previous_y : previous y position of the cell
 
     Returns
     -------
-    x, y : center position in screen
+    x, y (, angle) : position on screen and angle
     '''
     height, width = frame.shape[:2]
     ratio = width/256
@@ -29,6 +31,9 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False): # Locat
     ret = cv2.findContours(thresh, 1, 2)
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
     distmin = 1e6
+    if previous_x is None:
+        previous_x = width / 2 / ratio
+        previous_y = height / 2 / ratio
     for cnt in contours:
         try:
             M = cv2.moments(cnt)
@@ -41,7 +46,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False): # Locat
                 u11 = int(M['m11'] / M['m00'] - cx * cy)
                 theta = atan2((u20-u02), 2*u11)/2
                 radius = int(radius)
-                dist = ((x - width/2/ratio) ** 2 + (y - height/2/ratio) ** 2) ** 0.5
+                dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
                 if (radius < 20*pixel_per_um) & (radius > 10*pixel_per_um) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y

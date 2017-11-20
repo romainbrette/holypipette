@@ -408,7 +408,10 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         self.show_paramecium = False
 
     def point_paramecium(self, img):
-        x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True)
+        global paramecium_x, paramecium_y
+
+        x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True,
+                                        previous_x=paramecium_x, previous_y=paramecium_y)
         if x is not None:
             x, y = int(x), int(y)
             cv2.circle(img, (x,y), 50, (0, 0, 255))
@@ -417,8 +420,9 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
             # and track
             xs = x - img.shape[1] / 2
             ys = y - img.shape[0] / 2
-            gain = 0.5
+            gain = 1
             calibrated_stage.reference_relative_move(-gain*array([xs,ys,0]))
+            paramecium_x, paramecium_y = x,y
 
         return img
 
@@ -464,6 +468,8 @@ try:
     pressure = OB1()
 except Exception:
     print(traceback.format_exc())
+
+paramecium_x, paramecium_y = None, None
 
 calibrated_unit = calibrated_units[0]
 
