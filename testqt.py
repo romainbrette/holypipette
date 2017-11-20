@@ -11,7 +11,7 @@ from os.path import expanduser
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPoint
 
-from numpy import array, arange, mean, cos, sin, mgrid
+from numpy import array, arange, mean, cos, sin, mgrid, sum, zeros
 
 from devices import *
 from gui import *
@@ -407,11 +407,11 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
 
     def point_paramecium(self, img):
         x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True)
-        x,y = int(x),int(y)
         if x is not None:
+            x, y = int(x), int(y)
             cv2.circle(img, (x,y), 50, (0, 0, 255))
             # Draw segment to indicate angle
-            cv2.line(img,(x,y),(x+50*cos(theta),y+50*sin(theta)),(0, 0, 255))
+            cv2.line(img,(x,y),(x+int(50*cos(theta)),y+int(50*sin(theta))),(0, 0, 255))
             # and track
             xs = x - img.shape[1] / 2
             ys = y - img.shape[0] / 2
@@ -422,11 +422,17 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
 
     def edit_image(self, img):
         # Draws the centroid of the image
-        xy = mgrid[0:img.shape[0], 0:img.shape[1]]
-        yc = sum(xy[0] * img) / sum(img)
-        xc = sum(xy[1] * img) / sum(img)
-        cv2.line(img,(xc-5,yc),(xc+5,yc),(0, 0, 255))
-        cv2.line(img,(xc,yc-5),(xc,yc-5),(0, 0, 255))
+        # maybe first a laplacian? (local contrast)
+        #normalizedImg = zeros((800, 800))
+        #normalizedImg = cv2.normalize(img, normalizedImg, 0, 255, cv2.NORM_MINMAX)
+
+        # Find the centroid (doesn't give the tip)
+        #xy = mgrid[0:normalizedImg.shape[0], 0:normalizedImg.shape[1]]
+        #yc = int(sum(xy[0] * normalizedImg) / sum(normalizedImg))
+        #xc = int(sum(xy[1] * normalizedImg) / sum(normalizedImg))
+
+        #cv2.line(img,(xc-5,yc),(xc+5,yc),(0, 0, 255))
+        #cv2.line(img,(xc,yc-5),(xc,yc-5),(0, 0, 255))
 
         # Tracks paramecium
         if self.show_paramecium:
