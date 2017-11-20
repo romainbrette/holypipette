@@ -102,6 +102,8 @@ class TestGui(QtWidgets.QMainWindow):
                 print(traceback.format_exc())
 
     def keyPressEvent(self, event):
+        global calibrated_unit
+
         try:
             # Arrows move the stage
             if event.modifiers() == Qt.ShiftModifier:
@@ -134,7 +136,7 @@ class TestGui(QtWidgets.QMainWindow):
                 print('First manipulator selected') # status bar?
                 calibrated_unit = calibrated_units[0]
             # Select second manipulator
-            elif event.key() == Qt.Key_1:
+            elif event.key() == Qt.Key_2:
                 print('Second manipulator selected') # status bar?
                 calibrated_unit = calibrated_units[1]
             # Calibration
@@ -237,7 +239,7 @@ class TestGui(QtWidgets.QMainWindow):
         cfg = {'stage' : calibrated_stage.save_configuration(),
                'units' : [U.save_configuration() for U in calibrated_units],
                'microscope' : microscope.save_configuration()}
-        pickle.dump(cfg, open(config_filename+'-tmp', "wb"))
+        pickle.dump(cfg, open(config_filename, "wb"))
 
     def load(self):
         # Loads configuration
@@ -245,10 +247,10 @@ class TestGui(QtWidgets.QMainWindow):
         cfg = pickle.load(open(config_filename, "rb"))
         microscope.load_configuration(cfg['microscope'])
         calibrated_stage.load_configuration(cfg['stage'])
-        #cfg = load_configuration(cfg['units'])
-        #for i,cfg in enumerate(cfg):
-        #    calibrated_units[i].load_configuration(cfg['unit'])
-        calibrated_units[0].load_configuration(cfg['unit'])
+        cfg_units = cfg['units']
+        for i,cfg_unit in enumerate(cfg_units):
+            calibrated_units[i].load_configuration(cfg_unit)
+        #calibrated_units[0].load_configuration(cfg['unit'])
         calibrated_unit.analyze_calibration()
 
     def update_status_bar(self):

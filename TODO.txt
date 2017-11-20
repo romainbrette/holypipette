@@ -1,6 +1,6 @@
-*** Two electrodes
 *** Multiple calibrations (objective and immersion)
 
+* Selected manipulator in status bar
 * Paramecium stuff: maybe all this automatically from tracking?
     1) Approach above coverslip
     2) Move right above
