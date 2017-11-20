@@ -129,6 +129,14 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Minus:
                 self.camera.change_exposure(-2.5)
                 self.update_status_bar()
+            # Select first manipulator
+            elif event.key() == Qt.Key_1:
+                print('First manipulator selected') # status bar?
+                calibrated_unit = calibrated_units[0]
+            # Select second manipulator
+            elif event.key() == Qt.Key_1:
+                print('Second manipulator selected') # status bar?
+                calibrated_unit = calibrated_units[1]
             # Calibration
             elif event.key() == Qt.Key_C:
                 if event.modifiers() == Qt.ShiftModifier:
@@ -227,9 +235,9 @@ class TestGui(QtWidgets.QMainWindow):
         # Saves configuration
         print("Saving configuration")
         cfg = {'stage' : calibrated_stage.save_configuration(),
-               'unit' : calibrated_unit.save_configuration(),
+               'units' : [U.save_configuration() for U in calibrated_units],
                'microscope' : microscope.save_configuration()}
-        pickle.dump(cfg, open(config_filename, "wb"))
+        pickle.dump(cfg, open(config_filename+'-tmp', "wb"))
 
     def load(self):
         # Loads configuration
@@ -237,7 +245,10 @@ class TestGui(QtWidgets.QMainWindow):
         cfg = pickle.load(open(config_filename, "rb"))
         microscope.load_configuration(cfg['microscope'])
         calibrated_stage.load_configuration(cfg['stage'])
-        calibrated_unit.load_configuration(cfg['unit'])
+        #cfg = load_configuration(cfg['units'])
+        #for i,cfg in enumerate(cfg):
+        #    calibrated_units[i].load_configuration(cfg['unit'])
+        calibrated_units[0].load_configuration(cfg['unit'])
         calibrated_unit.analyze_calibration()
 
     def update_status_bar(self):
@@ -375,7 +386,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         print stage.min, stage.max
         print('Measuring motor ranges for the unit')
         calibrated_unit.motor_ranges()
-        print unit.min, unit.max
+        #print unit.min, unit.max
         print('Done')
 
     @QtCore.pyqtSlot()
@@ -445,6 +456,8 @@ try:
     pressure = OB1()
 except Exception:
     print(traceback.format_exc())
+
+calibrated_unit = calibrated_units[0]
 
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
