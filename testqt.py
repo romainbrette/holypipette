@@ -11,7 +11,7 @@ from os.path import expanduser
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPoint
 
-from numpy import array, arange, mean
+from numpy import array, arange, mean, cos, sin
 
 from devices import *
 from gui import *
@@ -395,9 +395,12 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         self.show_paramecium = False
 
     def point_paramecium(self, img):
-        x,y = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0])
+        x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True)
+        x,y = int(x),int(y)
         if x is not None:
-            cv2.circle(img, (int(x),int(y)), 50, (0, 0, 255))
+            cv2.circle(img, (x,y), 50, (0, 0, 255))
+            # Draw segment to indicate angle
+            cv2.line(img,(x,y),(x+50*cos(theta),y+50*sin(theta)),(0, 0, 255))
             # and track
             xs = x - img.shape[1] / 2
             ys = y - img.shape[0] / 2

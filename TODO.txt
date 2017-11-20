@@ -1,7 +1,6 @@
 *** Two electrodes
 *** Multiple calibrations (objective and immersion)
 
-* Paramecium tracking
 * Paramecium stuff: maybe all this automatically from tracking?
     1) Approach above coverslip
     2) Move right above

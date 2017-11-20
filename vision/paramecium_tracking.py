@@ -6,7 +6,7 @@ import cv2
 
 __all__ = ["where_is_paramecium"]
 
-def where_is_paramecium(frame, pixel_per_um = 5.): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -14,6 +14,7 @@ def where_is_paramecium(frame, pixel_per_um = 5.): # Locate paramecium
     ---------
     frame : the image
     pixel_per_um : number of pixels per um
+    return_angle : if True, return the angle of the cell
 
     Returns
     -------
@@ -44,10 +45,16 @@ def where_is_paramecium(frame, pixel_per_um = 5.): # Locate paramecium
                 if (radius < 20*pixel_per_um) & (radius > 10*pixel_per_um) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
-                    angle = theta # not used here
+                    angle = theta
         except cv2.error:
             pass
     if distmin<1e5:
-        return xmin*ratio,ymin*ratio
+        if return_angle:
+            return xmin * ratio, ymin * ratio, angle
+        else:
+            return xmin*ratio,ymin*ratio
     else:
-        return None,None
+        if return_angle:
+            return None,None,None
+        else:
+            return None, None
