@@ -466,6 +466,7 @@ except Exception:
     print(traceback.format_exc())
 try:
     pressure = OB1()
+    pressure.set_pressure(25)
 except Exception:
     print(traceback.format_exc())
 
@@ -480,8 +481,6 @@ landmark_u = [] # Landmark points
 landmark_r = []
 landmark_rs = []
 axes_end = [] # End points of axes
-
-pressure.set_pressure(25)
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TestGui(camera)
