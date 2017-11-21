@@ -1,5 +1,6 @@
 *** Multiple calibrations (objective and immersion)
 
+* Write template matching error during calibration
 * Paramecium tracking: autoexposure?
 * Paramecium tracking: angle doesn't work
 * it looks like photos are not stored during calibration
