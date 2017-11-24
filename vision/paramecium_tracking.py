@@ -30,7 +30,8 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     ret, thresh = cv2.threshold(canny, 127, 255, 0)
     ret = cv2.findContours(thresh, 1, 2)
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
-    distmin = 200*pixel_per_um/ratio # 200 um max distance over 1 frame
+    #distmin = 200*pixel_per_um/ratio # 200 um max distance over 1 frame
+    distmin = 1e6
     if previous_x is None:
         previous_x = width / 2
         previous_y = height / 2
