@@ -20,6 +20,7 @@ import ctypes
 import functools
 import logging
 import os
+import traceback
 
 __all__ = ['MultiClampChannel', 'MultiClamp']
 
@@ -292,6 +293,7 @@ class MultiClampChannel(object):
                 raise IOError(full_error)
             else:
                 logging.warn(full_error)
+                print(repr(traceback.extract_stack())) # so that we know what happened
             # Reset the error code
             self.last_error.value = NO_ERROR
 
