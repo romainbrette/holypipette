@@ -1,5 +1,8 @@
 *** Multiple calibrations (objective and immersion)
 
+* Actually start patch is problematic: capa comp etc, not at the right moment
+* pulses for R measurement should be small
+
 * Write template matching error during calibration
 * Paramecium tracking: autoexposure?
 * Paramecium tracking: angle doesn't work
