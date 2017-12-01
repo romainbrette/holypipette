@@ -1,12 +1,16 @@
 '''
 These are functions to locate paramecium in an image
+
+TODO: look for the closest in ellipse property space
 '''
 from math import atan2
 import cv2
+from numpy import zeros,uint8
 
 __all__ = ["where_is_paramecium"]
 
-def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
+                        ratio = None, background = None): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -17,20 +21,48 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     return_angle : if True, return the angle of the cell
     previous_x : previous x position of the cell
     previous_y : previous y position of the cell
+    ratio : decimating ratio (to make the image smaller)
+    background : background image to subtract
 
     Returns
     -------
     x, y (, angle) : position on screen and angle
     '''
+    # Resize
     height, width = frame.shape[:2]
-    ratio = width/256
+    if ratio is None:
+        ratio = width/256
     resized = cv2.resize(frame, (width/ratio, height/ratio))
-    gauss = cv2.GaussianBlur(resized, (9, 9), 0)
-    canny = cv2.Canny(gauss, gauss.shape[0]/8, gauss.shape[0]/8)
-    ret, thresh = cv2.threshold(canny, 127, 255, 0)
-    ret = cv2.findContours(thresh, 1, 2)
+    pixel_per_um = pixel_per_um/ratio
+
+    # Filter
+    blur_size = int(pixel_per_um*10)
+    if blur_size % 2 == 0:
+        blur_size+=1
+    filtered=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
+
+    # Filter background
+    if background is not None:
+        resized_background = cv2.resize(background, (width / ratio, height / ratio))
+        filtered_background=cv2.GaussianBlur(resized_background, (blur_size, blur_size), 0)
+    else:
+        filtered_background = 0*filtered
+
+    # Remove background
+    img = filtered * 1. - filtered_background * 1.
+
+    # Normalize image
+    normalized_img = zeros(img.shape)
+    normalized_img = cv2.normalize(img, normalized_img, 0, 255, cv2.NORM_MINMAX)
+    normalized_img = uint8(normalized_img)
+
+    # Extract edges
+    canny = cv2.Canny(normalized_img, 40, 40)
+
+    # Find contours
+    ret = cv2.findContours(canny, 1, 2)
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
-    #distmin = 200*pixel_per_um/ratio # 200 um max distance over 1 frame
+
     distmin = 1e6
     if previous_x is None:
         previous_x = width / 2
@@ -38,23 +70,16 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     previous_x = previous_x/ratio
     previous_y = previous_y/ratio
     found = False
-    for cnt in contours:
+    for contour in contours:
         try:
-            M = cv2.moments(cnt)
-            if (cv2.arcLength(cnt, True) > 35*pixel_per_um) & bool(M['m00']):
-                (x, y), radius = cv2.minEnclosingCircle(cnt)
-                cx = int(M['m10'] / M['m00'])
-                cy = int(M['m01'] / M['m00'])
-                u20 = int(M['m20']/M['m00'] - cx**2)
-                u02 = int(M['m02'] / M['m00'] - cy ** 2)
-                u11 = int(M['m11'] / M['m00'] - cx * cy)
-                theta = atan2((u20-u02), 2*u11)
-                radius = int(radius)
+            length = cv2.arcLength(contour, True) / pixel_per_um
+            if (length>250): # in um
+                (x, y), (MA, ma), theta = cv2.fitEllipse(contour)
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
-                if (radius < 20*pixel_per_um) & (radius > 10*pixel_per_um) & (dist<distmin):
+                if (MA>75) & (MA<250) & (ma>15) & (ma<45) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
-                    angle = theta
+                    angle = theta*pi/180.
                     found = True
         except cv2.error:
             pass

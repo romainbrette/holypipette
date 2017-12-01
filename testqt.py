@@ -420,8 +420,8 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
             # and track
             xs = x - img.shape[1] / 2
             ys = y - img.shape[0] / 2
-            gain = 1
-            calibrated_stage.reference_relative_move(-gain*array([xs,ys,0]))
+            gain = 0.5
+            #calibrated_stage.reference_relative_move(-gain*array([xs,ys,0]))
             paramecium_x, paramecium_y = x,y
 
         return img
