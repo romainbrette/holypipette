@@ -293,7 +293,8 @@ class MultiClampChannel(object):
                 raise IOError(full_error)
             else:
                 logging.warn(full_error)
-                print(repr(traceback.extract_stack())) # so that we know what happened
+                for line in traceback.extract_stack():
+                    print line # so that we know what happened
             # Reset the error code
             self.last_error.value = NO_ERROR
 
