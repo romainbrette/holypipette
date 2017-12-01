@@ -5,7 +5,7 @@ TODO: look for the closest in ellipse property space
 '''
 from math import atan2
 import cv2
-from numpy import zeros,uint8
+from numpy import zeros,uint8,pi
 
 __all__ = ["where_is_paramecium"]
 
@@ -28,6 +28,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     -------
     x, y (, angle) : position on screen and angle
     '''
+    pixel_per_um = 0.5
     # Resize
     height, width = frame.shape[:2]
     if ratio is None:
@@ -64,6 +65,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
 
     distmin = 1e6
+    previous_x=None
     if previous_x is None:
         previous_x = width / 2
         previous_y = height / 2
@@ -73,13 +75,15 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     for contour in contours:
         try:
             length = cv2.arcLength(contour, True) / pixel_per_um
-            if (length>250): # in um
+            if (length>250) & (contour.shape[0]>10): # at least 10 points
                 (x, y), (MA, ma), theta = cv2.fitEllipse(contour)
+                MA,ma = MA/pixel_per_um, ma/pixel_per_um
+                ma,MA = MA,ma
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
                 if (MA>75) & (MA<250) & (ma>15) & (ma<45) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
-                    angle = theta*pi/180.
+                    angle = (theta+90)*pi/180.
                     found = True
         except cv2.error:
             pass
