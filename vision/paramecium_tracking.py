@@ -65,7 +65,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
 
     distmin = 1e6
-    previous_x=None
+    #previous_x=None
     if previous_x is None:
         previous_x = width / 2
         previous_y = height / 2
