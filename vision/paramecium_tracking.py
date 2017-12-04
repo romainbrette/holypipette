@@ -10,7 +10,7 @@ from numpy import zeros,uint8,pi
 __all__ = ["where_is_paramecium"]
 
 def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
-                        ratio = None, background = None): # Locate paramecium
+                        ratio = None, background = None, debug = True): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -58,7 +58,8 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     normalized_img = uint8(normalized_img)
 
     # Extract edges
-    canny = cv2.Canny(normalized_img, 40, 40)
+    canny = cv2.Canny(normalized_img, int(50/pixel_per_um), int(50/pixel_per_um)) # should depend on pixel_per_um
+    #canny = cv2.Canny(normalized_img, 40, 40)  # should depend on pixel_per_um
 
     # Find contours
     ret = cv2.findContours(canny, 1, 2)
@@ -75,12 +76,13 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     for contour in contours:
         try:
             length = cv2.arcLength(contour, True) / pixel_per_um
-            if (length>250) & (contour.shape[0]>10): # at least 10 points
+            if (length>150) & (contour.shape[0]>10): # at least 10 points
+                cv2.drawContours(normalized_img, [contour], 0, (0, 255, 0), 1)
                 (x, y), (MA, ma), theta = cv2.fitEllipse(contour)
                 MA,ma = MA/pixel_per_um, ma/pixel_per_um
                 ma,MA = MA,ma
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
-                if (MA>75) & (MA<250) & (ma>15) & (ma<45) & (dist<distmin):
+                if (MA>70) & (MA<250) & (ma>15) & (ma<45) & (dist<distmin):
                     distmin=dist
                     xmin, ymin =x, y
                     angle = (theta+90)*pi/180.
@@ -88,12 +90,16 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
         except cv2.error:
             pass
     if found:
-        if return_angle:
+        if debug:
+            return xmin*ratio,ymin*ratio,normalized_img
+        elif return_angle:
             return xmin * ratio, ymin * ratio, angle
         else:
             return xmin*ratio,ymin*ratio
     else:
-        if return_angle:
+        if debug:
+            return None,None,normalized_img
+        elif return_angle:
             return None,None,None
         else:
             return None, None

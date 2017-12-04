@@ -1,5 +1,5 @@
 '''
-Trying to identify and locate Paramecium in the image, waiting for it to stop.
+Trying to identify and locate Paramecium in the image.
 Using x40 images.
 '''
 import cv2
