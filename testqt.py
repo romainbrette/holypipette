@@ -285,8 +285,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print("Starting automatic Paramecium impalement")
             # First wait for Paramecium to stop
             image_editor.show_paramecium = True
-            position_history = collections.deque(maxlen=50)
-            while 0:
+            position_history = collections.deque(maxlen=30)
+            while 1:
                 # Calculate variance of position
                 if len(position_history) == position_history.maxlen:
                     xpos, ypos = zip(*position_history)
@@ -294,17 +294,14 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
                     if movement < 1:  # 1 pixel
                         print("Paramecium has stopped!")
                         break
-                position_history.append((paramecium_x, paramecium_y))
+
+                time.sleep(0.1)
+                if paramecium_x is not None:
+                    position_history.append((paramecium_x, paramecium_y))
 
             print("Moving the pipette on the cell")
-            #x,y = paramecium_x-self.video.size().width()/2, paramecium_y-self.video.size().height()/2
-            x,y=0,0
-            xs = x - self.video.size().width() / 2
-            ys = y - self.video.size().height() / 2
-            # displayed image is not necessarily the same size as the original camera image
-            scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
-            xs *= scale
-            ys *= scale
+            xs,ys = paramecium_x-camera.width/2, paramecium_y-camera.height/2
+            #xs,ys=0,0
             calibrated_unit.reference_move(array([xs, ys, microscope.position() + microscope.up_direction * 50]))
             calibrated_unit.wait_until_still()
 

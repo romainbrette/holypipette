@@ -10,7 +10,7 @@ from numpy import zeros,uint8,pi
 __all__ = ["where_is_paramecium"]
 
 def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
-                        ratio = None, background = None, debug = True): # Locate paramecium
+                        ratio = None, background = None, debug = False): # Locate paramecium
     '''
     Locate paramecium in an image.
 
