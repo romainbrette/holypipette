@@ -28,7 +28,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     -------
     x, y (, angle) : position on screen and angle
     '''
-    pixel_per_um = 0.5
+    #pixel_per_um = 0.5
     # Resize
     height, width = frame.shape[:2]
     if ratio is None:

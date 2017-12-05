@@ -27,6 +27,7 @@ F                       Define coverslip Z (floor)
 G                       Go to coverslip Z with microscope
 
 T                       Track paramecium
+Return                  Impale paramecium automatically
 
 F1                      Reset camera (stop/start image acquisition)
 
@@ -34,5 +35,7 @@ F1                      Reset camera (stop/start image acquisition)
 
 1                       Select first manipulator
 2                       Select second manipulator
+
+O                       Change objective
 
 Esc                     Quit

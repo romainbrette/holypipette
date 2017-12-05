@@ -6,12 +6,13 @@ import pickle
 import signal
 import sys
 import traceback
+import collections
 from os.path import expanduser
 
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt, QPoint
 
-from numpy import array, arange, mean, cos, sin, mgrid, sum, zeros
+from numpy import array, arange, mean, cos, sin, mgrid, sum, zeros, var
 
 from devices import *
 from gui import *
@@ -46,6 +47,8 @@ class TestGui(QtWidgets.QMainWindow):
     patch_nomove_signal = QtCore.pyqtSignal()
     break_signal = QtCore.pyqtSignal()
     photo_signal = QtCore.pyqtSignal()
+    objective_signal = QtCore.pyqtSignal()
+    paramecium_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -73,6 +76,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.patch_nomove_signal.connect(self.calibrator.patch_without_move)
         self.break_signal.connect(self.calibrator.break_in)
         self.photo_signal.connect(self.calibrator.take_photos)
+        self.objective_signal.connect(self.calibrator.change_objective)
+        self.paramecium_signal.connect(self.calibrator.pick_paramecium)
         self.auto_recalibrate_signal.connect(self.calibrator.do_auto_recalibration)
         self.calibration_thread.start()
         self.load()
@@ -189,12 +194,18 @@ class TestGui(QtWidgets.QMainWindow):
                 image_editor.show_paramecium = not image_editor.show_paramecium
                 if image_editor.show_paramecium:
                     print('Paramecium tracking is on')
+            # Impale paramecium
+            elif event.key() == Qt.Key_Return:
+                self.paramecium_signal.emit()
             # Withdraw
             elif event.key() == Qt.Key_W:
                 calibrated_unit.withdraw()
             # Move pipette back after a change
             elif event.key() == Qt.Key_B:
                 self.pipette_back_signal.emit()
+            # Change objective
+            elif event.key() == Qt.Key_O:
+                self.objective_signal.emit()
             # Landmark point
             elif event.key() == Qt.Key_Asterisk:
                 print("Landmark")
@@ -267,6 +278,37 @@ class TestGui(QtWidgets.QMainWindow):
 
 
 class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
+
+    @QtCore.pyqtSlot()
+    def pick_paramecium(self): # Wait for Paramecium to stop, then move pipette and penetrate
+        try:
+            print("Starting automatic Paramecium impalement")
+            # First wait for Paramecium to stop
+            image_editor.show_paramecium = True
+            position_history = collections.deque(maxlen=50)
+            while 1:
+                # Calculate variance of position
+                if len(position_history) == position_history.maxlen:
+                    xpos, ypos = zip(*position_history)
+                    movement = (var(xpos) + var(ypos)) ** .5
+                    if movement < 1:  # 1 pixel
+                        print("Paramecium has stopped!")
+                        break
+                position_history.append((paramecium_x, paramecium_y))
+            print("Now moving the pipette")
+            x,y = paramecium_x-self.video.size().width()/2, paramecium_y-self.video.size().height()/2
+            xs = x - self.video.size().width() / 2
+            ys = y - self.video.size().height() / 2
+            # displayed image is not necessarily the same size as the original camera image
+            scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
+            xs *= scale
+            ys *= scale
+            calibrated_unit.reference_move(array([xs, ys, microscope.position() + microscope.up_direction * 50]))
+            calibrated_unit.wait_until_still()
+            print("Now moving the pipette down")
+            print("Done")
+        except Exception:
+            print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
     def break_in(self): # Breaking in
@@ -356,6 +398,27 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         except Exception:
             print(traceback.format_exc())
         print('Done')
+
+    @QtCore.pyqtSlot()
+    def change_objective(self):
+        print('New objective')
+        oldM,oldMinv,oldr0 = calibrated_stage.M,calibrated_stage.Minv,calibrated_stage.r0
+        pixel_per_um = calibrated_stage.pixel_per_um()
+        print('Starting stage calibration....')
+        try:
+            calibrated_stage.calibrate(message)
+            calibrated_unit.analyze_calibration()
+            magnification = calibrated_stage.pixel_per_um()/pixel_per_um
+            calibrated_unit.M = calibrated_unit.M*magnification
+            calibrated_unit.Minv = calibrated_unit.M/magnification
+            calibrated_unit.r0 = calibrated_unit.r0*magnification
+            calibrated_stage.M, calibrated_stage.Minv, calibrated_stage.r0 =\
+                oldM*magnification, oldMinv/magnification, oldr0*magnification
+        except Exception:
+            print(traceback.format_exc())
+
+        print('Done')
+
 
     @QtCore.pyqtSlot()
     def manual_calibration(self):
