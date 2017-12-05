@@ -295,7 +295,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
                         print("Paramecium has stopped!")
                         break
                 position_history.append((paramecium_x, paramecium_y))
-            print("Now moving the pipette")
+
+            print("Moving the pipette on the cell")
             x,y = paramecium_x-self.video.size().width()/2, paramecium_y-self.video.size().height()/2
             xs = x - self.video.size().width() / 2
             ys = y - self.video.size().height() / 2
@@ -305,7 +306,35 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             ys *= scale
             calibrated_unit.reference_move(array([xs, ys, microscope.position() + microscope.up_direction * 50]))
             calibrated_unit.wait_until_still()
-            print("Now moving the pipette down")
+
+            print("Moving the pipette down")
+            x = xs+camera.width/2
+            y = ys+camera.height/2
+            pixel_per_um = calibrated_stage.pixel_per_um()[0]
+            size = int(30 / pixel_per_um)  # 30 um around tip
+
+            for i in range(20): # 20 movements of 10 um maximum
+                framelet = camera.snap()[y:y + size, x:x + size]
+
+                ret, thresh = cv2.threshold(framelet, 127, 255, cv2.THRESH_BINARY)
+                black_area = sum(thresh == 0)
+
+                if i == 0:
+                    init_area = black_area
+                else:
+                    increase = black_area - init_area
+                    print increase
+                    if increase > 25 / pixel_per_um ** 2:  # 5 x 5 um
+                        print "Contact with water"
+                        break
+
+                calibrated_unit.relative_move(-10*calibrated_unit.up_direction[2],2) # 10 um down
+                calibrated_unit.wait_until_still()
+
+            print("Impaling the cell")
+            calibrated_unit.relative_move(-50 * calibrated_unit.up_direction[2], 2)  # 50 um down
+            calibrated_unit.wait_until_still()
+
             print("Done")
         except Exception:
             print(traceback.format_exc())
@@ -403,12 +432,12 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     def change_objective(self):
         print('New objective')
         oldM,oldMinv,oldr0 = calibrated_stage.M,calibrated_stage.Minv,calibrated_stage.r0
-        pixel_per_um = calibrated_stage.pixel_per_um()
+        pixel_per_um = calibrated_stage.pixel_per_um()[0]
         print('Starting stage calibration....')
         try:
             calibrated_stage.calibrate(message)
             calibrated_unit.analyze_calibration()
-            magnification = calibrated_stage.pixel_per_um()/pixel_per_um
+            magnification = calibrated_stage.pixel_per_um()[0]/pixel_per_um
             calibrated_unit.M = calibrated_unit.M*magnification
             calibrated_unit.Minv = calibrated_unit.M/magnification
             calibrated_unit.r0 = calibrated_unit.r0*magnification
