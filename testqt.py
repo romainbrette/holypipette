@@ -286,7 +286,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             # First wait for Paramecium to stop
             image_editor.show_paramecium = True
             position_history = collections.deque(maxlen=50)
-            while 1:
+            while 0:
                 # Calculate variance of position
                 if len(position_history) == position_history.maxlen:
                     xpos, ypos = zip(*position_history)
@@ -297,7 +297,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
                 position_history.append((paramecium_x, paramecium_y))
 
             print("Moving the pipette on the cell")
-            x,y = paramecium_x-self.video.size().width()/2, paramecium_y-self.video.size().height()/2
+            #x,y = paramecium_x-self.video.size().width()/2, paramecium_y-self.video.size().height()/2
+            x,y=0,0
             xs = x - self.video.size().width() / 2
             ys = y - self.video.size().height() / 2
             # displayed image is not necessarily the same size as the original camera image
@@ -431,18 +432,25 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def change_objective(self):
         print('New objective')
-        oldM,oldMinv,oldr0 = calibrated_stage.M,calibrated_stage.Minv,calibrated_stage.r0
+        oldM,oldMinv,oldr0 = calibrated_stage.M.copy(),\
+                             calibrated_stage.Minv.copy(),\
+                             calibrated_stage.r0.copy()
         pixel_per_um = calibrated_stage.pixel_per_um()[0]
         print('Starting stage calibration....')
         try:
             calibrated_stage.calibrate(message)
             calibrated_unit.analyze_calibration()
             magnification = calibrated_stage.pixel_per_um()[0]/pixel_per_um
-            calibrated_unit.M = calibrated_unit.M*magnification
-            calibrated_unit.Minv = calibrated_unit.M/magnification
-            calibrated_unit.r0 = calibrated_unit.r0*magnification
+            print magnification
+            calibrated_unit.M[:2,:] = calibrated_unit.M[:2,:]*magnification
+            calibrated_unit.Minv[:,:2] = calibrated_unit.Minv[:,:2]/magnification
+            calibrated_unit.r0[:2] = calibrated_unit.r0[:2]*magnification
             calibrated_stage.M, calibrated_stage.Minv, calibrated_stage.r0 =\
-                oldM*magnification, oldMinv/magnification, oldr0*magnification
+                oldM, oldMinv, oldr0
+            calibrated_stage.M[:2,:] = calibrated_stage.M[:2,:]*magnification
+            calibrated_stage.Minv[:,:2] = calibrated_stage.Minv[:,:2]/magnification
+            calibrated_stage.r0[:2] = calibrated_stage.r0[:2]*magnification
+            calibrated_unit.analyze_calibration()
         except Exception:
             print(traceback.format_exc())
 
