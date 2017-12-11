@@ -5,12 +5,63 @@ TODO: look for the closest in ellipse property space
 '''
 from math import atan2
 import cv2
-from numpy import zeros,uint8,pi
+from numpy import zeros,uint8,pi, uint16, around
 
-__all__ = ["where_is_paramecium"]
+__all__ = ["where_is_paramecium", "where_is_droplet"]
+
+def where_is_droplet(frame, pixel_per_um = 5., ratio = None,
+                     xc = None, yc = None):
+    '''
+    Locate a droplet in an image.
+
+    Arguments
+    ---------
+    frame : the image
+    pixel_per_um : number of pixels per um
+    ratio : decimating ratio (to make the image smaller)
+    xc, yc : coordinate of a point inside the droplet
+
+    Returns
+    -------
+    x, y, r : position and radius on screen
+    '''
+
+    # Resize
+    height, width = frame.shape[:2]
+    if ratio is None:
+        ratio = width/256
+    resized = cv2.resize(frame, (width/ratio, height/ratio))
+    pixel_per_um = pixel_per_um/ratio
+
+    # Filter
+    blur_size = int(pixel_per_um*10)
+    if blur_size % 2 == 0:
+        blur_size+=1
+    filtered=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
+
+    # Find circles
+    circles = cv2.HoughCircles(filtered[:,:,0], cv2.cv.CV_HOUGH_GRADIENT, 1, int(400*pixel_per_um),\
+                param1 = int(50/pixel_per_um), param2 = 30, minRadius = int(200*pixel_per_um), maxRadius = int(1000*pixel_per_um))
+
+    # Center
+    if xc is None:
+        xc = width/2
+        yc = height/2
+
+    # Choose one that encloses the center
+    x,y,r = None,None,None
+    if circles is not None:
+        circles = uint16(around(circles))
+        for j in circles[0, :]:
+            xj,yj,rj = j[0]*ratio,j[1]*ratio,j[2]*ratio
+            if ((xj-xc)**2 + (yj-yc)**2)<rj**2:
+                x,y,r = xj,yj,rj
+
+    return x,y,r
+
 
 def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
-                        ratio = None, background = None, debug = False): # Locate paramecium
+                        ratio = None, background = None, debug = False, max_dist = 1e6): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -23,6 +74,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     previous_y : previous y position of the cell
     ratio : decimating ratio (to make the image smaller)
     background : background image to subtract
+    max_dist : maximum distance from previous position
 
     Returns
     -------
@@ -65,7 +117,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     ret = cv2.findContours(canny, 1, 2)
     contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
 
-    distmin = 1e6
+    distmin = max_dist*ratio
     #previous_x=None
     if previous_x is None:
         previous_x = width / 2
