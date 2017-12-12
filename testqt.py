@@ -49,6 +49,7 @@ class TestGui(QtWidgets.QMainWindow):
     photo_signal = QtCore.pyqtSignal()
     objective_signal = QtCore.pyqtSignal()
     paramecium_signal = QtCore.pyqtSignal()
+    catch_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -79,6 +80,7 @@ class TestGui(QtWidgets.QMainWindow):
         self.objective_signal.connect(self.calibrator.change_objective)
         self.paramecium_signal.connect(self.calibrator.pick_paramecium)
         self.auto_recalibrate_signal.connect(self.calibrator.do_auto_recalibration)
+        self.catch_signal.connect(self.calibrator.catch_paramecium)
         self.calibration_thread.start()
         self.load()
 
@@ -197,6 +199,16 @@ class TestGui(QtWidgets.QMainWindow):
             # Impale paramecium
             elif event.key() == Qt.Key_Return:
                 self.paramecium_signal.emit()
+            # Catch paramecium
+            elif event.key() == Qt.Key_Q:
+                self.catch_signal.emit()
+            # Drop paramecium
+            elif event.key() == Qt.Key_D:
+                pressure.set_pressure(100) # should be in thread
+                time.sleep(1)
+                calibrated_unit.relative_move(2000 * calibrated_unit.up_direction[0], 0)
+                calibrated_unit.wait_until_still()
+                pressure.set_pressure(0)
             # Withdraw
             elif event.key() == Qt.Key_W:
                 calibrated_unit.withdraw()
@@ -278,6 +290,32 @@ class TestGui(QtWidgets.QMainWindow):
 
 
 class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
+
+    @QtCore.pyqtSlot()
+    def catch_paramecium(self):
+        # Catch a paramecium by aspiration
+        try:
+            print("Catching paramecium")
+            pressure.set_pressure(25)
+            image_editor.show_paramecium = True
+
+            while 1:
+                if paramecium_x is not None:
+                    xs,ys = paramecium_x-camera.width/2, paramecium_y-camera.height/2
+                    pixel_per_um = calibrated_stage.pixel_per_um()[0]
+                    maxd = 300*pixel_per_um # um
+                    if (xs**2 + ys**2)<maxd**2:
+                        print("Paramecium!")
+                        pressure.set_pressure(10)
+                        time.sleep(0.5)
+                        calibrated_unit.relative_move(2000*calibrated_unit.up_direction[2],2)
+                        calibrated_unit.wait_until_still()
+                        pressure.set_pressure(0)
+                        break
+
+            print("Done")
+        except Exception:
+            print(traceback.format_exc())
 
     @QtCore.pyqtSlot()
     def pick_paramecium(self): # Wait for Paramecium to stop, then move pipette and penetrate
@@ -508,7 +546,7 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         global paramecium_x, paramecium_y
 
         x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True,
-                                        previous_x=paramecium_x, previous_y=paramecium_y)
+                                        previous_x=None, previous_y=None)
         if x is not None:
             x, y = int(x), int(y)
             cv2.circle(img, (x,y), 50, (0, 0, 255))

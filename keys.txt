@@ -11,6 +11,8 @@ Ctrl-click              Patch without moving the pipette
 W                       Withdraw pipette
 B                       Move pipette back
 
+Z                       Zap on
+
 L                       Load configuration
 S                       Save configuration
 
@@ -28,6 +30,8 @@ G                       Go to coverslip Z with microscope
 
 T                       Track paramecium
 Return                  Impale paramecium automatically
+Q                       Catch paramecium
+D                       Drop paramecium
 
 F1                      Reset camera (stop/start image acquisition)
 
