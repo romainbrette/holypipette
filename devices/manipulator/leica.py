@@ -22,6 +22,7 @@ class Leica(Microscope):
         ----------
         name : port name
         '''
+        Microscope.__init__(self, None, None)
         self.port_name = name
         mmc = MMCorePy.CMMCore()
         self.mmc = mmc

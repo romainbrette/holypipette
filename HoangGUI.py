@@ -267,14 +267,17 @@ class TestGui(QtWidgets.QMainWindow):
     def load(self):
         # Loads configuration
         print("Loading configuration")
-        cfg = pickle.load(open(config_filename, "rb"))
-        microscope.load_configuration(cfg['microscope'])
-        calibrated_stage.load_configuration(cfg['stage'])
-        cfg_units = cfg['units']
-        for i,cfg_unit in enumerate(cfg_units):
-            calibrated_units[i].load_configuration(cfg_unit)
-        #calibrated_units[0].load_configuration(cfg['unit'])
-        calibrated_unit.analyze_calibration()
+        try:
+            cfg = pickle.load(open(config_filename, "rb"))
+            microscope.load_configuration(cfg['microscope'])
+            calibrated_stage.load_configuration(cfg['stage'])
+            cfg_units = cfg['units']
+            for i,cfg_unit in enumerate(cfg_units):
+                calibrated_units[i].load_configuration(cfg_unit)
+            #calibrated_units[0].load_configuration(cfg['unit'])
+            calibrated_unit.analyze_calibration()
+        except Exception:
+            print("Configuration file could not be loaded.")
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()

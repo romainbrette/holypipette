@@ -5,14 +5,14 @@ Methods to crop images
 __all__ = ['crop_center', 'crop_cardinal', 'cardinal_points']
 
 # coordinates of cardinal points (y,x)
-cardinal_points = {'NE' : (0,0),
+cardinal_points = {'NW' : (0,0),
                    'N' : (0,1),
-                   'NW' : (0,2),
-                   'W' : (1,2),
-                   'SW' : (2,2),
+                   'NE' : (0,2),
+                   'E' : (1,2),
+                   'SE' : (2,2),
                    'S' : (2,1),
-                   'SE' : (2,0),
-                   'E' : (1,0)}
+                   'SW' : (2,0),
+                   'W' : (1,0)}
 
 def crop_center(image, ratio=32):
     '''
