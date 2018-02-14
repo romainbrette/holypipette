@@ -6,14 +6,37 @@ TODO:
 '''
 import numpy as np
 import scipy.misc
+from PyQt5 import QtCore
 
 __all__ = ['Camera', 'FakeCamera']
 
 
-class Camera(object):
+class Camera(QtCore.QObject):
+    updated_exposure = QtCore.pyqtSignal('QString', 'QString')
+
     def __init__(self):
+        super(Camera, self).__init__()
         self.width = 1000
         self.height = 1000
+
+    def connect(self, main_gui):
+        self.updated_exposure.connect(main_gui.set_status_message)
+        self.signal_updated_exposure()
+
+    def signal_updated_exposure(self):
+        # Should be called by subclasses that actually support setting the exposure
+        exposure = self.get_exposure()
+        if exposure > 0:
+            self.updated_exposure.emit('Camera', 'Exposure: %.1fms' % exposure)
+
+    @QtCore.pyqtSlot('QString')
+    def handle_command(self, command):
+        if command == 'increase_exposure':
+            self.change_exposure(2.5)
+        elif command == 'decrease_exposure':
+            self.change_exposure(-2.5)
+        else:
+            raise ValueError('Uknown command: %s' % command)
 
     def new_frame(self):
         '''
@@ -43,17 +66,19 @@ class Camera(object):
 
 
 class FakeCamera(Camera):
+
     # TODO: Connect this to FakeManipulator etc.
-    def __init__(self, width=None, height=None, dummy=False):
+    def __init__(self):
+        super(FakeCamera, self).__init__()
         self.width = 1024
         self.height = 768
         self.frame = scipy.misc.face(gray=True)
         self.exposure_time = 30
 
     def set_exposure(self, value):
-        print value
         if 0 < value <= 200:
             self.exposure_time = value
+            self.signal_updated_exposure()
 
     def get_exposure(self):
         return self.exposure_time

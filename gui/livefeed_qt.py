@@ -6,47 +6,27 @@ import numpy as np
 
 from devices.camera.umanagercamera import Lumenera
 
-__all__ = ['LiveFeedQt', 'draw_cross', 'draw_bar']
-
-def draw_bar(pixmap, barsize = None):
-    '''
-    Draws a horizontal bar (showing scale)
-    '''
-    painter = QtGui.QPainter(pixmap)
-    pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
-    pen.setWidth(2)
-    painter.setPen(pen)
-    c_x, c_y = pixmap.width()/10, pixmap.height()*9/10
-    painter.drawLine(c_x, c_y, c_x + barsize, c_y)
-    painter.end()
-
-
-def draw_cross(pixmap):
-    '''
-    Draws a cross at the center
-    '''
-    painter = QtGui.QPainter(pixmap)
-    pen = QtGui.QPen(QtGui.QColor(200, 0, 0))
-    pen.setWidth(2)
-    painter.setPen(pen)
-    c_x, c_y = pixmap.width()/2, pixmap.height()/2
-    painter.drawLine(c_x - 10, c_y, c_x + 10, c_y)
-    painter.drawLine(c_x, c_y - 10, c_x, c_y + 10)
-    painter.end()
+__all__ = ['LiveFeedQt']
 
 
 class LiveFeedQt(QtWidgets.QLabel):
     def __init__(self, camera, mouse_callback=None,
-                 image_edit=lambda frame: frame,
-                 display_edit=draw_cross):
+                 image_edit=None,
+                 display_edit=None):
         super(LiveFeedQt, self).__init__()
         # The image_edit function (does nothing by default) gets the raw
         # unscaled image (i.e. a numpy array), while the display_edit
         # function gets a QPixmap and is meant to draw GUI elements in
         # "display space" (by default, a red cross in the middle of the
         # screen).
+        if image_edit is None:
+            image_edit = lambda frame: frame
         self.image_edit = image_edit
+
+        if display_edit is None:
+            display_edit = lambda img: img
         self.display_edit = display_edit
+
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
         self.callback = mouse_callback
