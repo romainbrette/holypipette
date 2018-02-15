@@ -92,6 +92,10 @@ class CameraGui(QtWidgets.QMainWindow):
                                  'Camera',
                                  'decrease_exposure',
                                  'Decrease the exposure time by 2.5ms')
+        self.register_key_action(Qt.Key_I, None, self.camera_signal,
+                                 'Camera',
+                                 'save_image',
+                                 'Save the current camera image to a file')
         self.camera_signal.connect(self.camera.handle_command)
         self.camera.connect(self)
 

@@ -6,7 +6,8 @@ TODO:
 '''
 import numpy as np
 import scipy.misc
-from PyQt5 import QtCore
+
+from PyQt5 import QtCore, QtWidgets
 
 __all__ = ['Camera', 'FakeCamera']
 
@@ -35,6 +36,8 @@ class Camera(QtCore.QObject):
             self.change_exposure(2.5)
         elif command == 'decrease_exposure':
             self.change_exposure(-2.5)
+        elif command == 'save_image':
+            self.save_image()
         else:
             raise ValueError('Uknown command: %s' % command)
 
@@ -63,6 +66,18 @@ class Camera(QtCore.QObject):
 
     def reset(self):
         pass
+
+    def save_image(self):
+        try:
+            import imageio
+        except ImportError:
+            print('Saving images needs imageio')
+            return
+        frame = self.snap()
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(caption='Save image',
+                                                               filter='Images (*.png, *.tiff)')
+        if len(fname):
+            imageio.imwrite(fname, frame)
 
 
 class FakeCamera(Camera):
