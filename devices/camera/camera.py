@@ -30,8 +30,8 @@ class Camera(QtCore.QObject):
         if exposure > 0:
             self.updated_exposure.emit('Camera', 'Exposure: %.1fms' % exposure)
 
-    @QtCore.pyqtSlot('QString')
-    def handle_command(self, command):
+    @QtCore.pyqtSlot('QString', object)
+    def handle_command(self, command, argument):
         if command == 'increase_exposure':
             self.change_exposure(2.5)
         elif command == 'decrease_exposure':

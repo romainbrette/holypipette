@@ -38,16 +38,17 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
     def update_text(self):
         lines = []
         for category, info in self.help_catalog.iteritems():
-            lines.append('<tr><td colspan=2 style="font-size: xx-large; font-weight: bold">{}</td></tr>'.format(category))
+            lines.append('<tr><td colspan=2 style="font-size: large; padding-top: 1ex">{}</td></tr>'.format(category))
+
             for key, modifier, description in info:
                 if modifier is not None:
-                    key_text = QtGui.QKeySequence(modifier + key).toString()
+                    key_text = QtGui.QKeySequence(int(modifier) + key).toString()
                 else:
                     key_text = QtGui.QKeySequence(key).toString()
 
                 lines.append('<tr>')
-                lines.append('<td style="font-size: x-large; font-weight: bold; align: center">{}</td>'
-                             '<td style="font-size: x-large">{}</td>'.format(key_text,
+                lines.append('<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
+                             '<td>{}</td>'.format(key_text,
                                                                            description))
                 lines.append('</tr>')
         text = '<table>' +('\n'.join(lines)) + '</table>'
@@ -56,7 +57,7 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
 
 class CameraGui(QtWidgets.QMainWindow):
 
-    camera_signal = QtCore.pyqtSignal('QString')
+    camera_signal = QtCore.pyqtSignal('QString', object)
 
     def __init__(self, camera, image_edit=None, display_edit=draw_cross):
         super(CameraGui, self).__init__()
@@ -83,52 +84,60 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_window.setStyleSheet("QLabel { background-color : rgb(200, 200, 200, 175); "
                                        "color : rgb(200, 0, 0)}")
         self.help_window.setVisible(False)
+        self.help_window.setFocusPolicy(Qt.NoFocus)
         self.setCentralWidget(self.video)
-        self.register_key_action(Qt.Key_Plus, None, self.camera_signal,
+        self.camera_signal.connect(self.camera.handle_command)
+        self.camera.connect(self)
+        self.register_commands()
+
+    def register_commands(self):
+        self.register_key_action(Qt.Key_Plus, None, self.camera_signal, None,
                                  'Camera',
                                  'increase_exposure',
                                  'Increase the exposure time by 2.5ms')
-        self.register_key_action(Qt.Key_Minus, None, self.camera_signal,
+        self.register_key_action(Qt.Key_Minus, None, self.camera_signal, None,
                                  'Camera',
                                  'decrease_exposure',
                                  'Decrease the exposure time by 2.5ms')
-        self.register_key_action(Qt.Key_I, None, self.camera_signal,
+        self.register_key_action(Qt.Key_I, None, self.camera_signal, None,
                                  'Camera',
                                  'save_image',
                                  'Save the current camera image to a file')
-        self.register_key_action(Qt.Key_Question, None, lambda: self.help_button.click(),
+        self.register_key_action(Qt.Key_Question, None, lambda: self.help_button.click(), None,
                                  'General',
                                  '',
                                  'Toggle display of keyboard shortcuts')
-        self.register_key_action(Qt.Key_Escape, None, self.close,
+        self.register_key_action(Qt.Key_Escape, None, self.close, None,
                                  'General',
                                  '',
                                  'Exit the application')
-        self.camera_signal.connect(self.camera.handle_command)
-        self.camera.connect(self)
 
-    def register_key_action(self, key, modifier, signal_or_func,
+
+    def register_key_action(self, key, modifier, signal_or_func, argument,
                             category, command, long_description):
-        self.key_actions[(key, modifier)] = (signal_or_func, category, command, long_description)
+        self.key_actions[(key, modifier)] = (signal_or_func, category, command, argument, long_description)
         self.help_window.register_key_action(key, modifier, category, long_description)
 
     def mouse_callback(self, event):
         pass
 
-    def keyPressEvent(self, event):
-        # Look for an exact match first (key + modifier)
-        event_tuple = (event.key(), event.modifiers())
-        description = self.key_actions.get(event_tuple, None)
-        # If not found, check for keys that ignore the modifier
-        if description is None:
-            description = self.key_actions.get((event.key(), None), None)
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            # Look for an exact match first (key + modifier)
+            event_tuple = (event.key(), int(event.modifiers()))
+            description = self.key_actions.get(event_tuple, None)
+            # If not found, check for keys that ignore the modifier
+            if description is None:
+                description = self.key_actions.get((event.key(), None), None)
 
-        if description is not None:
-            signal_or_func, _, command, _ = description
-            if callable(signal_or_func):
-                signal_or_func()
-            else:
-                signal_or_func.emit(command)
+            if description is not None:
+                signal_or_func, _, command, argument, _ = description
+                if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
+                    signal_or_func.emit(command, argument)
+                else:
+                    signal_or_func()
+                return True
+        return False
 
     def toggle_help(self):
         self.help_window.setVisible(not self.help_window.isVisible())
