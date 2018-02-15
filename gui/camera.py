@@ -29,6 +29,7 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
                            QtWidgets.QSizePolicy.MinimumExpanding)
         self.key_catalog = collections.OrderedDict()
         self.mouse_catalog = collections.OrderedDict()
+        self.custom_catalog = collections.OrderedDict()
 
     def register_key_action(self, key, modifier, category, description):
         if category not in self.key_catalog:
@@ -42,12 +43,20 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
         self.mouse_catalog[category].append((click_type, modifier, description))
         self.update_text()
 
+    def register_custom_action(self, category, action, description):
+        if category not in self.custom_catalog:
+            self.custom_catalog[category] = []
+        self.custom_catalog[category].append((action, description))
+
     def update_text(self):
         lines = []
         # Keys
-        for category, info in self.key_catalog.iteritems():
+        for category, key_info in self.key_catalog.iteritems():
+            # FIXME: The logic below assumes that there is no category that does
+            # not have any standard key actions. Instead, we should build a
+            # list of all categories first and then go through all catalogs.
             lines.append('<tr><td colspan=2 style="font-size: large; padding-top: 1ex">{}</td></tr>'.format(category))
-            # TODO: For now we assume there's no category with only mouse actions...
+
             mouse_info = self.mouse_catalog.get(category, [])
             for click_type, modifier, description in mouse_info:
                 if modifier is not None and modifier != Qt.NoModifier:
@@ -62,26 +71,30 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
                     mouse_text = 'Middle click'
                 else:
                     mouse_text = '??? click'
-                lines.append('<tr>')
-                lines.append(
-                    '<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
-                    '<td>{}</td>'.format(key_text + mouse_text,
-                                         description))
-                lines.append('</tr>')
-            for key, modifier, description in info:
+                action = key_text + mouse_text
+                lines.extend(self._format_action(action, description))
+
+            custom_info = self.custom_catalog.get(category, [])
+            for action, description in custom_info:
+                lines.extend(self._format_action(action, description))
+
+            for key, modifier, description in key_info:
                 if modifier is not None:
                     key_text = QtGui.QKeySequence(int(modifier) + key).toString()
                 else:
                     key_text = QtGui.QKeySequence(key).toString()
 
-                lines.append('<tr>')
-                lines.append('<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
-                             '<td>{}</td>'.format(key_text,
-                                                                           description))
-                lines.append('</tr>')
+                lines.extend(self._format_action(key_text, description))
         text = '<table>' +('\n'.join(lines)) + '</table>'
 
         self.setText(text)
+
+    def _format_action(self, action, description):
+        lines = ['<tr>',
+                 '<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
+                 '<td>{}</td>'.format(action, description),
+                 '</tr>']
+        return lines
 
 
 class CameraGui(QtWidgets.QMainWindow):
@@ -143,16 +156,19 @@ class CameraGui(QtWidgets.QMainWindow):
                                  'Exit the application')
 
     def register_key_action(self, key, modifier, signal_or_func, argument,
-                            category, command, long_description):
+                            category, command, long_description, default_doc=True):
         self.key_actions[(key, modifier)] = (signal_or_func, category, command, argument, long_description)
-        self.help_window.register_key_action(key, modifier, category, long_description)
+        if default_doc:
+            self.help_window.register_key_action(key, modifier, category, long_description)
 
     def register_mouse_action(self, click_type, modifier, signal_or_func,
-                              category, command, long_description):
+                              category, command, long_description,
+                              default_doc=True):
         self.mouse_actions[(click_type, modifier)] = (signal_or_func, category,
                                                       command, long_description)
-        self.help_window.register_mouse_action(click_type, modifier, category,
-                                               long_description)
+        if default_doc:
+            self.help_window.register_mouse_action(click_type, modifier, category,
+                                                   long_description)
 
     def mouse_callback(self, event):
         pass

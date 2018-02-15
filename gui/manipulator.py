@@ -20,6 +20,7 @@ class ManipulatorGui(CameraGui):
 
     def register_commands(self):
         super(ManipulatorGui, self).register_commands()
+
         # Commands to move the stage
         for modifier, distance in [(Qt.NoModifier, 10),
                                    (Qt.AltModifier, 2.5),
@@ -27,19 +28,26 @@ class ManipulatorGui(CameraGui):
             self.register_key_action(Qt.Key_Up, modifier, self.control_command, -distance,
                                      'Stage',
                                      'move_stage_vertical',
-                                     'Move up by %gum' % distance)
+                                     None, default_doc=False)
             self.register_key_action(Qt.Key_Down, modifier, self.control_command, distance,
                                      'Stage',
                                      'move_stage_vertical',
-                                     'Move down by %gum' % distance)
+                                     None, default_doc=False)
             self.register_key_action(Qt.Key_Left, modifier, self.control_command, -distance,
                                      'Stage',
                                      'move_stage_horizontal',
-                                     'Move left by %gum' % distance)
+                                     None, default_doc=False)
             self.register_key_action(Qt.Key_Right, modifier, self.control_command, distance,
                                      'Stage',
                                      'move_stage_horizontal',
-                                     'Move right by %gum' % distance)
+                                     None, default_doc=False)
+
+            if modifier == Qt.NoModifier:
+                modifier_text = ''
+            else:
+                modifier_text = QtGui.QKeySequence(modifier).toString()
+            self.help_window.register_custom_action('Stage', modifier_text+'Arrows',
+                                                    'Move stage by %gum' % distance)
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier, self.control_command, None,
