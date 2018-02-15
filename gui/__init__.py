@@ -1,1 +1,1 @@
-from livefeed_qt import *
+from livefeed import *

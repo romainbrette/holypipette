@@ -3,7 +3,7 @@ import collections
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
-from .livefeed_qt import LiveFeedQt
+from .livefeed import LiveFeedQt
 
 
 # Add a cross to the display
