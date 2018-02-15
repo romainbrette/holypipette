@@ -21,7 +21,6 @@ class ManipulatorGui(CameraGui):
         self.control_command.connect(self.controller.handle_command)
         self.controller.connect(self)
 
-
     def register_commands(self):
         super(ManipulatorGui, self).register_commands()
         # Commands to move the stage
@@ -74,6 +73,12 @@ class ManipulatorGui(CameraGui):
                                  'Manipulators',
                                  'save_configuration',
                                  'Save calibration values')
+
+        # Move pipette by clicking
+        self.register_mouse_action(Qt.LeftButton, Qt.NoModifier, self.control_command,
+                                   'Manipulators',
+                                   'move_pipette',
+                                   'Move pipette to position')
 
 from setup_script import *
 

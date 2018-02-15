@@ -27,19 +27,47 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
         super(KeyboardHelpWindow, self).__init__(parent=parent)
         self.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
                            QtWidgets.QSizePolicy.MinimumExpanding)
-        self.help_catalog = collections.OrderedDict()
+        self.key_catalog = collections.OrderedDict()
+        self.mouse_catalog = collections.OrderedDict()
 
     def register_key_action(self, key, modifier, category, description):
-        if category not in self.help_catalog:
-            self.help_catalog[category] = []
-        self.help_catalog[category].append((key, modifier, description))
+        if category not in self.key_catalog:
+            self.key_catalog[category] = []
+        self.key_catalog[category].append((key, modifier, description))
+        self.update_text()
+
+    def register_mouse_action(self, click_type, modifier, category, description):
+        if category not in self.mouse_catalog:
+            self.mouse_catalog[category] = []
+        self.mouse_catalog[category].append((click_type, modifier, description))
         self.update_text()
 
     def update_text(self):
         lines = []
-        for category, info in self.help_catalog.iteritems():
+        # Keys
+        for category, info in self.key_catalog.iteritems():
             lines.append('<tr><td colspan=2 style="font-size: large; padding-top: 1ex">{}</td></tr>'.format(category))
-
+            # TODO: For now we assume there's no category with only mouse actions...
+            mouse_info = self.mouse_catalog.get(category, [])
+            for click_type, modifier, description in mouse_info:
+                if modifier is not None and modifier != Qt.NoModifier:
+                    key_text = QtGui.QKeySequence(int(modifier)).toString() + '+'
+                else:
+                    key_text = ''
+                if click_type == Qt.LeftButton:
+                    mouse_text = 'Left click'
+                elif click_type == Qt.RightButton:
+                    mouse_text = 'Right click'
+                elif click_type == Qt.MiddleButton:
+                    mouse_text = 'Middle click'
+                else:
+                    mouse_text = '??? click'
+                lines.append('<tr>')
+                lines.append(
+                    '<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
+                    '<td>{}</td>'.format(key_text + mouse_text,
+                                         description))
+                lines.append('</tr>')
             for key, modifier, description in info:
                 if modifier is not None:
                     key_text = QtGui.QKeySequence(int(modifier) + key).toString()
@@ -52,6 +80,7 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
                                                                            description))
                 lines.append('</tr>')
         text = '<table>' +('\n'.join(lines)) + '</table>'
+
         self.setText(text)
 
 
@@ -75,6 +104,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.status_messages = collections.OrderedDict()
         self.camera = camera
         self.key_actions = {}
+        self.mouse_actions = {}
         self.video = LiveFeedQt(self.camera,
                                 mouse_callback=self.mouse_callback,
                                 image_edit=image_edit,
@@ -112,11 +142,17 @@ class CameraGui(QtWidgets.QMainWindow):
                                  '',
                                  'Exit the application')
 
-
     def register_key_action(self, key, modifier, signal_or_func, argument,
                             category, command, long_description):
         self.key_actions[(key, modifier)] = (signal_or_func, category, command, argument, long_description)
         self.help_window.register_key_action(key, modifier, category, long_description)
+
+    def register_mouse_action(self, click_type, modifier, signal_or_func,
+                              category, command, long_description):
+        self.mouse_actions[(click_type, modifier)] = (signal_or_func, category,
+                                                      command, long_description)
+        self.help_window.register_mouse_action(click_type, modifier, category,
+                                               long_description)
 
     def mouse_callback(self, event):
         pass
@@ -134,6 +170,30 @@ class CameraGui(QtWidgets.QMainWindow):
                 signal_or_func, _, command, argument, _ = description
                 if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
                     signal_or_func.emit(command, argument)
+                else:
+                    signal_or_func()
+                return True
+        elif event.type() == QtCore.QEvent.MouseButtonPress:
+            # Look for an exact match first (key + modifier)
+            event_tuple = (event.button(), int(event.modifiers()))
+            description = self.mouse_actions.get(event_tuple, None)
+            # If not found, check for keys that ignore the modifier
+            if description is None:
+                description = self.mouse_actions.get((event.button(), None), None)
+
+            if description is not None:
+                # Mouse commands do not have custom arguments, they always get
+                # the position in the image (rescaled, i.e. independent of the
+                # window size)
+                x, y = event.x(), event.y()
+                xs = x - self.video.size().width() / 2.
+                ys = y - self.video.size().height() / 2.
+                # displayed image is not necessarily the same size as the original camera image
+                scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
+                position = (xs * scale, ys * scale)
+                signal_or_func, _, command, _ = description
+                if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
+                    signal_or_func.emit(command, position)
                 else:
                     signal_or_func()
                 return True

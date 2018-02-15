@@ -9,9 +9,6 @@ from PyQt5 import QtWidgets
 
 from gui.camera import CameraGui
 
-home = expanduser("~")
-config_filename = home+'/config_manipulator.cfg'
-
 from setup_script import *
 
 app = QtWidgets.QApplication(sys.argv)

@@ -1,6 +1,7 @@
 import cPickle as pickle
 import os
 
+import numpy as np
 from PyQt5 import QtCore
 
 from devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
@@ -34,12 +35,12 @@ class PipetteController(QtCore.QObject):
         self.config_filename = config_filename
         self.current_unit = 0
         self.calibrated_unit = None
-        # We call this via handle command to catch errors automatically
-        self.handle_command('load_configuration', None)
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
         self.switch_manipulator(0)
+        # We call this via handle command to catch errors automatically
+        self.handle_command('load_configuration', None)
 
     @QtCore.pyqtSlot('QString', object)
     def handle_command(self, command, argument):
@@ -59,6 +60,8 @@ class PipetteController(QtCore.QObject):
                 self.load_configuration()
             elif command == 'save_configuration':
                 self.save_configuration()
+            elif command == 'move_pipette':
+                self.move_pipette(argument[0], argument[1])
             else:
                 raise ValueError('Unknown command: %s' % command)
         except Exception as ex:
@@ -101,3 +104,7 @@ class PipetteController(QtCore.QObject):
             for i, cfg_unit in enumerate(cfg_units):
                 self.calibrated_units[i].load_configuration(cfg_unit)
             self.calibrated_unit.analyze_calibration()
+
+    def move_pipette(self, x, y):
+        position = np.array([x, y, self.microscope.position()])
+        self.calibrated_unit.safe_move(position)
