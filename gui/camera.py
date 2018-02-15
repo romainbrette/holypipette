@@ -173,7 +173,7 @@ class CameraGui(QtWidgets.QMainWindow):
     def mouse_callback(self, event):
         pass
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.KeyPress:
             # Look for an exact match first (key + modifier)
             event_tuple = (event.key(), int(event.modifiers()))
@@ -190,6 +190,9 @@ class CameraGui(QtWidgets.QMainWindow):
                     signal_or_func()
                 return True
         elif event.type() == QtCore.QEvent.MouseButtonPress:
+            if source != self.video:
+                # We only want to intercept clicks on the video stream!
+                return False
             # Look for an exact match first (key + modifier)
             event_tuple = (event.button(), int(event.modifiers()))
             description = self.mouse_actions.get(event_tuple, None)
