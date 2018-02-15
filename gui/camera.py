@@ -96,12 +96,20 @@ class CameraGui(QtWidgets.QMainWindow):
                                  'Camera',
                                  'save_image',
                                  'Save the current camera image to a file')
+        self.register_key_action(Qt.Key_Question, None, lambda: self.help_button.click(),
+                                 'General',
+                                 '',
+                                 'Toggle display of keyboard shortcuts')
+        self.register_key_action(Qt.Key_Escape, None, self.close,
+                                 'General',
+                                 '',
+                                 'Exit the application')
         self.camera_signal.connect(self.camera.handle_command)
         self.camera.connect(self)
 
-    def register_key_action(self, key, modifier, signal,
+    def register_key_action(self, key, modifier, signal_or_func,
                             category, command, long_description):
-        self.key_actions[(key, modifier)] = (signal, category, command, long_description)
+        self.key_actions[(key, modifier)] = (signal_or_func, category, command, long_description)
         self.help_window.register_key_action(key, modifier, category, long_description)
 
     def mouse_callback(self, event):
@@ -116,8 +124,11 @@ class CameraGui(QtWidgets.QMainWindow):
             description = self.key_actions.get((event.key(), None), None)
 
         if description is not None:
-            signal, _, command, _ = description
-            signal.emit(command)
+            signal_or_func, _, command, _ = description
+            if callable(signal_or_func):
+                signal_or_func()
+            else:
+                signal_or_func.emit(command)
 
     def toggle_help(self):
         self.help_window.setVisible(not self.help_window.isVisible())
