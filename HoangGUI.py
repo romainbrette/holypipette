@@ -259,7 +259,7 @@ class TestGui(QtWidgets.QMainWindow):
                 print("Done")
             ##### HOANG
             #Bath Location (Teamporary for testing). Will be integrated later with the cleaning button after setting fixed position of baths
-            #Store the initial position
+            #Store the initial position.
             elif event.key() == Qt.Key_F2:
                 global z3, u3, us3
                 z3 = microscope.position()
@@ -579,6 +579,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def do_cleaning_pipette(self):
         pressure = OB1()
+        # Need to modify trajectory: sequence of moving for each axis.
         #Step 1: Washing.
         #print('Cleaning the pipette: Started')
         try:
