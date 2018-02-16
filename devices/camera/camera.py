@@ -4,8 +4,10 @@ A generic camera class
 TODO:
 * A stack() method which takes a series of photos along Z axis
 '''
+import numpy as np
+import scipy.misc
 
-__all__ = ['Camera']
+__all__ = ['Camera', 'FakeCamera']
 
 
 class Camera(object):
@@ -38,3 +40,30 @@ class Camera(object):
 
     def reset(self):
         pass
+
+
+class FakeCamera(Camera):
+    # TODO: Connect this to FakeManipulator etc.
+    def __init__(self, width=None, height=None, dummy=False):
+        self.width = 1024
+        self.height = 768
+        self.frame = scipy.misc.face(gray=True)
+        self.exposure_time = 30
+
+    def set_exposure(self, value):
+        print value
+        if 0 < value <= 200:
+            self.exposure_time = value
+
+    def get_exposure(self):
+        return self.exposure_time
+
+    def snap(self):
+        '''
+        Returns the current image.
+        This is a blocking call (wait until next frame is available)
+        '''
+        exposure_factor = self.exposure_time/30.
+        noisy_frame = self.frame + np.random.randn(self.height, self.width)*10
+        return np.array(np.clip(noisy_frame*exposure_factor, 0, 255),
+                        dtype=np.uint8)
