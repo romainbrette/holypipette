@@ -50,7 +50,6 @@ class TestGui(QtWidgets.QMainWindow):
     objective_signal = QtCore.pyqtSignal()
     paramecium_signal = QtCore.pyqtSignal()
     catch_signal = QtCore.pyqtSignal()
-
     ##### HOANG
     pipette_cleaning_signal = QtCore.pyqtSignal()
 
@@ -86,9 +85,8 @@ class TestGui(QtWidgets.QMainWindow):
         self.catch_signal.connect(self.calibrator.catch_paramecium)
         self.calibration_thread.start()
         self.load()
-
         ##### HOANG
-        self.pipette_cleaning_signal.connect(self.calibrator.do_clean_pipette)
+        self.pipette_cleaning_signal.connect(self.calibrator.do_cleaning_pipette)
 
     def mouse_callback(self, event):
         # Click = move
@@ -98,7 +96,7 @@ class TestGui(QtWidgets.QMainWindow):
                 x, y = event.x(), event.y()
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
-                # displayed image is not necessarily the same size as the original camera image````
+                # displayed image is not necessarily the same size as the original camera image
                 scale = 1.0*self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
                 ys *= scale
@@ -259,35 +257,36 @@ class TestGui(QtWidgets.QMainWindow):
                     calibrated_stage.relative_move(10, axis = 0)
                     calibrated_stage.wait_until_still(0)
                 print("Done")
-
             ##### HOANG
-            # Bath Location. Can be integrated with the cleaning button later after setting fixed position of baths.
-            # Store the Initial Position
+            #Bath Location (Teamporary for testing). Will be integrated later with the cleaning button after setting fixed position of baths
+            #Store the initial position
             elif event.key() == Qt.Key_F2:
-                z3 = self.microscope.position()
-                u3 = self.position()
-                us3 = self.stage.position()
-                print("Starting the bath location process. Locate the washing bath and press F3")
-            # Store the position of the washing bath
+                global z3, u3, us3
+                z3 = microscope.position()
+                u3 = calibrated_unit.position()
+                us3 = stage.position()
+                print("Washing bath location: Done. Locate the rinsing bath and press F3")
+            #Store the position of the washing bath
             elif event.key() == Qt.Key_F3:
-                z4 = self.microscope.position()
-                u4 = self.position()
-                us4 = self.stage.position()
+                global z4,u4,us4
+                z4 = microscope.position()
+                u4 = calibrated_unit.position()
+                us4 = stage.position()
                 print("Washing bath location: Done. Locate the rinsing bath and press F4")
-            # Store the position of the rinsing bath and move back to initial position
+            #Store the position of the rinsing bath and move back to original position
             elif event.key() == Qt.Key_F4:
-                z5 = self.microscope.position()
-                u5 = self.position()
-                us5 = self.stage.position()
-                print("Bath location process: Done. Moving to the original position")
-                self.microscope.absolute_move(z3)
-                self.microscope.wait_until_still()
-                self.absolute_move(u3)
-                if us3 is not None:  # stage moves too
-                    self.stage.absolute_move(us3)
-                    self.stage.wait_until_still()
-                self.wait_until_still()
-
+                global z5,u5,us5
+                z5 = microscope.position()
+                u5 = calibrated_unit.position()
+                us5 = stage.position()
+                print("bath location process: Done. Move back to the original position")
+                microscope.absolute_move(z3)
+                microscope.wait_until_still()
+                calibrated_unit.absolute_move(u3)
+                if us3 is not None:
+                    stage.absolute_move(us3)
+                    stage.wait_until_still()
+                calibrated_unit.wait_until_still()
             elif event.key() == Qt.Key_F5:
                 self.pipette_cleaning_signal.emit()
         except Exception:
@@ -304,14 +303,17 @@ class TestGui(QtWidgets.QMainWindow):
     def load(self):
         # Loads configuration
         print("Loading configuration")
-        cfg = pickle.load(open(config_filename, "rb"))
-        microscope.load_configuration(cfg['microscope'])
-        calibrated_stage.load_configuration(cfg['stage'])
-        cfg_units = cfg['units']
-        for i,cfg_unit in enumerate(cfg_units):
-            calibrated_units[i].load_configuration(cfg_unit)
-        #calibrated_units[0].load_configuration(cfg['unit'])
-        calibrated_unit.analyze_calibration()
+        try:
+            cfg = pickle.load(open(config_filename, "rb"))
+            microscope.load_configuration(cfg['microscope'])
+            calibrated_stage.load_configuration(cfg['stage'])
+            cfg_units = cfg['units']
+            for i,cfg_unit in enumerate(cfg_units):
+                calibrated_units[i].load_configuration(cfg_unit)
+            #calibrated_units[0].load_configuration(cfg['unit'])
+            calibrated_unit.analyze_calibration()
+        except Exception:
+            print("Configuration file could not be loaded.")
 
     def update_status_bar(self):
         exposure = self.camera.get_exposure()
@@ -324,7 +326,6 @@ class TestGui(QtWidgets.QMainWindow):
         except AttributeError:
             pass
         event.accept()
-
 
 
 class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
@@ -464,6 +465,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         except Exception:
             print(traceback.format_exc())
 
+
     @QtCore.pyqtSlot()
     def move_pipette(self):
         try:
@@ -574,55 +576,52 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print("Done")
 
-    ##### HOANG
     @QtCore.pyqtSlot()
-    def do_clean_pipette(self):
-    #Step 1: Washing.
-        print('Cleaning the pipette: Started')
+    def do_cleaning_pipette(self):
+        pressure = OB1()
+        #Step 1: Washing.
+        #print('Cleaning the pipette: Started')
         try:
-            # Move to the washing bath.
-            self.microscope.absolute_move(z4)
-            self.microscope.wait_until_still()
-            self.absolute_move(u4)
+            #Move the pipette to the washing bath.
+            microscope.absolute_move(z4)
+            microscope.wait_until_still()
+            calibrated_unit.absolute_move(u4)
             if us4 is not None:
-                self.stage.absolute_move(us4)
-                self.stage.wait_until_still()
-            self.wait_until_still()
-            # Fill up with the Alconox
-            pressure = OB1()
+                stage.absolute_move(us4)
+                stage.wait_until_still()
+            calibrated_unit.wait_until_still()
+            #Fill up with the Alconox
             pressure.set_pressure(-600)
             time.sleep(1)
-            # 5 cycles of tip cleaning
+            #5 cycles of tip cleaning
             for i in range (1,5):
                 pressure.set_pressure(-600)
                 time.sleep(0.625)
                 pressure.set_pressure(1000)
                 time.sleep(0.375)
-    #Step 2: Rinsing.
-            # Move to the rinsing bath
-            self.microscope.absolute_move(z5)
-            self.microscope.wait_until_still()
-            self.absolute_move(u5)
+            #Step 2: Rinsing.
+            #Move the pipette to the rinsing bath.
+            microscope.absolute_move(z5)
+            microscope.wait_until_still()
+            calibrated_unit.absolute_move(u5)
             if us5 is not None:
-                self.stage.absolute_move(us5)
-                self.stage.wait_until_still()
-            self.wait_until_still()
-            # Expel the remaining Alconox
+                stage.absolute_move(us5)
+                stage.wait_until_still()
+            calibrated_unit.wait_until_still()
+            #Expel the remaining Alconox
             pressure.set_pressure(1000)
             time.sleep(6)
-    #Step 3: Move back.
-            # Move to the initial position
-            self.microscope.absolute_move(z3)
-            self.microscope.wait_until_still()
-            self.absolute_move(u3)
+            #Step 3: Move back.
+            microscope.absolute_move(z3)
+            microscope.wait_until_still()
+            calibrated_unit.absolute_move(u3)
             if us3 is not None:
-                self.stage.absolute_move(us3)
-                self.stage.wait_until_still()
-            self.wait_until_still()
+                stage.absolute_move(us3)
+                stage.wait_until_still()
+            calibrated_unit.wait_until_still()
             print("Done")
         except Exception:
             print(traceback.format_exc())
-
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
         self.show_paramecium = False
@@ -679,6 +678,7 @@ def display_edit(img):
 
 # Start amplifier and pressure controller
 # If not available, run anyway without them
+z3,u3,us3,z4,u4,us4,z5,u5,us5 = None, None, None, None, None, None, None, None, None
 amplifier, pressure = None, None
 try:
     amplifier = MultiClampChannel()
