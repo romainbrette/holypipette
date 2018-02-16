@@ -265,7 +265,7 @@ class TestGui(QtWidgets.QMainWindow):
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
                 us3 = stage.position()
-                print("Washing bath location: Done. Locate the rinsing bath and press F3")
+                print("Locate the washing bath and press F3")
             #Store the position of the washing bath
             elif event.key() == Qt.Key_F3:
                 global z4,u4,us4
@@ -578,7 +578,10 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def do_cleaning_pipette(self):
-        pressure = OB1()
+        if (pressure is None):
+            print("Pressure controller not available. Aborting.")
+            return
+        #pressure = OB1()
         # Need to modify trajectory: sequence of moving for each axis.
         #Step 1: Washing.
         #print('Cleaning the pipette: Started')
