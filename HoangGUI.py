@@ -51,6 +51,9 @@ class TestGui(QtWidgets.QMainWindow):
     paramecium_signal = QtCore.pyqtSignal()
     catch_signal = QtCore.pyqtSignal()
 
+    ##### HOANG
+    pipette_cleaning_signal = QtCore.pyqtSignal()
+
     def __init__(self, camera):
         super(TestGui, self).__init__()
         self.setWindowTitle("Calibration GUI")
@@ -84,6 +87,9 @@ class TestGui(QtWidgets.QMainWindow):
         self.calibration_thread.start()
         self.load()
 
+        ##### HOANG
+        self.pipette_cleaning_signal.connect(self.calibrator.do_clean_pipette)
+
     def mouse_callback(self, event):
         # Click = move
         # Shift-click = move and patch
@@ -92,7 +98,7 @@ class TestGui(QtWidgets.QMainWindow):
                 x, y = event.x(), event.y()
                 xs = x - self.video.size().width()/2
                 ys = y - self.video.size().height()/2
-                # displayed image is not necessarily the same size as the original camera image
+                # displayed image is not necessarily the same size as the original camera image````
                 scale = 1.0*self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
                 ys *= scale
@@ -253,6 +259,37 @@ class TestGui(QtWidgets.QMainWindow):
                     calibrated_stage.relative_move(10, axis = 0)
                     calibrated_stage.wait_until_still(0)
                 print("Done")
+
+            ##### HOANG
+            # Bath Location. Can be integrated with the cleaning button later after setting fixed position of baths.
+            # Store the Initial Position
+            elif event.key() == Qt.Key_F2:
+                z3 = self.microscope.position()
+                u3 = self.position()
+                us3 = self.stage.position()
+                print("Starting the bath location process. Locate the washing bath and press F3")
+            # Store the position of the washing bath
+            elif event.key() == Qt.Key_F3:
+                z4 = self.microscope.position()
+                u4 = self.position()
+                us4 = self.stage.position()
+                print("Washing bath location: Done. Locate the rinsing bath and press F4")
+            # Store the position of the rinsing bath and move back to initial position
+            elif event.key() == Qt.Key_F4:
+                z5 = self.microscope.position()
+                u5 = self.position()
+                us5 = self.stage.position()
+                print("Bath location process: Done. Moving to the original position")
+                self.microscope.absolute_move(z3)
+                self.microscope.wait_until_still()
+                self.absolute_move(u3)
+                if us3 is not None:  # stage moves too
+                    self.stage.absolute_move(us3)
+                    self.stage.wait_until_still()
+                self.wait_until_still()
+
+            elif event.key() == Qt.Key_F5:
+                self.pipette_cleaning_signal.emit()
         except Exception:
             print(traceback.format_exc())
 
@@ -287,6 +324,7 @@ class TestGui(QtWidgets.QMainWindow):
         except AttributeError:
             pass
         event.accept()
+
 
 
 class PipetteHandler(QtCore.QObject): # This could be more general, for each pipette (or maybe for the entire setup)
@@ -426,7 +464,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         except Exception:
             print(traceback.format_exc())
 
-
     @QtCore.pyqtSlot()
     def move_pipette(self):
         try:
@@ -537,6 +574,54 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print("Done")
 
+    ##### HOANG
+    @QtCore.pyqtSlot()
+    def do_clean_pipette(self):
+    #Step 1: Washing.
+        print('Cleaning the pipette: Started')
+        try:
+            # Move to the washing bath.
+            self.microscope.absolute_move(z4)
+            self.microscope.wait_until_still()
+            self.absolute_move(u4)
+            if us4 is not None:
+                self.stage.absolute_move(us4)
+                self.stage.wait_until_still()
+            self.wait_until_still()
+            # Fill up with the Alconox
+            pressure = OB1()
+            pressure.set_pressure(-600)
+            time.sleep(1)
+            # 5 cycles of tip cleaning
+            for i in range (1,5):
+                pressure.set_pressure(-600)
+                time.sleep(0.625)
+                pressure.set_pressure(1000)
+                time.sleep(0.375)
+    #Step 2: Rinsing.
+            # Move to the rinsing bath
+            self.microscope.absolute_move(z5)
+            self.microscope.wait_until_still()
+            self.absolute_move(u5)
+            if us5 is not None:
+                self.stage.absolute_move(us5)
+                self.stage.wait_until_still()
+            self.wait_until_still()
+            # Expel the remaining Alconox
+            pressure.set_pressure(1000)
+            time.sleep(6)
+    #Step 3: Move back.
+            # Move to the initial position
+            self.microscope.absolute_move(z3)
+            self.microscope.wait_until_still()
+            self.absolute_move(u3)
+            if us3 is not None:
+                self.stage.absolute_move(us3)
+                self.stage.wait_until_still()
+            self.wait_until_still()
+            print("Done")
+        except Exception:
+            print(traceback.format_exc())
 
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
