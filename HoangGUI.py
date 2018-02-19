@@ -571,12 +571,11 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def do_cleaning_pipette(self):
-        #if (pressure is None):
-        #    print("Pressure controller not available. Aborting.")
-        #    return
-        # Need to modify trajectory: sequence of moving for each axis.
+        if (pressure is None):
+            print("Pressure controller not available. Aborting.")
+            return
         #Step 1: Washing.
-        #print('Cleaning the pipette: Started')
+        print('Cleaning the pipette: Started')
         try:
             #Move micrpscope above to avoid collision
             microscope.absolute_move(0)
