@@ -1,4 +1,4 @@
-'''
+c'''
 Setup script for the first rig with the LN SM-10
 '''
 from devices.camera.umanagercamera import Lumenera

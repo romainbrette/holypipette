@@ -260,12 +260,12 @@ class TestGui(QtWidgets.QMainWindow):
             ##### HOANG
             #Bath Location (Teamporary for testing). Will be integrated later with the cleaning button after setting fixed position of baths
             #Store the initial position.
+            #z and us: not necessary
             elif event.key() == Qt.Key_F2:
                 global z3, u3, us3
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
                 us3 = stage.position()
-                print("Locate the washing bath and press F3")
             #Store the position of the washing bath
             elif event.key() == Qt.Key_F3:
                 global z4,u4,us4
@@ -280,13 +280,6 @@ class TestGui(QtWidgets.QMainWindow):
                 u5 = calibrated_unit.position()
                 us5 = stage.position()
                 print("bath location process: Done. Move back to the original position")
-                microscope.absolute_move(z3)
-                microscope.wait_until_still()
-                calibrated_unit.absolute_move(u3)
-                if us3 is not None:
-                    stage.absolute_move(us3)
-                    stage.wait_until_still()
-                calibrated_unit.wait_until_still()
             elif event.key() == Qt.Key_F5:
                 self.pipette_cleaning_signal.emit()
         except Exception:
@@ -578,51 +571,55 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
     @QtCore.pyqtSlot()
     def do_cleaning_pipette(self):
-        if (pressure is None):
-            print("Pressure controller not available. Aborting.")
-            return
-        #pressure = OB1()
+        #if (pressure is None):
+        #    print("Pressure controller not available. Aborting.")
+        #    return
         # Need to modify trajectory: sequence of moving for each axis.
         #Step 1: Washing.
         #print('Cleaning the pipette: Started')
         try:
-            #Move the pipette to the washing bath.
-            microscope.absolute_move(z4)
+            #Move micrpscope above to avoid collision
+            microscope.absolute_move(0)
             microscope.wait_until_still()
-            calibrated_unit.absolute_move(u4)
-            if us4 is not None:
-                stage.absolute_move(us4)
-                stage.wait_until_still()
+            #Move the pipette to the washing bath.
+            calibrated_unit.absolute_move(u4[0],0)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u4[1],1)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u4[2],2)
             calibrated_unit.wait_until_still()
             #Fill up with the Alconox
-            pressure.set_pressure(-600)
+            #pressure.set_pressure(-600)
             time.sleep(1)
             #5 cycles of tip cleaning
             for i in range (1,5):
-                pressure.set_pressure(-600)
+                #pressure.set_pressure(-600)
                 time.sleep(0.625)
-                pressure.set_pressure(1000)
+                #pressure.set_pressure(1000)
                 time.sleep(0.375)
+
             #Step 2: Rinsing.
             #Move the pipette to the rinsing bath.
-            microscope.absolute_move(z5)
-            microscope.wait_until_still()
-            calibrated_unit.absolute_move(u5)
-            if us5 is not None:
-                stage.absolute_move(us5)
-                stage.wait_until_still()
+            calibrated_unit.absolute_move(u3[2], 2)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u5[1], 1)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u5[2], 2)
             calibrated_unit.wait_until_still()
             #Expel the remaining Alconox
-            pressure.set_pressure(1000)
+            #pressure.set_pressure(1000)
             time.sleep(6)
+
             #Step 3: Move back.
+            calibrated_unit.absolute_move(u3[2], 2)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u3[1], 1)
+            calibrated_unit.wait_until_still()
+            calibrated_unit.absolute_move(u3[0], 0)
+            calibrated_unit.wait_until_still()
+            #Move microscope back to original position
             microscope.absolute_move(z3)
             microscope.wait_until_still()
-            calibrated_unit.absolute_move(u3)
-            if us3 is not None:
-                stage.absolute_move(us3)
-                stage.wait_until_still()
-            calibrated_unit.wait_until_still()
             print("Done")
         except Exception:
             print(traceback.format_exc())
@@ -682,7 +679,10 @@ def display_edit(img):
 
 # Start amplifier and pressure controller
 # If not available, run anyway without them
+
+##### HOANG
 z3,u3,us3,z4,u4,us4,z5,u5,us5 = None, None, None, None, None, None, None, None, None
+
 amplifier, pressure = None, None
 try:
     amplifier = MultiClampChannel()
