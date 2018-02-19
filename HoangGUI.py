@@ -266,6 +266,7 @@ class TestGui(QtWidgets.QMainWindow):
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
                 us3 = stage.position()
+                print(u3)
             #Store the position of the washing bath
             elif event.key() == Qt.Key_F3:
                 global z4,u4,us4
@@ -273,6 +274,7 @@ class TestGui(QtWidgets.QMainWindow):
                 u4 = calibrated_unit.position()
                 us4 = stage.position()
                 print("Washing bath location: Done. Locate the rinsing bath and press F4")
+                print(u4[0])
             #Store the position of the rinsing bath and move back to original position
             elif event.key() == Qt.Key_F4:
                 global z5,u5,us5
@@ -280,8 +282,22 @@ class TestGui(QtWidgets.QMainWindow):
                 u5 = calibrated_unit.position()
                 us5 = stage.position()
                 print("bath location process: Done. Move back to the original position")
+                print(u5[0])
             elif event.key() == Qt.Key_F5:
                 self.pipette_cleaning_signal.emit()
+            # TESTING
+            elif event.key() ==Qt.Key_F6:
+                calibrated_unit.absolute_move(u4[2], 2)
+                calibrated_unit.wait_until_still(2)
+                print("Move to the z of u4")
+                print(u4[2])
+                print(calibrated_unit.position()[2])
+                calibrated_unit.absolute_move(u5[2], 2)
+                calibrated_unit.wait_until_still(2)
+                print("Move to the z of u5")
+                print(u5[2])
+                print(calibrated_unit.position()[2])
+
         except Exception:
             print(traceback.format_exc())
 
@@ -569,6 +585,7 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print("Done")
 
+    ##### HOANG
     @QtCore.pyqtSlot()
     def do_cleaning_pipette(self):
         if (pressure is None):
@@ -582,44 +599,77 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             microscope.wait_until_still()
             #Move the pipette to the washing bath.
             calibrated_unit.absolute_move(u4[0],0)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(0)
+            print("Move to the x of u4")
+            print(u4[0])
+            print(calibrated_unit.position()[0])
             calibrated_unit.absolute_move(u4[1],1)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(1)
+            print("Move to the y of u4")
+            print(u4[1])
+            print(calibrated_unit.position()[1])
             calibrated_unit.absolute_move(u4[2],2)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(2)
+            print("Move to the z of u4")
+            print(u4[2])
+            print(calibrated_unit.position()[2])
             #Fill up with the Alconox
-            #pressure.set_pressure(-600)
+            pressure.set_pressure(-600)
             time.sleep(1)
             #5 cycles of tip cleaning
             for i in range (1,5):
-                #pressure.set_pressure(-600)
+                pressure.set_pressure(-600)
                 time.sleep(0.625)
-                #pressure.set_pressure(1000)
+                pressure.set_pressure(1000)
                 time.sleep(0.375)
 
             #Step 2: Rinsing.
             #Move the pipette to the rinsing bath.
             calibrated_unit.absolute_move(u3[2], 2)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(2)
+            print("Move to the z of u3")
+            print(u3[2])
+            print(calibrated_unit.position()[2])
             calibrated_unit.absolute_move(u5[1], 1)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(1)
+            print("Move to the y of u5")
+            print(u5[1])
+            print(calibrated_unit.position()[1])
+            calibrated_unit.absolute_move(u5[0], 0)
+            calibrated_unit.wait_until_still(0)
+            print("Move to the x of u5")
+            print(u5[0])
+            print(calibrated_unit.position()[0])
             calibrated_unit.absolute_move(u5[2], 2)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(2)
+            print("Move to the z of u5")
+            print(u5[2])
+            print(calibrated_unit.position()[2])
             #Expel the remaining Alconox
-            #pressure.set_pressure(1000)
+            pressure.set_pressure(1000)
             time.sleep(6)
 
             #Step 3: Move back.
             calibrated_unit.absolute_move(u3[2], 2)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(2)
+            print("Move to the z of u3")
+            print(u3[2])
+            print(calibrated_unit.position()[2])
             calibrated_unit.absolute_move(u3[1], 1)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(1)
+            print("Move to the y of u3")
+            print(u3[1])
+            print(calibrated_unit.position()[1])
             calibrated_unit.absolute_move(u3[0], 0)
-            calibrated_unit.wait_until_still()
+            calibrated_unit.wait_until_still(0)
+            print("Move to the x of u3")
+            print(u3[0])
+            print(calibrated_unit.position()[0])
             #Move microscope back to original position
             microscope.absolute_move(z3)
             microscope.wait_until_still()
             print("Done")
+            print(calibrated_unit.position())
         except Exception:
             print(traceback.format_exc())
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
