@@ -141,6 +141,14 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         x_hex = binascii.hexlify(struct.pack('>f', x))
         data = [axis, int(x_hex[6:], 16), int(x_hex[4:6], 16), int(x_hex[2:4], 16), int(x_hex[:2], 16)]
         # TODO: always goes fast (use 0049 for slow)
+
+        ##### HOANG
+        #Always goes fasr or slow
+        #if (axis == 2):
+        #   self.send_command('0049', data, 0)
+        #else:
+        #   self.send_command('0048', data, 0)
+
         self.send_command('0048', data, 0)
 
     def absolute_move_group(self, x, axes):

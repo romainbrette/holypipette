@@ -275,10 +275,14 @@ class TestGui(QtWidgets.QMainWindow):
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
                 self.pipette_cleaning_signal.emit()
-            #TESTING
+            #Pipette cleaning TESTING
             elif event.key() == Qt.Key_F5:
-                calibrated_unit.absolute_move(u4[0]+5000, 0)
-                calibrated_unit.wait_until_still(0)
+                if amplifier is None:
+                    print("Amplifier not available. Aborting.")
+                    return
+                else:
+                    R = amplifier.resistance()
+                    message("Resistance:" + str(R / 1e6))
 
         except Exception:
             print(traceback.format_exc())
