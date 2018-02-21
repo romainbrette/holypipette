@@ -258,45 +258,27 @@ class TestGui(QtWidgets.QMainWindow):
                     calibrated_stage.wait_until_still(0)
                 print("Done")
             ##### HOANG
-            #Bath Location (Teamporary for testing). Will be integrated later with the cleaning button after setting fixed position of baths
-            #Store the initial position.
             #z and us: not necessary
-            elif event.key() == Qt.Key_F2:
-                global z3, u3, us3
-                z3 = microscope.position()
-                u3 = calibrated_unit.position()
-                us3 = stage.position()
-                print(u3)
+            #Bath location to be involved in the calibration later (Ex, after the current calibration).
             #Store the position of the washing bath
             elif event.key() == Qt.Key_F3:
-                global z4,u4,us4
-                z4 = microscope.position()
+                global u4
                 u4 = calibrated_unit.position()
-                us4 = stage.position()
                 print("Washing bath location: Done. Locate the rinsing bath and press F4")
-                print(u4[0])
-            #Store the position of the rinsing bath and move back to original position
+            #Store the position of the rinsing bath
             elif event.key() == Qt.Key_F4:
-                global z5,u5,us5
-                z5 = microscope.position()
+                global u5
                 u5 = calibrated_unit.position()
-                us5 = stage.position()
-                print("bath location process: Done. Move back to the original position")
-                print(u5[0])
-            elif event.key() == Qt.Key_F5:
+                print("bath location process: Done. Ready for pipette cleaning!")
+            elif event.key() == Qt.Key_F2:
+                global z3, u3
+                z3 = microscope.position()
+                u3 = calibrated_unit.position()
                 self.pipette_cleaning_signal.emit()
-            # TESTING
-            elif event.key() ==Qt.Key_F6:
-                calibrated_unit.absolute_move(u4[2], 2)
-                calibrated_unit.wait_until_still(2)
-                print("Move to the z of u4")
-                print(u4[2])
-                print(calibrated_unit.position()[2])
-                calibrated_unit.absolute_move(u5[2], 2)
-                calibrated_unit.wait_until_still(2)
-                print("Move to the z of u5")
-                print(u5[2])
-                print(calibrated_unit.position()[2])
+            #TESTING
+            elif event.key() == Qt.Key_F5:
+                calibrated_unit.absolute_move(u4[0]+5000, 0)
+                calibrated_unit.wait_until_still(0)
 
         except Exception:
             print(traceback.format_exc())
@@ -600,19 +582,13 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             #Move the pipette to the washing bath.
             calibrated_unit.absolute_move(u4[0],0)
             calibrated_unit.wait_until_still(0)
-            print("Move to the x of u4")
-            print(u4[0])
-            print(calibrated_unit.position()[0])
+            calibrated_unit.absolute_move(u4[2]-5000, 2)
+            calibrated_unit.wait_until_still(2)
             calibrated_unit.absolute_move(u4[1],1)
             calibrated_unit.wait_until_still(1)
-            print("Move to the y of u4")
-            print(u4[1])
-            print(calibrated_unit.position()[1])
             calibrated_unit.absolute_move(u4[2],2)
             calibrated_unit.wait_until_still(2)
-            print("Move to the z of u4")
-            print(u4[2])
-            print(calibrated_unit.position()[2])
+
             #Fill up with the Alconox
             pressure.set_pressure(-600)
             time.sleep(1)
@@ -625,51 +601,31 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
 
             #Step 2: Rinsing.
             #Move the pipette to the rinsing bath.
-            calibrated_unit.absolute_move(u3[2], 2)
+            calibrated_unit.absolute_move(u5[2]-5000, 2)
             calibrated_unit.wait_until_still(2)
-            print("Move to the z of u3")
-            print(u3[2])
-            print(calibrated_unit.position()[2])
             calibrated_unit.absolute_move(u5[1], 1)
             calibrated_unit.wait_until_still(1)
-            print("Move to the y of u5")
-            print(u5[1])
-            print(calibrated_unit.position()[1])
             calibrated_unit.absolute_move(u5[0], 0)
             calibrated_unit.wait_until_still(0)
-            print("Move to the x of u5")
-            print(u5[0])
-            print(calibrated_unit.position()[0])
             calibrated_unit.absolute_move(u5[2], 2)
             calibrated_unit.wait_until_still(2)
-            print("Move to the z of u5")
-            print(u5[2])
-            print(calibrated_unit.position()[2])
             #Expel the remaining Alconox
             pressure.set_pressure(1000)
             time.sleep(6)
 
             #Step 3: Move back.
-            calibrated_unit.absolute_move(u3[2], 2)
-            calibrated_unit.wait_until_still(2)
-            print("Move to the z of u3")
-            print(u3[2])
-            print(calibrated_unit.position()[2])
+            calibrated_unit.absolute_move(0, 0)
+            calibrated_unit.wait_until_still(0)
             calibrated_unit.absolute_move(u3[1], 1)
             calibrated_unit.wait_until_still(1)
-            print("Move to the y of u3")
-            print(u3[1])
-            print(calibrated_unit.position()[1])
+            calibrated_unit.absolute_move(u3[2], 2)
+            calibrated_unit.wait_until_still(2)
             calibrated_unit.absolute_move(u3[0], 0)
             calibrated_unit.wait_until_still(0)
-            print("Move to the x of u3")
-            print(u3[0])
-            print(calibrated_unit.position()[0])
             #Move microscope back to original position
             microscope.absolute_move(z3)
             microscope.wait_until_still()
             print("Done")
-            print(calibrated_unit.position())
         except Exception:
             print(traceback.format_exc())
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
@@ -730,7 +686,7 @@ def display_edit(img):
 # If not available, run anyway without them
 
 ##### HOANG
-z3,u3,us3,z4,u4,us4,z5,u5,us5 = None, None, None, None, None, None, None, None, None
+z3,u3,u4,u5 = None, None, None, None
 
 amplifier, pressure = None, None
 try:
