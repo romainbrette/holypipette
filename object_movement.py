@@ -5,7 +5,6 @@ import argparse
 #import imutils
 import cv2
 from matplotlib import pyplot as plt
-
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video",
 	help="path to the (optional) video file")
