@@ -105,22 +105,25 @@ class CameraGui(QtWidgets.QMainWindow):
         super(CameraGui, self).__init__()
         self.setWindowTitle("Camera GUI")
         self.status_bar = QtWidgets.QStatusBar()
+        self.task_abort_button = QtWidgets.QPushButton(clicked=self.abort_task)
+        self.task_abort_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogCancelButton))
+        self.task_abort_button.setVisible(False)
+        self.status_bar.addWidget(self.task_abort_button)
         self.task_progress = QtWidgets.QProgressBar(parent=self)
         self.task_progress.setAlignment(Qt.AlignLeft)
         self.task_progress.setTextVisible(False)
         self.task_progress.setVisible(False)
-        self.status_bar.addWidget(self.task_progress, 1)
         layout = QtWidgets.QHBoxLayout(self.task_progress)
         self.task_progress_text = QtWidgets.QLabel()
         self.task_progress_text.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.task_progress_text)
         layout.setContentsMargins(0, 0, 0, 0)
+        self.status_bar.addWidget(self.task_progress, 1)
         self.status_label = QtWidgets.QLabel()
         self.status_bar.addPermanentWidget(self.status_label)
         self.help_button = QtWidgets.QPushButton(clicked=self.toggle_help)
         self.help_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxQuestion))
         self.help_button.setCheckable(True)
-        self.help_button.setFlat(True)
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.setSizeGripEnabled(False)
         self.setStatusBar(self.status_bar)
@@ -142,6 +145,10 @@ class CameraGui(QtWidgets.QMainWindow):
         self.camera.connect(self)
         self.register_commands()
         self.running_task = None
+
+    def close(self):
+        del self.camera
+        super(CameraGui, self).close()
 
     def register_commands(self):
         self.register_key_action(Qt.Key_Plus, None, self.camera_signal, None,
@@ -198,21 +205,26 @@ class CameraGui(QtWidgets.QMainWindow):
         self.task_progress.reset()
         self.task_progress_text.setText(task_name)
         self.task_progress.setVisible(True)
+        self.task_abort_button.setVisible(True)
+        self.task_abort_button.setVisible(True)
         self.running_task = task_name
+
+    def end_task(self, text):
+        self.task_progress.setVisible(False)
+        self.task_abort_button.setVisible(False)
+        self.status_bar.showMessage(text, 3000)
+        self.running_task = None
+
+    def abort_task(self):
+        print 'abort task (not implemented yet)'
 
     @QtCore.pyqtSlot('QString', int)
     def display_progress(self, step_desc, step):
         if step == self.task_progress.maximum():
-            self.task_progress.setVisible(False)
-            self.status_bar.showMessage('Task "{}" finished '
-                                        'successfully'.format(self.running_task),
-                                        3000)
-            self.running_task = None
+            self.end_task('Task "{}" finished '
+                          'successfully'.format(self.running_task))
         elif step < 0:
-            self.task_progress.setVisible(False)
-            self.status_bar.showMessage('Task "{}" failed'.format(self.running_task),
-                                        3000)
-            self.running_task = None
+            self.end_task('Task "{}" failed'.format(self.running_task))
         else:
             text = self.running_task
             if step_desc:
