@@ -8,8 +8,11 @@ To make a new device, one must implement at least:
 TODO:
 * Add minimum and maximum for each axis
 """
-from numpy import array
 import time
+
+from PyQt5 import QtCore
+from numpy import array
+
 
 __all__ = ['Manipulator','ManipulatorError']
 
@@ -22,9 +25,8 @@ class ManipulatorError(Exception):
         return self.message
 
 
-class Manipulator(object):
-    def __init__(self):
-        pass
+class Manipulator(QtCore.QObject):
+    task_progress = QtCore.pyqtSignal('QString', int)
 
     def position(self, axis):
         '''

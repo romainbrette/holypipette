@@ -10,9 +10,7 @@ __all__ = ['LiveFeedQt']
 
 
 class LiveFeedQt(QtWidgets.QLabel):
-    def __init__(self, camera, mouse_callback=None,
-                 image_edit=None,
-                 display_edit=None):
+    def __init__(self, camera, image_edit=None, display_edit=None):
         super(LiveFeedQt, self).__init__()
         # The image_edit function (does nothing by default) gets the raw
         # unscaled image (i.e. a numpy array), while the display_edit
@@ -29,7 +27,6 @@ class LiveFeedQt(QtWidgets.QLabel):
 
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
-        self.callback = mouse_callback
 
         self.update_image()
 
@@ -40,10 +37,6 @@ class LiveFeedQt(QtWidgets.QLabel):
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
         timer.start(50) #20 Hz
-
-    def mousePressEvent(self, event):
-        if self.callback is not None:
-            self.callback(event)
 
     @QtCore.pyqtSlot()
     def update_image(self):

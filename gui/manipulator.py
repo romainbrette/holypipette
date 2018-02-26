@@ -10,11 +10,11 @@ class ManipulatorGui(CameraGui):
 
     def __init__(self, camera, pipette_controller):
         self.controller = pipette_controller
+
+        super(ManipulatorGui, self).__init__(camera)
         self.control_thread = QtCore.QThread()
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
-
-        super(ManipulatorGui, self).__init__(camera)
         self.control_command.connect(self.controller.handle_command)
         self.controller.connect(self)
 
@@ -53,7 +53,9 @@ class ManipulatorGui(CameraGui):
         self.register_key_action(Qt.Key_C, Qt.ControlModifier, self.control_command, None,
                                  'Stage',
                                  'calibrate_stage',
-                                 'Calibrate stage only')
+                                 'Calibrate stage only',
+                                 task_name='Calibrating stage...',
+                                 task_steps=4)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
                                  self.control_command, None,
                                  'Manipulators',

@@ -50,7 +50,7 @@ class CalibrationError(Exception):
 #         self.offset = offset
 
 class CalibratedUnit(ManipulatorUnit):
-    def __init__(self, unit, stage=None, microscope=None, camera = None):
+    def __init__(self, unit, stage=None, microscope=None, camera = None, parent=None):
         '''
         A manipulator unit calibrated to a fixed reference coordinate system.
         The stage refers to a platform on which the unit is mounted, which can
@@ -63,7 +63,7 @@ class CalibratedUnit(ManipulatorUnit):
         microscope : ManipulatorUnit for the microscope (single axis)
         camera : a camera, ie, object with a snap() method (optional, for visual calibration)
         '''
-        ManipulatorUnit.__init__(self, unit.dev, unit.axes)
+        ManipulatorUnit.__init__(self, unit.dev, unit.axes, parent=parent)
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
             self.fixed = True
@@ -853,8 +853,9 @@ class CalibratedStage(CalibratedUnit):
     microscope : ManipulatorUnit for the microscope (single axis)
     camera : a camera, ie, object with a snap() method (optional, for visual calibration)
     '''
-    def __init__(self, unit, stage=None, microscope=None, camera = None):
-        CalibratedUnit.__init__(self, unit, stage, microscope, camera)
+    def __init__(self, unit, stage=None, microscope=None, camera = None,
+                 parent=None):
+        CalibratedUnit.__init__(self, unit, stage, microscope, camera, parent=parent)
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
@@ -878,6 +879,7 @@ class CalibratedStage(CalibratedUnit):
         if not self.stage.calibrated:
             self.stage.calibrate(message=message)
 
+        self.task_progress.emit('Preparation', 0)
         # Take a photo of the pipette or coverslip
         template = crop_center(self.camera.snap())
 
@@ -888,7 +890,7 @@ class CalibratedStage(CalibratedUnit):
 
         # Store current position
         u0 = self.position()
-
+        self.task_progress.emit('Small displacements', 1)
         # 1) Move each axis by a small displacement (50 um)
         distance = 40. # in um
         for axis in range(len(self.axes)):  # normally just two axes
@@ -909,6 +911,8 @@ class CalibratedStage(CalibratedUnit):
         # Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
         self.calibrated = True
+
+        self.task_progress.emit('Large displacements', 2)
 
         # More accurate calibration:
         # 3) Move to three corners using the computed matrix
@@ -949,9 +953,11 @@ class CalibratedStage(CalibratedUnit):
         # 6) Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
 
+        self.task_progress.emit('Moving back', 3)
         # Move back
         self.absolute_move(u0)
         self.wait_until_still()
+        self.task_progress.emit('finished', 4)
 
     def mosaic(self, width = None, height = None):
         '''

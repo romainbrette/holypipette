@@ -36,3 +36,4 @@ class FakeManipulator(Manipulator):
         x : target position in um.
         '''
         self.x[axis-1] = x
+        print 'Moved, new position: ', self.x

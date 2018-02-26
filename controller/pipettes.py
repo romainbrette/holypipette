@@ -15,6 +15,7 @@ class PipetteController(QtCore.QObject):
     '''
 
     manipulator_switched = QtCore.pyqtSignal('QString', 'QString')
+    task_progress = QtCore.pyqtSignal('QString', int)
 
     def __init__(self, stage, microscope, camera, units,
                  config_filename=None):
@@ -23,7 +24,8 @@ class PipetteController(QtCore.QObject):
         self.microscope = microscope
         self.camera = camera
         self.units = units
-        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera)
+        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera,
+                                                parent=self)
         self.calibrated_units = [CalibratedUnit(unit,
                                                 self.calibrated_stage,
                                                 microscope,
@@ -41,6 +43,8 @@ class PipetteController(QtCore.QObject):
         self.switch_manipulator(0)
         # We call this via handle command to catch errors automatically
         self.handle_command('load_configuration', None)
+        self.calibrated_stage.task_progress.connect(main_gui.display_progress)
+        self.task_progress.connect(main_gui.display_progress)
 
     @QtCore.pyqtSlot('QString', object)
     def handle_command(self, command, argument):
@@ -68,6 +72,8 @@ class PipetteController(QtCore.QObject):
             # TODO: Use a logging object provided by the main GUI and/or have
             # an error signal
             print('An exception occured: %s' % str(ex))
+            # Clear any progress bar
+            self.task_progress.emit('', -1)
 
     def switch_manipulator(self, unit_number):
         self.current_unit = unit_number
