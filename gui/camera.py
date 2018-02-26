@@ -91,7 +91,7 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
 
     def _format_action(self, action, description):
         lines = ['<tr>',
-                 '<td style="font-weight: bold; align: center; padding-right: 1ex">{}</td>'
+                 '<td style="font-family: monospace; font-weight: bold; align: center; padding-right: 1ex">{}</td>'
                  '<td>{}</td>'.format(action, description),
                  '</tr>']
         return lines
