@@ -23,12 +23,17 @@ def draw_cross(pixmap):
     painter.end()
 
 
-class KeyboardHelpWindow(QtWidgets.QLabel):
+class KeyboardHelpWindow(QtWidgets.QMainWindow):
+
+    close_signal = QtCore.pyqtSignal()
 
     def __init__(self, parent):
         super(KeyboardHelpWindow, self).__init__(parent=parent)
-        self.setSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding,
-                           QtWidgets.QSizePolicy.MinimumExpanding)
+        self.setWindowTitle('Keyboard/mouse commands')
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        self.setWindowFlags(Qt.Tool | Qt.WindowStaysOnTopHint)
+        self.label = QtWidgets.QLabel()
+        self.setCentralWidget(self.label)
         self.key_catalog = collections.OrderedDict()
         self.mouse_catalog = collections.OrderedDict()
         self.custom_catalog = collections.OrderedDict()
@@ -89,7 +94,7 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
                 lines.extend(self._format_action(key_text, description))
         text = '<table>' +('\n'.join(lines)) + '</table>'
 
-        self.setText(text)
+        self.label.setText(text)
 
     def _format_action(self, action, description):
         lines = ['<tr>',
@@ -97,6 +102,10 @@ class KeyboardHelpWindow(QtWidgets.QLabel):
                  '<td>{}</td>'.format(action, description),
                  '</tr>']
         return lines
+
+    def closeEvent(self, event):
+        self.close_signal.emit()
+        super(KeyboardHelpWindow, self).closeEvent(event)
 
 
 class BaseGui(QtWidgets.QMainWindow):
@@ -130,11 +139,9 @@ class BaseGui(QtWidgets.QMainWindow):
         self.key_actions = {}
         self.mouse_actions = {}
         self.help_window = KeyboardHelpWindow(self)
-        self.help_window.setAutoFillBackground(True)
-        self.help_window.setStyleSheet("QLabel { background-color : rgb(200, 200, 200, 175); "
-                                       "color : rgb(200, 0, 0)}")
-        self.help_window.setVisible(False)
         self.help_window.setFocusPolicy(Qt.NoFocus)
+        self.help_window.setVisible(False)
+        self.help_window.close_signal.connect(lambda: self.help_button.setChecked(False))
         self.running_task = None
 
     def initialize(self):
@@ -170,11 +177,13 @@ class BaseGui(QtWidgets.QMainWindow):
         self.status_bar.clearMessage()
         self.task_progress_text.setText(task_name + '…')
         self.task_progress.setVisible(True)
+        self.task_abort_button.setEnabled(True)
         self.task_abort_button.setVisible(True)
         self.running_task = task_name
         self.running_task_controller = controller
 
     def abort_task(self):
+        self.task_abort_button.setEnabled(False)
         self.running_task_controller.abort_task()
 
     @QtCore.pyqtSlot(int)
@@ -218,7 +227,13 @@ class BaseGui(QtWidgets.QMainWindow):
                 raise AssertionError('Need a controller or a function')
 
     def toggle_help(self):
-        self.help_window.setVisible(not self.help_window.isVisible())
+        if self.help_button.isChecked():
+            self.help_window.show()
+            # We need to keep the focus
+            self.setFocus()
+        else:
+            self.help_window.setVisible(False)
+
 
     @QtCore.pyqtSlot('QString', 'QString')
     def set_status_message(self, category, message):
