@@ -10,8 +10,9 @@ __all__ = ['LiveFeedQt']
 
 
 class LiveFeedQt(QtWidgets.QLabel):
-    def __init__(self, camera, image_edit=None, display_edit=None):
-        super(LiveFeedQt, self).__init__()
+    def __init__(self, camera, image_edit=None, display_edit=None,
+                 parent=None):
+        super(LiveFeedQt, self).__init__(parent=parent)
         # The image_edit function (does nothing by default) gets the raw
         # unscaled image (i.e. a numpy array), while the display_edit
         # function gets a QPixmap and is meant to draw GUI elements in
