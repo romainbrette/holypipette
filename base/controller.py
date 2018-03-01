@@ -1,8 +1,25 @@
+from collections import OrderedDict
+
 from PyQt5 import QtCore
 
 from base.executor import LoggingObject
 
-class TaskController(QtCore.QObject,LoggingObject):
+
+class Command(object):
+    def __init__(self, name, category, description, controller=None, default_arg=None):
+        self.default_arg = default_arg
+        self.description = description
+        self.category = category
+        self.controller = controller
+        self.name = name
+
+    def auto_description(self, argument=None):
+        if argument is None:
+            argument = self.default_arg
+        return self.description.format(argument)
+
+
+class TaskController(QtCore.QObject, LoggingObject):
     #: Signals the end of a task with an "error code":
     #: 0: successful execution; 1: error during execution; 2: aborted
     task_finished = QtCore.pyqtSignal(int)
@@ -10,6 +27,12 @@ class TaskController(QtCore.QObject,LoggingObject):
     def __init__(self):
         super(TaskController, self).__init__()
         self.executors = set()
+        self.commands = OrderedDict()
+
+    def add_command(self, name, category, description, default_arg=None):
+        command = Command(name, category, description,
+                          controller=self, default_arg=default_arg)
+        self.commands[name] = command
 
     def connect(self, main_gui):
         pass

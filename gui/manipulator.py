@@ -23,26 +23,25 @@ class ManipulatorGui(CameraGui):
         super(ManipulatorGui, self).register_commands()
 
         # Commands to move the stage
+        # Note that we do not use the automatic documentation mechanism here,
+        # as we one entry for every possible keypress
         for modifier, distance in [(Qt.NoModifier, 10),
                                    (Qt.AltModifier, 2.5),
                                    (Qt.ShiftModifier, 50)]:
-            self.register_key_action(Qt.Key_Up, modifier, self.controller, -distance,
-                                     'Stage',
-                                     'move_stage_vertical',
-                                     None, default_doc=False)
-            self.register_key_action(Qt.Key_Down, modifier, self.controller, distance,
-                                     'Stage',
-                                     'move_stage_vertical',
-                                     None, default_doc=False)
-            self.register_key_action(Qt.Key_Left, modifier, self.controller, -distance,
-                                     'Stage',
-                                     'move_stage_horizontal',
-                                     None, default_doc=False)
-            self.register_key_action(Qt.Key_Right, modifier, self.controller, distance,
-                                     'Stage',
-                                     'move_stage_horizontal',
-                                     None, default_doc=False)
+            self.register_key_action(Qt.Key_Up, modifier,
+                                     self.controller.commands['move_stage_vertical'],
+                                     argument=-distance, default_doc=False)
+            self.register_key_action(Qt.Key_Down, modifier,
+                                     self.controller.commands['move_stage_vertical'],
+                                     argument=distance, default_doc=False)
+            self.register_key_action(Qt.Key_Left, modifier,
+                                     self.controller.commands['move_stage_horizontal'],
+                                     argument=-distance, default_doc=False)
+            self.register_key_action(Qt.Key_Right, modifier,
+                                     self.controller.commands['move_stage_horizontal'],
+                                     argument=distance, default_doc=False)
 
+            # Manually document all arrows at once
             if modifier == Qt.NoModifier:
                 modifier_text = ''
             else:
@@ -51,38 +50,23 @@ class ManipulatorGui(CameraGui):
                                                     'Move stage by %gum' % distance)
 
         # Calibration commands
-        self.register_key_action(Qt.Key_C, Qt.ControlModifier, self.controller, None,
-                                 'Stage',
-                                 'calibrate_stage',
-                                 'Calibrate stage only',
+        self.register_key_action(Qt.Key_C, Qt.ControlModifier,
+                                 self.controller.commands['calibrate_stage'],
                                  task_name='Calibrating stage')
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.controller, None,
-                                 'Manipulators',
-                                 'calibrate_manipulator',
-                                 'Calibrate stage and manipulator')
+                                 self.controller.commands['calibrate_manipulator'],
+                                 task_name='Calibrating stage and manipulators')
         # Pipette selection
         number_of_units = len(self.controller.calibrated_units)
         for unit_number in range(number_of_units):
             key = QtGui.QKeySequence("%d" % (unit_number + 1))[0]
-            text = 'Switch to manipulator %d' % (unit_number + 1)
-            self.register_key_action(key, None, self.controller, unit_number,
-                                     'Manipulators',
-                                     'switch_manipulator',
-                                     text)
+            self.register_key_action(key, None,
+                                     self.controller.commands['switch_manipulator'],
+                                     argument=unit_number + 1)
 
         # Load/save configurations
-        self.register_key_action(Qt.Key_L, None, self.controller, None,
-                                 'Manipulators',
-                                 'load_configuration',
-                                 'Load previously stored calibration')
-        self.register_key_action(Qt.Key_S, None, self.controller, None,
-                                 'Manipulators',
-                                 'save_configuration',
-                                 'Save calibration values')
+        # TODO
 
         # Move pipette by clicking
-        self.register_mouse_action(Qt.LeftButton, Qt.NoModifier, self.controller,
-                                   'Manipulators',
-                                   'move_pipette',
-                                   'Move pipette to position')
+        self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
+                                   self.controller.commands['move_pipette'])

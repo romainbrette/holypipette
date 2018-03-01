@@ -4,7 +4,7 @@ import os
 import numpy as np
 from PyQt5 import QtCore
 
-from base.controller import TaskController
+from base.controller import TaskController, Command
 from devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
 
 def message(msg):
@@ -36,12 +36,31 @@ class PipetteController(TaskController):
         for calibrated_unit in self.calibrated_units:
             self.executors.add(calibrated_unit)
 
+
         if config_filename is None:
             config_filename = os.path.join(os.path.expanduser('~'),
                                            'config_manipulator.cfg')
         self.config_filename = config_filename
         self.current_unit = 0
         self.calibrated_unit = None
+
+        # Define commands
+        self.add_command('move_stage_vertical', 'Stage',
+                         'Move stage vertically by {:.0f}um',
+                         default_arg=10)
+        self.add_command('move_stage_horizontal', 'Stage',
+                         'Move stage horizontally by {:.0f}um',
+                         default_arg=10)
+        self.add_command('calibrate_stage', 'Stage',
+                         'Calibrate stage only')
+        self.add_command('calibrate_manipulator', 'Manipulators',
+                         'Calibrate stage and manipulator')
+        self.add_command('switch_manipulator', 'Manipulators',
+                         'Switch to manipulator {}',
+                         default_arg=1)
+        # TODO: Load/save
+        self.add_command('move_pipette', 'Manipulators',
+                         'Move pipette to position')
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)

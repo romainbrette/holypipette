@@ -2,6 +2,9 @@ import logging
 
 
 class LoggingObject(object):
+    def __init__(self):
+        self.logger = None
+
     def _ensure_logger(self):
         if self.logger is None:
             self.logger = logging.getLogger(__name__)

@@ -21,6 +21,14 @@ class Camera(TaskController):
         super(Camera, self).__init__()
         self.width = 1000
         self.height = 1000
+        self.add_command('increase_exposure', 'Camera',
+                         'Increase exposure time by {:.1f}ms',
+                         default_arg=2.5)
+        self.add_command('decrease_exposure', 'Camera',
+                         'Decrease exposure time by {:.1f}ms',
+                         default_arg=2.5)
+        self.add_command('save_image','Camera',
+                         'Save the current camera image to a file')
 
     def connect(self, main_gui):
         self.updated_exposure.connect(main_gui.set_status_message)
