@@ -11,6 +11,7 @@ app = QtWidgets.QApplication(sys.argv)
 
 controller = PipetteController(stage, microscope, camera, units)
 gui = ManipulatorGui(camera, controller)
+gui.initialize()
 app.installEventFilter(gui)
 gui.show()
 ret = app.exec_()

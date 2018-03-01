@@ -4,7 +4,7 @@ import os
 import numpy as np
 from PyQt5 import QtCore
 
-from base.controller import TaskController, Command
+from base.controller import TaskController
 from devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
 
 def message(msg):

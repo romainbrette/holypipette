@@ -9,15 +9,16 @@ class ManipulatorGui(CameraGui):
     command_signal = QtCore.pyqtSignal('QString', object)
 
     def __init__(self, camera, pipette_controller):
-        self.controller = pipette_controller
-
         super(ManipulatorGui, self).__init__(camera)
+        self.controller = pipette_controller
         self.control_thread = QtCore.QThread()
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
         self.controller_signals[self.controller] = self.command_signal
+
+    def initialize(self):
+        super(ManipulatorGui, self).initialize()
         self.controller.connect(self)
-        self.connect()
 
     def register_commands(self):
         super(ManipulatorGui, self).register_commands()

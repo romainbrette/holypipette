@@ -6,6 +6,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
 from base.controller import Command
+from controller.camera import CameraController
 from .livefeed import LiveFeedQt
 
 
@@ -133,6 +134,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.setStatusBar(self.status_bar)
         self.status_messages = collections.OrderedDict()
         self.camera = camera
+        self.camera_controller = CameraController(camera)
         self.key_actions = {}
         self.mouse_actions = {}
         self.video = LiveFeedQt(self.camera,
@@ -145,15 +147,14 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_window.setVisible(False)
         self.help_window.setFocusPolicy(Qt.NoFocus)
         self.setCentralWidget(self.video)
-        self.camera.connect(self)
-        self.register_commands()
         self.running_task = None
-        self.controller_signals = {self.camera: self.camera_signal}
-        self.connect()
+        self.controller_signals = {self.camera_controller: self.camera_signal}
 
-    def connect(self):
+    def initialize(self):
         for controller, signal in self.controller_signals.items():
             signal.connect(controller.command_received)
+        self.camera_controller.connect(self)
+        self.register_commands()
 
     def close(self):
         del self.camera
@@ -161,11 +162,11 @@ class CameraGui(QtWidgets.QMainWindow):
 
     def register_commands(self):
         self.register_key_action(Qt.Key_Plus, None,
-                                 self.camera.commands['increase_exposure'])
+                                 self.camera_controller.commands['increase_exposure'])
         self.register_key_action(Qt.Key_Minus, None,
-                                 self.camera.commands['decrease_exposure'])
+                                 self.camera_controller.commands['decrease_exposure'])
         self.register_key_action(Qt.Key_I, None,
-                                 self.camera.commands['save_image'])
+                                 self.camera_controller.commands['save_image'])
         help = Command('help', 'General', 'Toggle display of keyboard/mouse commands')
         self.register_key_action(Qt.Key_Question, None, help,
                                  func=lambda arg: self.help_button.click())
@@ -238,6 +239,8 @@ class CameraGui(QtWidgets.QMainWindow):
                     signal.emit(command.name, argument)
                 elif func is not None:
                     func(argument)
+                else:
+                    raise AssertionError('Need a controller or a function')
                 return True
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             if source != self.video:
@@ -251,8 +254,8 @@ class CameraGui(QtWidgets.QMainWindow):
                 description = self.mouse_actions.get((event.button(), None), None)
 
             if description is not None:
-                controller_or_func, _, command, _, task_name, ignore = description
-                if self.running_task and ignore:
+                command, func, task_name = description
+                if self.running_task:
                     # Another task is running, ignore the mouse click
                     return True
                 # Mouse commands do not have custom arguments, they always get
@@ -265,12 +268,14 @@ class CameraGui(QtWidgets.QMainWindow):
                 scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
                 position = (xs * scale, ys * scale)
                 if task_name is not None:
-                    self.start_task(task_name, controller_or_func)
-                if controller_or_func in self.controller_signals:
-                    signal = self.controller_signals[controller_or_func]
-                    signal.emit(command, position)
+                    self.start_task(task_name, command.controller)
+                if command.controller in self.controller_signals:
+                    signal = self.controller_signals[command.controller]
+                    signal.emit(command.name, position)
+                elif func is not None:
+                    func(position)
                 else:
-                    controller_or_func(position)
+                    raise AssertionError('Need a controller or a function')
                 return True
         return False
 
