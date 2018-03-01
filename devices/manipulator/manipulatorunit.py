@@ -10,14 +10,14 @@ __all__ = ['ManipulatorUnit']
 
 
 class ManipulatorUnit(Manipulator):
-    def __init__(self, dev, axes, parent=None):
+    def __init__(self, dev, axes):
         '''
         Parameters
         ----------
         dev : underlying device
         axes : list of 3 axis indexes
         '''
-        Manipulator.__init__(self, parent=parent)
+        Manipulator.__init__(self)
         self.dev = dev
         self.axes = axes
         # Motor ranges in um; by default +- one meter

@@ -63,7 +63,7 @@ class CalibratedUnit(ManipulatorUnit):
         microscope : ManipulatorUnit for the microscope (single axis)
         camera : a camera, ie, object with a snap() method (optional, for visual calibration)
         '''
-        ManipulatorUnit.__init__(self, unit.dev, unit.axes, parent=parent)
+        ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
             self.fixed = True
@@ -879,7 +879,7 @@ class CalibratedStage(CalibratedUnit):
         if not self.stage.calibrated:
             self.stage.calibrate(message=message)
 
-        self.task_progress.emit('Preparation', 0)
+        self.info('Preparing calibration')
         # Take a photo of the pipette or coverslip
         template = crop_center(self.camera.snap())
 
@@ -888,22 +888,27 @@ class CalibratedStage(CalibratedUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
+        if self.abort_requested:
+            return
         # Store current position
         u0 = self.position()
-        self.task_progress.emit('Small displacements', 1)
+        self.info('Small movements for each axis')
         # 1) Move each axis by a small displacement (50 um)
         distance = 40. # in um
         for axis in range(len(self.axes)):  # normally just two axes
+            if self.abort_requested:
+                return
+
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
             sleep(sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
-            message('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+            self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
 
             # 2) Compute the matrix from unit to camera (first in pixels)
             self.M[:,axis] = array([x-x0, y-y0, 0])/distance
-            message('Matrix column:' + str(self.M[:, axis]))
+            self.debug('Matrix column:' + str(self.M[:, axis]))
             x0, y0 = x, y # this is the position before the next move
 
         # Compute the (pseudo-)inverse
@@ -912,7 +917,7 @@ class CalibratedStage(CalibratedUnit):
         self.r0 = -dot(self.M, u0)
         self.calibrated = True
 
-        self.task_progress.emit('Large displacements', 2)
+        self.info('Large displacements')
 
         # More accurate calibration:
         # 3) Move to three corners using the computed matrix
@@ -926,12 +931,14 @@ class CalibratedStage(CalibratedUnit):
         u = []
         r = []
         for ri in rtarget:
+            if self.abort_requested:
+                return
             self.reference_move(ri)
             self.wait_until_still()
             sleep(sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
-            message('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+            self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
             r.append(array([x,y]))
             u.append(self.position())
         rx = r[1]-r[0]
@@ -940,10 +947,10 @@ class CalibratedStage(CalibratedUnit):
         ux = u[1]-u[0]
         uy = u[2]-u[0]
         u = vstack((ux,uy)).T
-        message('r: '+str(r))
-        message('u: '+str(u))
+        self.debug('r: '+str(r))
+        self.debug('u: '+str(u))
         self.M[:2,:] = dot(r,inv(u))
-        message('Matrix: ' + str(self.M))
+        self.debug('Matrix: ' + str(self.M))
 
         # 4) Recompute the matrix and the (pseudo) inverse
         self.Minv = pinv(self.M)
@@ -953,11 +960,14 @@ class CalibratedStage(CalibratedUnit):
         # 6) Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
 
-        self.task_progress.emit('Moving back', 3)
+        if self.abort_requested:
+            return
+
+        self.info('Moving back')
         # Move back
         self.absolute_move(u0)
         self.wait_until_still()
-        self.task_progress.emit('finished', 4)
+        self.info('Stage calibration done')
 
     def mosaic(self, width = None, height = None):
         '''

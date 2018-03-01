@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import collections
 
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -110,6 +112,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.task_abort_button.setVisible(False)
         self.status_bar.addWidget(self.task_abort_button)
         self.task_progress = QtWidgets.QProgressBar(parent=self)
+        self.task_progress.setMaximum(0)
         self.task_progress.setAlignment(Qt.AlignLeft)
         self.task_progress.setTextVisible(False)
         self.task_progress.setVisible(False)
@@ -152,85 +155,86 @@ class CameraGui(QtWidgets.QMainWindow):
 
     def register_commands(self):
         self.register_key_action(Qt.Key_Plus, None, self.camera_signal, None,
+                                 self.camera,
                                  'Camera',
                                  'increase_exposure',
                                  'Increase the exposure time by 2.5ms')
         self.register_key_action(Qt.Key_Minus, None, self.camera_signal, None,
+                                 self.camera,
                                  'Camera',
                                  'decrease_exposure',
                                  'Decrease the exposure time by 2.5ms')
         self.register_key_action(Qt.Key_I, None, self.camera_signal, None,
+                                 self.camera,
                                  'Camera',
                                  'save_image',
                                  'Save the current camera image to a file')
         self.register_key_action(Qt.Key_Question, None,
                                  lambda: self.help_button.click(), None,
+                                 None,
                                  'General',
                                  '',
                                  'Toggle display of keyboard shortcuts')
         self.register_key_action(Qt.Key_Escape, None, self.close, None,
+                                 None,
                                  'General',
                                  '',
                                  'Exit the application')
 
     def register_key_action(self, key, modifier, signal_or_func, argument,
+                            controller,
                             category, command, long_description,
-                            task_name=None, task_steps=0, default_doc=True,
+                            task_name=None, default_doc=True,
                             ignore_when_running_task=True):
-        self.key_actions[(key, modifier)] = (signal_or_func, category,
+        self.key_actions[(key, modifier)] = (signal_or_func, controller,
+                                             category,
                                              command, argument,
                                              long_description,
                                              task_name,
-                                             task_steps,
                                              ignore_when_running_task)
         if default_doc:
             self.help_window.register_key_action(key, modifier, category,
                                                  long_description)
 
     def register_mouse_action(self, click_type, modifier, signal_or_func,
-                              category, command, long_description,
-                              task_name=None, task_steps=0, default_doc=True,
+                              controller, category, command, long_description,
+                              task_name=None, default_doc=True,
                               ignore_when_running_task=True):
-        self.mouse_actions[(click_type, modifier)] = (signal_or_func, category,
+        self.mouse_actions[(click_type, modifier)] = (signal_or_func, controller,
+                                                      category,
                                                       command, long_description,
                                                       task_name,
-                                                      task_steps,
                                                       ignore_when_running_task)
         if default_doc:
             self.help_window.register_mouse_action(click_type, modifier, category,
                                                    long_description)
 
-    def start_task(self, task_name, num_steps):
-        self.task_progress.setMaximum(num_steps)
-        self.task_progress.reset()
-        self.task_progress_text.setText(task_name)
+    def start_task(self, task_name, controller):
+        self.task_progress_text.setText(task_name + '…')
         self.task_progress.setVisible(True)
         self.task_abort_button.setVisible(True)
-        self.task_abort_button.setVisible(True)
         self.running_task = task_name
-
-    def end_task(self, text):
-        self.task_progress.setVisible(False)
-        self.task_abort_button.setVisible(False)
-        self.status_bar.showMessage(text, 3000)
-        self.running_task = None
+        self.running_task_controller = controller
 
     def abort_task(self):
-        print 'abort task (not implemented yet)'
+        self.running_task_controller.abort_task()
 
-    @QtCore.pyqtSlot('QString', int)
-    def display_progress(self, step_desc, step):
-        if step == self.task_progress.maximum():
-            self.end_task('Task "{}" finished '
-                          'successfully'.format(self.running_task))
-        elif step < 0:
-            self.end_task('Task "{}" failed'.format(self.running_task))
+    @QtCore.pyqtSlot(int)
+    def task_finished(self, exit_reason):
+        # 0 = normal exit, 1 = error, 2 = abort
+        self.task_progress.setVisible(False)
+        self.task_abort_button.setVisible(False)
+        if exit_reason == 0:
+            text = "Task '{}' finished successfully.".format(self.running_task)
+        elif exit_reason == 1:
+            text = "Task '{}' failed (see log for details).".format(self.running_task)
+        elif exit_reason == 2:
+            text = "Task '{}' aborted.".format(self.running_task)
         else:
-            text = self.running_task
-            if step_desc:
-                text += '({})'.format(step_desc)
-            self.task_progress_text.setText(text)
-            self.task_progress.setValue(step)
+            #TODO Warning
+            text = "Task {} ended for unknown reason".format(self.running_task)
+        self.status_bar.showMessage(text, 5000)
+        self.running_task = None
 
     def eventFilter(self, source, event):
         if event.type() == QtCore.QEvent.KeyPress:
@@ -242,12 +246,12 @@ class CameraGui(QtWidgets.QMainWindow):
                 description = self.key_actions.get((event.key(), None), None)
 
             if description is not None:
-                signal_or_func, _, command, argument, _, task_name, task_steps, ignore = description
+                signal_or_func, controller, _, command, argument, _, task_name, ignore = description
                 if self.running_task and ignore:
                     # Another task is running, ignore the key press
                     return True
                 if task_name is not None:
-                    self.start_task(task_name, task_steps)
+                    self.start_task(task_name, controller)
                 if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
                     signal_or_func.emit(command, argument)
                 else:
@@ -265,12 +269,12 @@ class CameraGui(QtWidgets.QMainWindow):
                 description = self.mouse_actions.get((event.button(), None), None)
 
             if description is not None:
-                signal_or_func, _, command, _, task_name, task_steps, ignore = description
+                signal_or_func, controller, _, command, _, task_name, ignore = description
                 if self.running_task and ignore:
                     # Another task is running, ignore the key press
                     return True
                 if task_name is not None:
-                    self.start_task(task_name, task_steps)
+                    self.start_task(task_name, controller)
                 # Mouse commands do not have custom arguments, they always get
                 # the position in the image (rescaled, i.e. independent of the
                 # window size)

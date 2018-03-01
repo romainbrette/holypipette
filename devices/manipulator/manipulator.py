@@ -10,11 +10,11 @@ TODO:
 """
 import time
 
-from PyQt5 import QtCore
 from numpy import array
 
+from base.controller import TaskController
 
-__all__ = ['Manipulator','ManipulatorError']
+__all__ = ['Manipulator', 'ManipulatorError']
 
 
 class ManipulatorError(Exception):
@@ -25,9 +25,7 @@ class ManipulatorError(Exception):
         return self.message
 
 
-class Manipulator(QtCore.QObject):
-    task_progress = QtCore.pyqtSignal('QString', int)
-
+class Manipulator(TaskController):
     def position(self, axis):
         '''
         Current position along an axis.
