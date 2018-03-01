@@ -1,3 +1,4 @@
+# coding=utf-8
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
@@ -15,6 +16,21 @@ class ManipulatorGui(CameraGui):
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
         self.controller_signals[self.controller] = self.command_signal
+        self.display_edit_funcs.append(self.draw_scale_bar)
+
+    def draw_scale_bar(self, pixmap):
+        stage = self.controller.calibrated_stage
+        if stage.calibrated:
+            barlength = stage.pixel_per_um()[0]*10
+            scale = 1.0 * self.camera.width / pixmap.size().width()
+            painter = QtGui.QPainter(pixmap)
+            pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+            pen.setWidth(4)
+            painter.setPen(pen)
+            c_x, c_y = pixmap.width() / 20, pixmap.height() * 19.0 / 20
+            painter.drawLine(c_x, c_y, c_x + barlength/scale, c_y)
+            painter.drawText(c_x, c_y - 10, '10µm')
+            painter.end()
 
     def initialize(self):
         super(ManipulatorGui, self).initialize()

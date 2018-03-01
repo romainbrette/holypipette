@@ -36,12 +36,17 @@ class CameraGui(BaseGui):
         self.setWindowTitle("Camera GUI")
         self.camera = camera
         self.camera_controller = CameraController(camera)
+        self.display_edit_funcs = [draw_cross]
         self.video = LiveFeedQt(self.camera,
                                 image_edit=image_edit,
-                                display_edit=display_edit)
+                                display_edit=self.display_edit)
         self.setFocus()  # Need this to handle arrow keys, etc.
         self.setCentralWidget(self.video)
         self.controller_signals = {self.camera_controller: self.camera_signal}
+
+    def display_edit(self, pixmap):
+        for func in self.display_edit_funcs:
+            func(pixmap)
 
     def initialize(self):
         super(CameraGui, self).initialize()
