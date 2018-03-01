@@ -144,49 +144,47 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_window.setVisible(False)
         self.help_window.setFocusPolicy(Qt.NoFocus)
         self.setCentralWidget(self.video)
-        self.camera_signal.connect(self.camera.handle_command)
         self.camera.connect(self)
         self.register_commands()
         self.running_task = None
+        self.controller_signals = {self.camera: self.camera_signal}
+
+    def connect(self):
+        for controller, signal in self.controller_signals.items():
+            signal.connect(controller.command_received)
 
     def close(self):
         del self.camera
         super(CameraGui, self).close()
 
     def register_commands(self):
-        self.register_key_action(Qt.Key_Plus, None, self.camera_signal, None,
-                                 self.camera,
+        self.register_key_action(Qt.Key_Plus, None, self.camera, None,
                                  'Camera',
                                  'increase_exposure',
                                  'Increase the exposure time by 2.5ms')
-        self.register_key_action(Qt.Key_Minus, None, self.camera_signal, None,
-                                 self.camera,
+        self.register_key_action(Qt.Key_Minus, None, self.camera, None,
                                  'Camera',
                                  'decrease_exposure',
                                  'Decrease the exposure time by 2.5ms')
-        self.register_key_action(Qt.Key_I, None, self.camera_signal, None,
-                                 self.camera,
+        self.register_key_action(Qt.Key_I, None, self.camera, None,
                                  'Camera',
                                  'save_image',
                                  'Save the current camera image to a file')
         self.register_key_action(Qt.Key_Question, None,
                                  lambda: self.help_button.click(), None,
-                                 None,
                                  'General',
                                  '',
                                  'Toggle display of keyboard shortcuts')
         self.register_key_action(Qt.Key_Escape, None, self.close, None,
-                                 None,
                                  'General',
                                  '',
                                  'Exit the application')
 
-    def register_key_action(self, key, modifier, signal_or_func, argument,
-                            controller,
+    def register_key_action(self, key, modifier, controller_or_func, argument,
                             category, command, long_description,
                             task_name=None, default_doc=True,
                             ignore_when_running_task=True):
-        self.key_actions[(key, modifier)] = (signal_or_func, controller,
+        self.key_actions[(key, modifier)] = (controller_or_func,
                                              category,
                                              command, argument,
                                              long_description,
@@ -196,11 +194,11 @@ class CameraGui(QtWidgets.QMainWindow):
             self.help_window.register_key_action(key, modifier, category,
                                                  long_description)
 
-    def register_mouse_action(self, click_type, modifier, signal_or_func,
-                              controller, category, command, long_description,
+    def register_mouse_action(self, click_type, modifier, controller_or_func,
+                              category, command, long_description,
                               task_name=None, default_doc=True,
                               ignore_when_running_task=True):
-        self.mouse_actions[(click_type, modifier)] = (signal_or_func, controller,
+        self.mouse_actions[(click_type, modifier)] = (controller_or_func,
                                                       category,
                                                       command, long_description,
                                                       task_name,
@@ -210,6 +208,7 @@ class CameraGui(QtWidgets.QMainWindow):
                                                    long_description)
 
     def start_task(self, task_name, controller):
+        self.status_bar.clearMessage()
         self.task_progress_text.setText(task_name + '…')
         self.task_progress.setVisible(True)
         self.task_abort_button.setVisible(True)
@@ -246,16 +245,17 @@ class CameraGui(QtWidgets.QMainWindow):
                 description = self.key_actions.get((event.key(), None), None)
 
             if description is not None:
-                signal_or_func, controller, _, command, argument, _, task_name, ignore = description
+                controller_or_func, _, command, argument, _, task_name, ignore = description
                 if self.running_task and ignore:
                     # Another task is running, ignore the key press
                     return True
                 if task_name is not None:
-                    self.start_task(task_name, controller)
-                if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
-                    signal_or_func.emit(command, argument)
+                    self.start_task(task_name, controller_or_func)
+                if controller_or_func in self.controller_signals:
+                    signal = self.controller_signals[controller_or_func]
+                    signal.emit(command, argument)
                 else:
-                    signal_or_func()
+                    controller_or_func()
                 return True
         elif event.type() == QtCore.QEvent.MouseButtonPress:
             if source != self.video:
@@ -269,12 +269,10 @@ class CameraGui(QtWidgets.QMainWindow):
                 description = self.mouse_actions.get((event.button(), None), None)
 
             if description is not None:
-                signal_or_func, controller, _, command, _, task_name, ignore = description
+                controller_or_func, _, command, _, task_name, ignore = description
                 if self.running_task and ignore:
-                    # Another task is running, ignore the key press
+                    # Another task is running, ignore the mouse click
                     return True
-                if task_name is not None:
-                    self.start_task(task_name, controller)
                 # Mouse commands do not have custom arguments, they always get
                 # the position in the image (rescaled, i.e. independent of the
                 # window size)
@@ -284,10 +282,13 @@ class CameraGui(QtWidgets.QMainWindow):
                 # displayed image is not necessarily the same size as the original camera image
                 scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
                 position = (xs * scale, ys * scale)
-                if isinstance(signal_or_func, QtCore.pyqtBoundSignal):
-                    signal_or_func.emit(command, position)
+                if task_name is not None:
+                    self.start_task(task_name, controller_or_func)
+                if controller_or_func in self.controller_signals:
+                    signal = self.controller_signals[controller_or_func]
+                    signal.emit(command, position)
                 else:
-                    signal_or_func()
+                    controller_or_func(position)
                 return True
         return False
 

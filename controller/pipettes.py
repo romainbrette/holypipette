@@ -4,13 +4,14 @@ import os
 import numpy as np
 from PyQt5 import QtCore
 
+from base.controller import TaskController
 from devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
 
 def message(msg):
     print(msg)
 
 
-class PipetteController(QtCore.QObject):
+class PipetteController(TaskController):
     '''
     Controller for the stage, the microscope, and several pipettes.
     '''
@@ -30,6 +31,11 @@ class PipetteController(QtCore.QObject):
                                                 microscope,
                                                 camera)
                                  for unit in units]
+
+        self.executors.add(self.calibrated_stage)
+        for calibrated_unit in self.calibrated_units:
+            self.executors.add(calibrated_unit)
+
         if config_filename is None:
             config_filename = os.path.join(os.path.expanduser('~'),
                                            'config_manipulator.cfg')
@@ -40,11 +46,10 @@ class PipetteController(QtCore.QObject):
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
         self.switch_manipulator(0)
-        # We call this via handle command to catch errors automatically
-        self.handle_command('load_configuration', None)
+        # We call this via command_received to catch errors automatically
+        self.command_received('load_configuration', None)
         self.task_finished.connect(main_gui.task_finished)
 
-    @QtCore.pyqtSlot('QString', object)
     def handle_command(self, command, argument):
         if command == 'move_stage_horizontal':
             self.calibrated_stage.relative_move(argument, axis=0)
@@ -64,11 +69,6 @@ class PipetteController(QtCore.QObject):
             self.move_pipette(argument[0], argument[1])
         else:
             raise ValueError('Unknown command: %s' % command)
-
-    def abort_task(self):
-        self.calibrated_stage.abort_requested = True
-        for calibrated_unit in self.calibrated_units:
-            calibrated_unit.abort_requested = True
 
     def switch_manipulator(self, unit_number):
         self.current_unit = unit_number

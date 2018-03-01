@@ -12,7 +12,7 @@ import time
 
 from numpy import array
 
-from base.controller import TaskController
+from base.executor import TaskExecutor
 
 __all__ = ['Manipulator', 'ManipulatorError']
 
@@ -25,7 +25,7 @@ class ManipulatorError(Exception):
         return self.message
 
 
-class Manipulator(TaskController):
+class Manipulator(TaskExecutor):
     def position(self, axis):
         '''
         Current position along an axis.

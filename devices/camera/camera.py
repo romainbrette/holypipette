@@ -9,10 +9,12 @@ import scipy.misc
 
 from PyQt5 import QtCore, QtWidgets
 
+from base.controller import TaskController
+
 __all__ = ['Camera', 'FakeCamera']
 
 
-class Camera(QtCore.QObject):
+class Camera(TaskController):
     updated_exposure = QtCore.pyqtSignal('QString', 'QString')
 
     def __init__(self):
