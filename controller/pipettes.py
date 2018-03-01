@@ -7,9 +7,6 @@ from PyQt5 import QtCore
 from base.controller import TaskController
 from devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
 
-def message(msg):
-    print(msg)
-
 
 class PipetteController(TaskController):
     '''
@@ -24,8 +21,7 @@ class PipetteController(TaskController):
         super(PipetteController, self).__init__()
         self.microscope = microscope
         self.camera = camera
-        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera,
-                                                parent=self)
+        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera)
         self.calibrated_units = [CalibratedUnit(unit,
                                                 self.calibrated_stage,
                                                 microscope,
@@ -64,7 +60,7 @@ class PipetteController(TaskController):
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
-        self.switch_manipulator(0)
+        self.switch_manipulator(1)
         # We call this via command_received to catch errors automatically
         self.command_received('load_configuration', None)
         self.task_finished.connect(main_gui.task_finished)
@@ -90,14 +86,29 @@ class PipetteController(TaskController):
             raise ValueError('Unknown command: %s' % command)
 
     def switch_manipulator(self, unit_number):
-        self.current_unit = unit_number
+        '''
+        Switch the currently active manipulator
+
+        Parameters
+        ----------
+        unit_number : int
+            The number of the manipulator (using 1-based indexing, whereas the
+            code internally uses 0-based indexing).
+        '''
+        self.current_unit = unit_number - 1
         self.calibrated_unit = self.calibrated_units[self.current_unit]
         self.manipulator_switched.emit('Manipulators',
-                                       'Manipulator: %d' % (self.current_unit + 1))
+                                       'Manipulator: %d' % unit_number)
 
     def calibrate(self):
-        self.calibrated_unit.calibrate(message)
-        self.calibrated_unit.analyze_calibration()
+        self.calibrated_unit.run('calibrate')
+        if self.calibrated_unit.error:
+            self.task_finished.emit(1)
+        elif self.calibrated_unit.abort_requested:
+            self.task_finished.emit(2)
+        else:
+            self.calibrated_unit.run('analyze_calibration')
+            self.task_finished.emit(0)
 
     def calibrate_stage(self):
         self.calibrated_stage.run('calibrate')
@@ -112,7 +123,7 @@ class PipetteController(TaskController):
     # TODO: Make the configuration system more general/clean
     def save_configuration(self):
         # Saves configuration
-        print("Saving configuration")
+        self.info("Saving configuration")
         cfg = {'stage': self.calibrated_stage.save_configuration(),
                'units': [u.save_configuration() for u in self.calibrated_units],
                'microscope': self.microscope.save_configuration()}
@@ -121,7 +132,7 @@ class PipetteController(TaskController):
 
     def load_configuration(self):
         # Loads configuration
-        print("Loading configuration")
+        self.info("Loading configuration")
         with open(self.config_filename, "rb") as f:
             cfg = pickle.load(f)
             self.microscope.load_configuration(cfg['microscope'])
