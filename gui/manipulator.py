@@ -14,6 +14,7 @@ class ManipulatorGui(CameraGui):
         super(ManipulatorGui, self).__init__(camera)
         self.controller = pipette_controller
         self.control_thread = QtCore.QThread()
+        self.control_thread.setObjectName('PipetteControlThread')
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
         self.controller_signals[self.controller] = self.pipette_command_signal

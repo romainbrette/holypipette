@@ -21,6 +21,8 @@ class LoggingObject(object):
         root_logger = logging.getLogger()
         if not len(root_logger.handlers):
             handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s [%(name)s - thread %(thread)d]')
+            handler.setFormatter(formatter)
             handler.setLevel(logging.DEBUG)
             # TODO: Format log messages
             root_logger.addHandler(handler)
