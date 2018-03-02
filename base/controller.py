@@ -6,12 +6,14 @@ from base.executor import LoggingObject
 
 
 class Command(object):
-    def __init__(self, name, category, description, controller=None, default_arg=None):
+    def __init__(self, name, category, description, controller=None, default_arg=None,
+                 task_description=None):
         self.default_arg = default_arg
         self.description = description
         self.category = category
         self.controller = controller
         self.name = name
+        self.task_description = task_description
 
     def auto_description(self, argument=None):
         if argument is None:
@@ -29,9 +31,11 @@ class TaskController(QtCore.QObject, LoggingObject):
         self.executors = set()
         self.commands = OrderedDict()
 
-    def add_command(self, name, category, description, default_arg=None):
+    def add_command(self, name, category, description, default_arg=None,
+                    task_description=None):
         command = Command(name, category, description,
-                          controller=self, default_arg=default_arg)
+                          controller=self, default_arg=default_arg,
+                          task_description=task_description)
         self.commands[name] = command
 
     def connect(self, main_gui):

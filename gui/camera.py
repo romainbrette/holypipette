@@ -67,6 +67,14 @@ class CameraGui(BaseGui):
         del self.camera
         super(CameraGui, self).close()
 
+    def register_mouse_action(self, click_type, modifier, command, func=None,
+                              default_doc=True):
+        self.mouse_actions[(click_type, modifier)] = (command, func)
+        if default_doc:
+            self.help_window.register_mouse_action(click_type, modifier,
+                                                   command.category,
+                                                   command.auto_description())
+
     def mousePressEvent(self, event):
         # Look for an exact match first (key + modifier)
         event_tuple = (event.button(), int(event.modifiers()))
@@ -76,7 +84,7 @@ class CameraGui(BaseGui):
             description = self.mouse_actions.get((event.button(), None), None)
 
         if description is not None:
-            command, func, task_name = description
+            command, func = description
             if self.running_task:
                 # Another task is running, ignore the mouse click
                 return
@@ -89,8 +97,8 @@ class CameraGui(BaseGui):
             # displayed image is not necessarily the same size as the original camera image
             scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
             position = (xs * scale, ys * scale)
-            if task_name is not None:
-                self.start_task(task_name, command.controller)
+            if command.task_description is not None:
+                self.start_task(command.task_description, command.controller)
             if command.controller in self.controller_signals:
                 signal = self.controller_signals[command.controller]
                 signal.emit(command.name, position)

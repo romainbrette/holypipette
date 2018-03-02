@@ -149,8 +149,6 @@ class AutoPatchController(TaskController):
     '''
     A class to run automatic patch-clamp
     '''
-    task_finished = QtCore.pyqtSignal(int)
-
     def __init__(self, amplifier, pressure, pipette_controller):
         super(AutoPatchController, self).__init__()
         self.amplifier = amplifier
@@ -163,11 +161,14 @@ class AutoPatchController(TaskController):
             self.autopatcher_by_unit[idx] = autopatcher
             self.executors.add(autopatcher)
         # Define commands
-        self.add_command('break_in', 'Patch', 'Break into the cell')
+        self.add_command('break_in', 'Patch', 'Break into the cell',
+                         task_description='Breaking into cell')
         self.add_command('patch_with_move', 'Patch',
-                         'Move to cell and patch it')
+                         'Move to cell and patch it',
+                         task_description='Moving to cell and patching it')
         self.add_command('patch_without_move', 'Patch',
-                         'Patch cell at current position')
+                         'Patch cell at current position',
+                         task_description='Patching cell')
 
     def handle_command(self, command, argument):
         if self.amplifier is None or self.pressure is None:
@@ -182,6 +183,3 @@ class AutoPatchController(TaskController):
             autopatcher.patch()
         else:
             raise ValueError('Unknown command: %s' % command)
-
-    def connect(self, main_gui):
-        self.task_finished.connect(main_gui.task_finished)

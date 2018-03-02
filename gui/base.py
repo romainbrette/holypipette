@@ -158,20 +158,12 @@ class BaseGui(QtWidgets.QMainWindow):
                                  func=lambda arg: self.close())
 
     def register_key_action(self, key, modifier, command, argument=None,
-                            func=None, task_name=None, default_doc=True):
-        self.key_actions[(key, modifier)] = (command, argument, func, task_name)
+                            func=None, default_doc=True):
+        self.key_actions[(key, modifier)] = (command, argument, func)
         if default_doc:
             self.help_window.register_key_action(key, modifier,
                                                  command.category,
                                                  command.auto_description(argument))
-
-    def register_mouse_action(self, click_type, modifier, command, func=None,
-                              task_name=None, default_doc=True):
-        self.mouse_actions[(click_type, modifier)] = (command, func, task_name)
-        if default_doc:
-            self.help_window.register_mouse_action(click_type, modifier,
-                                                   command.category,
-                                                   command.auto_description())
 
     def start_task(self, task_name, controller):
         self.status_bar.clearMessage()
@@ -212,12 +204,12 @@ class BaseGui(QtWidgets.QMainWindow):
             description = self.key_actions.get((event.key(), None), None)
 
         if description is not None:
-            command, argument, func, task_name = description
+            command, argument, func = description
             if self.running_task:
                 # Another task is running, ignore the key press
                 return
-            if task_name is not None:
-                self.start_task(task_name, command.controller)
+            if command.task_description is not None:
+                self.start_task(command.task_description, command.controller)
             if command.controller in self.controller_signals:
                 signal = self.controller_signals[command.controller]
                 signal.emit(command.name, argument)

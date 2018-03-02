@@ -91,11 +91,9 @@ class ManipulatorGui(CameraGui):
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
-                                 self.controller.commands['calibrate_stage'],
-                                 task_name='Calibrating stage')
+                                 self.controller.commands['calibrate_stage'])
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.controller.commands['calibrate_manipulator'],
-                                 task_name='Calibrating stage and manipulators')
+                                 self.controller.commands['calibrate_manipulator'])
         # Pipette selection
         number_of_units = len(self.controller.calibrated_units)
         for unit_number in range(number_of_units):

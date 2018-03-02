@@ -48,9 +48,11 @@ class PipetteController(TaskController):
                          'Move stage horizontally by {:.0f}um',
                          default_arg=10)
         self.add_command('calibrate_stage', 'Stage',
-                         'Calibrate stage only')
+                         'Calibrate stage only',
+                         task_description='Calibrating stage')
         self.add_command('calibrate_manipulator', 'Manipulators',
-                         'Calibrate stage and manipulator')
+                         'Calibrate stage and manipulator',
+                         task_description='Calibrating stage and manipulator')
         self.add_command('switch_manipulator', 'Manipulators',
                          'Switch to manipulator {}',
                          default_arg=1)
