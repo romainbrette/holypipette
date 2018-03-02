@@ -181,6 +181,9 @@ class BaseGui(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(int)
     def task_finished(self, exit_reason):
+        if self.running_task is None:
+            return  # Nothing to do
+
         # 0 = normal exit, 1 = error, 2 = abort
         self.task_progress.setVisible(False)
         self.task_abort_button.setVisible(False)
@@ -206,8 +209,10 @@ class BaseGui(QtWidgets.QMainWindow):
 
         if description is not None:
             command, argument, func = description
-            if self.running_task:
+            if self.running_task and not command.category == 'General':
                 # Another task is running, ignore the key press
+                # (we allow the "General" category to still allow to see the
+                # help, etc.)
                 return
             if command.task_description is not None:
                 self.start_task(command.task_description, command.controller)
