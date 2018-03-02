@@ -67,7 +67,7 @@ class KeyboardHelpWindow(QtWidgets.QMainWindow):
             mouse_info = self.mouse_catalog.get(category, [])
             for click_type, modifier, description in mouse_info:
                 if modifier is not None and modifier != Qt.NoModifier:
-                    key_text = QtGui.QKeySequence(int(modifier)).toString() + '+'
+                    key_text = QtGui.QKeySequence(int(modifier)).toString()
                 else:
                     key_text = ''
                 if click_type == Qt.LeftButton:
