@@ -147,6 +147,7 @@ class BaseGui(QtWidgets.QMainWindow):
     def initialize(self):
         for controller, signal in self.controller_signals.items():
             signal.connect(controller.command_received)
+            controller.task_finished.connect(self.task_finished)
         self.register_commands()
 
     def register_commands(self):

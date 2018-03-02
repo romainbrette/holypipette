@@ -19,12 +19,8 @@ class PatchGui(ManipulatorGui):
     def register_commands(self):
         super(PatchGui, self).register_commands()
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
-                                   self.patch_controller.commands['patch_with_move'])
+                                   self.patch_controller.commands['patch_with_move'],)
         self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
                                    self.patch_controller.commands['patch_without_move'])
         self.register_key_action(Qt.Key_B, None,
                                  self.patch_controller.commands['break_in'])
-
-    def initialize(self):
-        super(PatchGui, self).initialize()
-        self.patch_controller.connect(self)

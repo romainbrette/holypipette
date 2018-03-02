@@ -14,7 +14,6 @@ class PipetteController(TaskController):
     '''
 
     manipulator_switched = QtCore.pyqtSignal('QString', 'QString')
-    task_finished = QtCore.pyqtSignal(int)
 
     def __init__(self, stage, microscope, camera, units,
                  config_filename=None):
@@ -65,7 +64,6 @@ class PipetteController(TaskController):
         self.switch_manipulator(1)
         # We call this via command_received to catch errors automatically
         self.command_received('load_configuration', None)
-        self.task_finished.connect(main_gui.task_finished)
 
     def handle_command(self, command, argument):
         if command == 'move_stage_horizontal':
