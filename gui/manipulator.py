@@ -1,6 +1,7 @@
 # coding=utf-8
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
+import numpy as np
 
 from gui.camera import CameraGui
 
@@ -18,18 +19,40 @@ class ManipulatorGui(CameraGui):
         self.controller_signals[self.controller] = self.command_signal
         self.display_edit_funcs.append(self.draw_scale_bar)
 
-    def draw_scale_bar(self, pixmap):
+    def draw_scale_bar(self, pixmap, text=True, autoscale=True):
+        if autoscale and not text:
+            raise ValueError('Automatic scaling of the bar without showing text '
+                             'will not be very helpful...')
         stage = self.controller.calibrated_stage
         if stage.calibrated:
-            barlength = stage.pixel_per_um()[0]*10
+            pen_width = 4
+            bar_length = stage.pixel_per_um()[0]
             scale = 1.0 * self.camera.width / pixmap.size().width()
+            scaled_length = bar_length/scale
+            if autoscale:
+                lengths = np.array([1, 2, 5, 10, 20, 50, 100])
+                if scaled_length*lengths[-1] < pen_width:
+                    # even the longest bar is not long enough -- don't show
+                    # any scale bar
+                    return
+                elif scaled_length*lengths[0] > 20*pen_width:
+                    # the shortest bar is not short enough (>20x the width)
+                    length_in_um = lengths[0]
+                else:
+                    # Use the length that gives a bar of about 10x its width
+                    length_in_um = lengths[np.argmin(np.abs(scaled_length*lengths - 10*pen_width))]
+            else:
+                length_in_um = 10
+
             painter = QtGui.QPainter(pixmap)
             pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-            pen.setWidth(4)
+            pen.setWidth(pen_width)
             painter.setPen(pen)
             c_x, c_y = pixmap.width() / 20, pixmap.height() * 19.0 / 20
-            painter.drawLine(c_x, c_y, c_x + barlength/scale, c_y)
-            painter.drawText(c_x, c_y - 10, '10µm')
+            painter.drawLine(c_x, c_y,
+                             int(c_x + round(length_in_um*scaled_length)), c_y)
+            if text:
+                painter.drawText(c_x, c_y - 10, '{}µm'.format(length_in_um))
             painter.end()
 
     def initialize(self):
