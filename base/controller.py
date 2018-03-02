@@ -40,6 +40,9 @@ class TaskController(QtCore.QObject, LoggingObject):
     @QtCore.pyqtSlot('QString', object)
     def command_received(self, command, argument):
         try:
+            for e in self.executors:
+                e.error_occured = False
+                e.abort_requested = False
             self.handle_command(command, argument)
         except Exception:
             self.exception("An error occured dealing with command "

@@ -102,7 +102,7 @@ class PipetteController(TaskController):
 
     def calibrate(self):
         self.calibrated_unit.run('calibrate')
-        if self.calibrated_unit.error:
+        if self.calibrated_unit.error_occurred:
             self.task_finished.emit(1)
         elif self.calibrated_unit.abort_requested:
             self.task_finished.emit(2)
@@ -112,7 +112,7 @@ class PipetteController(TaskController):
 
     def calibrate_stage(self):
         self.calibrated_stage.run('calibrate')
-        if self.calibrated_stage.error:
+        if self.calibrated_stage.error_occurred:
             self.task_finished.emit(1)
         elif self.calibrated_stage.abort_requested:
             self.task_finished.emit(2)

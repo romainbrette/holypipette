@@ -397,34 +397,44 @@ class CalibratedUnit(ManipulatorUnit):
         x,y,z: pipette position on screen and focal plane
         '''
         self.relative_move(distance, axis)
-
+        self.abort_if_requested()
         # Estimate movement on screen
         estimate = self.M[:,axis]*distance
 
         # Move the stage to compensate
         if move_stage:
+            self.abort_if_requested()
             self.stage.reference_relative_move(-estimate)
             self.stage.wait_until_still()
+
+        self.abort_if_requested()
 
         # Autofocus
         self.wait_until_still(axis) # Wait until pipette has moved
         self.microscope.relative_move(estimate[2])
         self.microscope.wait_until_still()
 
+        self.abort_if_requested()
+
         # Locate pipette
         sleep(sleep_time)
+        self.abort_if_requested()
         x, y, z = self.locate_pipette()
-
+        self.abort_if_requested()
         # Focus, move stage and locate again
         self.microscope.relative_move(z)
         if move_stage:
+            self.abort_if_requested()
             self.stage.reference_relative_move(-array([x,y,0]))
             self.stage.wait_until_still()
+        self.abort_if_requested()
         self.microscope.wait_until_still()
+        self.abort_if_requested()
         sleep(sleep_time)
+        self.abort_if_requested()
         x, y, z = self.locate_pipette()
 
-        return x,y,z
+        return x, y, z
 
     def move_back(self, z0, u0, us0=None):
         '''
@@ -443,20 +453,28 @@ class CalibratedUnit(ManipulatorUnit):
         # Move back
         self.microscope.absolute_move(z0)
         self.microscope.wait_until_still()
+        self.abort_if_requested()
         self.absolute_move(u0)
         if us0 is not None: # stage moves too
+            self.abort_if_requested()
             self.stage.absolute_move(us0)
             self.stage.wait_until_still()
+        self.abort_if_requested()
         self.wait_until_still()
 
         # Locate pipette
         sleep(sleep_time)
+        self.abort_if_requested()
         _, _, z = self.locate_pipette()
+
+        self.abort_if_requested()
 
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
+        self.abort_if_requested()
         sleep(sleep_time)
+        self.abort_if_requested()
         x, y, z = self.locate_pipette()
 
         return x,y,z
@@ -490,16 +508,10 @@ class CalibratedUnit(ManipulatorUnit):
         # *** Calibrate the stage ***
         self.info('Calibrating stage first')
         self.stage.calibrate()
-
-        if self.abort_requested:
-            return
-
+        self.abort_if_requested()
         # *** Take photos ***
         # Take a stack of photos on different focal planes, spaced by 1 um
         self.take_photos()
-
-        if self.abort_requested:
-            return
 
         # *** Calculate image borders ***
 
@@ -522,12 +534,10 @@ class CalibratedUnit(ManipulatorUnit):
         distance = stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
-            if self.abort_requested:
-                return
             self.debug('Moving axis {}'.format(axis))
             x,y,z = self.move_and_track(distance, axis, move_stage=False)
             z+= self.microscope.position()
-            print x,y,z
+            self.debug('x={}, y={}, z={}'.format(x, y, z))
             self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
             oldx, oldy, oldz = x, y, z
         self.debug('Matrix:' + str(self.M))
@@ -535,8 +545,6 @@ class CalibratedUnit(ManipulatorUnit):
         # *** Calculate up directions ***
         self.calculate_up_directions()
 
-        if self.abort_requested:
-            return
         self.info('Moving back to initial position')
         # Move back to initial position
         oldx, oldy, oldz = self.move_back(z0, u0, None)  # The pipette could have moved
@@ -557,8 +565,6 @@ class CalibratedUnit(ManipulatorUnit):
             oldrs = self.stage.reference_position()
             move_stage = False
             while (distance<2000): # just for testing
-                if self.abort_requested:
-                    return
                 distance *= 2
                 self.debug('Distance ' + str(distance))
 
@@ -585,6 +591,7 @@ class CalibratedUnit(ManipulatorUnit):
                     self.info('We reached the coverslip.')
                     break
 
+                self.abort_if_requested()
                 # Move pipette down
                 x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
                                               move_stage=move_stage)
@@ -596,8 +603,6 @@ class CalibratedUnit(ManipulatorUnit):
                 oldx, oldy, oldz = x, y, z
                 oldrs = rs
 
-            if self.abort_requested:
-                return
             # Move back to initial position
             u = self.position(axis)
             self.debug('Moving back over '+str(u0[axis]-u)+' um')
@@ -796,8 +801,6 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         self.info('Automatic recalibration')
         x,y,z = self.locate_pipette(depth=50) # 50 um
-        if self.abort_requested:
-            return
         z+= self.microscope.position()
         self.info('Pipette at z='+str(z))
 
@@ -809,15 +812,10 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Move to center pipette
         if center:
-            if self.abort_requested:
-                return
             self.debug('Center pipette')
             self.microscope.absolute_move(z)
-            if self.abort_requested:
-                return
+            self.abort_if_requested()
             self.stage.reference_relative_move(-array([x,y]))
-        if self.abort_requested:
-            return
         self.wait_until_still()
 
     def save_configuration(self):
@@ -897,23 +895,21 @@ class CalibratedStage(CalibratedUnit):
 
         # Calculate the location of the template in the image
         sleep(sleep_time)
+        self.abort_if_requested()
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
-        if self.abort_requested:
-            return
         # Store current position
         u0 = self.position()
         self.info('Small movements for each axis')
         # 1) Move each axis by a small displacement (50 um)
         distance = 40. # in um
         for axis in range(len(self.axes)):  # normally just two axes
-            if self.abort_requested:
-                return
-
+            self.abort_if_requested()
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
             sleep(sleep_time)
+            self.abort_if_requested()
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
@@ -943,11 +939,11 @@ class CalibratedStage(CalibratedUnit):
         u = []
         r = []
         for ri in rtarget:
-            if self.abort_requested:
-                return
+            self.abort_if_requested()
             self.reference_move(ri)
             self.wait_until_still()
             sleep(sleep_time)
+            self.abort_if_requested()
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
@@ -971,9 +967,6 @@ class CalibratedStage(CalibratedUnit):
 
         # 6) Offset is such that the initial position is zero in the reference system
         self.r0 = -dot(self.M, u0)
-
-        if self.abort_requested:
-            return
 
         self.info('Moving back')
         # Move back

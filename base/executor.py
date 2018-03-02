@@ -1,5 +1,10 @@
+import functools
 import logging
 
+class RequestedAbortException(Exception):
+    '''Exception that should be raised when a function aborts its exectuion due
+       to ``abort_requested``.'''
+    pass
 
 class LoggingObject(object):
     def __init__(self):
@@ -38,12 +43,26 @@ class LoggingObject(object):
         self.logger.exception(message, *args, **kwds)
 
 
+def check_for_abort(obj, func):
+    '''Decorator to make a function raise a `RequestedAbortException` if
+       ``abort_requested`` attribute is set.'''
+    @functools.wraps(func)
+    def decorated(*args, **kwds):
+        if getattr(obj, 'abort_requested', False):
+            raise RequestedAbortException()
+        return func(*args, **kwds)
+    return decorated
+
 class TaskExecutor(LoggingObject):
     def __init__(self):
         self.logger = None
-        self.error = False
+        self.error_occurred = False
         self.abort_requested = False
         self.saved_state = None
+        # Overwrite the logging functions so that they check for `abort_requested`
+        self.debug = check_for_abort(self, self.debug)
+        self.info = check_for_abort(self, self.info)
+        self.warn = check_for_abort(self, self.warn)
 
     def run(self, func_name, *args, **kwds):
         func = getattr(self, func_name, None)
@@ -51,17 +70,29 @@ class TaskExecutor(LoggingObject):
             self.error('Object of type {} does not have a '
                        'function {}.'.format(self.__class__.__name__,
                                              func_name))
-            self.error = True
+            self.error_occurred = True
             return
 
         try:
-            self.error = False
+            self.error_occurred = False
             self.abort_requested = False
             func(*args, **kwds)
+        except RequestedAbortException:
+            # We don't want the debug command to raise the exception again,
+            # so temporarily disable the `abort_requested` attribute
+            self.abort_requested = False
+            self.debug('command "{}" has been aborted.'.format(func_name))
+            # Set the attribute again so that later code knows about the abort
+            self.abort_requested = True
         except Exception:
             self.exception('An exception occured executing '
                            '{}'.format(func_name))
-            self.error = True
+            self.error_occurred = True
+
+    def abort_if_requested(self):
+        '''This function should be called regularly during long_running tasks'''
+        if self.abort_requested:
+            raise RequestedAbortException()
 
     def save_state(self):
         pass
