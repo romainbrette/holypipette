@@ -14,7 +14,6 @@ from setup_script import *
 app = QtWidgets.QApplication(sys.argv)
 gui = CameraGui(camera)
 gui.initialize()
-app.installEventFilter(gui)
 gui.show()
 ret = app.exec_()
 
