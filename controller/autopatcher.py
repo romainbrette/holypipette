@@ -4,9 +4,9 @@ Automatic patch-clamp algorithm
 import time
 from numpy import array
 
-__all__ = ['AutoPatcher','AutopatchError']
+__all__ = ['AutoPatcher', 'AutopatchError']
 
-from parameters import *
+from patch_parameters import *
 
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
