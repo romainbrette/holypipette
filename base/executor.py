@@ -1,10 +1,13 @@
 import functools
 import logging
+import time
+
 
 class RequestedAbortException(Exception):
     '''Exception that should be raised when a function aborts its exectuion due
        to ``abort_requested``.'''
     pass
+
 
 class LoggingObject(object):
     def __init__(self):
@@ -53,6 +56,7 @@ def check_for_abort(obj, func):
         return func(*args, **kwds)
     return decorated
 
+
 class TaskExecutor(LoggingObject):
     def __init__(self):
         self.logger = None
@@ -93,6 +97,18 @@ class TaskExecutor(LoggingObject):
         '''This function should be called regularly during long_running tasks'''
         if self.abort_requested:
             raise RequestedAbortException()
+
+    def sleep(self, seconds):
+        '''Convenience function that sleeps but remains sensitive to abort
+        requests'''
+        check_every = 0.25
+        start = time.time()
+        while time.time() - start < (seconds-check_every):
+            time.sleep(check_every)
+            self.abort_if_requested()
+
+        time.sleep(seconds - (time.time() - start))
+        self.abort_if_requested()
 
     def save_state(self):
         pass

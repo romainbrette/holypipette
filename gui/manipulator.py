@@ -8,7 +8,7 @@ from gui.camera import CameraGui
 
 class ManipulatorGui(CameraGui):
 
-    command_signal = QtCore.pyqtSignal('QString', object)
+    pipette_command_signal = QtCore.pyqtSignal('QString', object)
 
     def __init__(self, camera, pipette_controller):
         super(ManipulatorGui, self).__init__(camera)
@@ -16,7 +16,7 @@ class ManipulatorGui(CameraGui):
         self.control_thread = QtCore.QThread()
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
-        self.controller_signals[self.controller] = self.command_signal
+        self.controller_signals[self.controller] = self.pipette_command_signal
         self.display_edit_funcs.append(self.draw_scale_bar)
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
