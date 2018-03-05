@@ -1,9 +1,7 @@
 '''
 Test mosaic photos
 '''
-from devices import *
-from vision import *
-from gui import *
+from holypipette.devices import *
 import cv2
 import time
 from numpy import array

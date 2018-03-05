@@ -1,12 +1,9 @@
 '''
 Detects contact of pipette with water
 '''
-from vision.paramecium_tracking import *
 import cv2
-from matplotlib import pyplot as plt
 from numpy import *
 import imageio
-import collections
 
 path='/Users/Romain/Desktop/'
 cap = imageio.get_reader(path+'electrode-in-water.mp4')

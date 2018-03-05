@@ -2,10 +2,13 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from controller.pipettes import PipetteController
-from gui.manipulator import ManipulatorGui
+from holypipette.base import console_logger
+from holypipette.controller.pipettes import PipetteController
+from holypipette.gui.manipulator import ManipulatorGui
 
 from setup_script import *
+
+console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
 

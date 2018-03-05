@@ -1,9 +1,9 @@
 '''
 This is a test GUI, to test the functionality.
 '''
-from devices import *
-from vision import *
-from gui import *
+from holypipette.devices import *
+from holypipette.vision import *
+from holypipette.gui import *
 import sys
 import cv2
 import time

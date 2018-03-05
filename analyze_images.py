@@ -4,7 +4,7 @@ A script to test image processing to locate pipettes
 import cv2
 from matplotlib import pyplot as plt
 from numpy import *
-from vision import *
+from holypipette.vision import *
 
 # Load all images
 

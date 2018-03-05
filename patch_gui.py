@@ -2,10 +2,10 @@ import sys
 
 from PyQt5 import QtWidgets
 
-from base.executor import console_logger
-from controller import AutoPatchController
-from controller.pipettes import PipetteController
-from gui.patch import PatchGui
+from holypipette.base.executor import console_logger
+from holypipette.controller import AutoPatchController
+from holypipette.controller.pipettes import PipetteController
+from holypipette.gui import PatchGui
 
 from setup_script import *
 

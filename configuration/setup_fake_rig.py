@@ -1,8 +1,8 @@
 '''
 "Fake setup" for GUI development on a computer without access to a rig
 '''
-from devices.camera.camera import FakeCamera
-from devices.manipulator import *
+from holypipette.devices.camera.camera import FakeCamera
+from holypipette.devices.manipulator import *
 
 camera = FakeCamera()
 controller = FakeManipulator()

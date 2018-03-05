@@ -4,12 +4,10 @@ Apparently precision is a pixel in x,y.
 
 TODO: same thing, but with a photo stack
 '''
-from devices import *
-from vision import *
-from gui import *
-import cv2
+from holypipette.devices import *
+from holypipette.vision import *
 import time
-from numpy import array,zeros
+from numpy import zeros
 
 if True:
     camera = Lumenera()

@@ -1,8 +1,8 @@
 '''
 Setup script for the first rig with the LN SM-10
 '''
-from devices.camera.umanagercamera import Lumenera
-from devices.manipulator import *
+from holypipette.devices.camera.umanagercamera import Lumenera
+from holypipette.devices.manipulator import *
 
 camera = Lumenera()
 controller = LuigsNeumann_SM10(stepmoves=False)
