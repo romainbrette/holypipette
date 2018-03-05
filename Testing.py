@@ -15,7 +15,7 @@ cv2.namedWindow('img')
 cv2.setMouseCallback('img', callback)
 cap = cv2.VideoCapture("Testing0503.mp4")
 frame_number = 0
-wait_time = 1
+wait_time = 0
 p0 = np.array([[[0, 0]]], np.float32)
 while True:
     click_length = len(click_list)
