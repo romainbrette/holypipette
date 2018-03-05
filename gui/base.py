@@ -2,13 +2,18 @@
 from __future__ import absolute_import
 
 import collections
+import functools
 
+import param
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
 from base.controller import Command
 
 # Add a cross to the display
+from controller.autopatcher import NumberWithUnit
+
+
 def draw_cross(pixmap):
     '''
     Draws a cross at the center
@@ -242,3 +247,60 @@ class BaseGui(QtWidgets.QMainWindow):
 
         messages = ' | '.join(self.status_messages.values())
         self.status_label.setText(messages)
+
+
+class ConfigGui(QtWidgets.QWidget):
+    def __init__(self, config):
+        super(ConfigGui, self).__init__()
+        self.config = config
+        layout = QtWidgets.QVBoxLayout()
+        self.title = QtWidgets.QLabel(config.name)
+        self.title.setStyleSheet('font-weight: bold;')
+        layout.addWidget(self.title)
+        all_params = config.params()
+        for category, params in config.categories:
+            box = QtWidgets.QGroupBox(category)
+            rows = QtWidgets.QVBoxLayout()
+            for param_name in params:
+                param_obj = all_params[param_name]
+                row = QtWidgets.QHBoxLayout()
+                label = QtWidgets.QLabel(param_name)
+                label.setToolTip(param_obj.doc)
+                if isinstance(param_obj, param.Number):
+                    value_widget = QtWidgets.QDoubleSpinBox()
+                    value_widget.setMinimum(param_obj.bounds[0])
+                    value_widget.setMaximum(param_obj.bounds[1])
+                    value_widget.setValue(getattr(config, param_name))
+                    value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
+                if isinstance(param_obj, NumberWithUnit):
+                    value_widget = QtWidgets.QDoubleSpinBox()
+                    magnitude = param_obj.magnitude
+                    value_widget.setMinimum(param_obj.bounds[0]/magnitude)
+                    value_widget.setMaximum(param_obj.bounds[1]/magnitude)
+                    value_widget.setValue(getattr(config, param_name)/magnitude)
+                    value_widget.valueChanged.connect(
+                        functools.partial(self.set_numerical_value_with_unit, param_name, magnitude))
+                elif isinstance(param_obj, param.Boolean):
+                    value_widget = QtWidgets.QCheckBox()
+                    value_widget.setChecked(getattr(config, param_name))
+                    value_widget.stateChanged.connect(functools.partial(self.set_boolean_value, param_name, value_widget))
+                value_widget.setToolTip(param_obj.doc)
+                row.addWidget(label, stretch=1)
+                row.addWidget(value_widget)
+                if isinstance(param_obj, NumberWithUnit):
+                    unit_label = QtWidgets.QLabel(param_obj.unit)
+                    row.addWidget(unit_label)
+                rows.addLayout(row)
+            box.setLayout(rows)
+            layout.addWidget(box)
+        self.setLayout(layout)
+
+    def set_numerical_value(self, name, value):
+        setattr(self.config, name, value)
+
+    def set_numerical_value_with_unit(self, name, magnitude, value):
+        print 'setting ', name, 'to ', value*magnitude
+        setattr(self.config, name, value*magnitude)
+
+    def set_boolean_value(self, name, widget):
+        setattr(self.config, name, widget.isChecked())

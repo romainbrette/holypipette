@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 Automatic patch-clamp algorithm
 '''
@@ -11,7 +12,6 @@ from base.executor import TaskExecutor
 
 __all__ = ['AutoPatchController', 'AutopatchError', 'PatchConfig']
 
-
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
         self.message = message
@@ -19,39 +19,60 @@ class AutopatchError(Exception):
     def __str__(self):
         return self.message
 
+class NumberWithUnit(param.Number):
+    __slots__ = ['unit', 'magnitude']
+
+    def __init__(self, default, unit, magnitude=1.0, *args, **kwds):
+        super(NumberWithUnit, self).__init__(default=default, *args, **kwds)
+        self.unit = unit
+        self.magnitude = magnitude
 
 class PatchConfig(param.Parameterized):
+    # Note that the hardware uses mbar and um to measure pressure/distances,
+    # therefore pressure and distance values are not defined with magnitude 1e-3
+    # or 1e-6
+
     # Pressure parameters
-    pressure_near = param.Number(20, bounds=(0, 100), doc='Pressure during approach')
-    pressure_sealing = param.Number(-20, bounds=(-100, 0), doc='Pressure for sealing')
-    pressure_ramp_increment = param.Number(-25, bounds=(-100, 0), doc='Pressure ramp increment')
-    pressure_ramp_max = param.Number(-300., bounds=(-1000, 0), doc='Pressure ramp maximum')
-    pressure_ramp_duration = param.Number(1.15, bounds=(0, 10), doc='Pressure ramp duration (in s)')
+    pressure_near = NumberWithUnit(20, bounds=(0, 100), doc='Pressure during approach', unit='mbar')
+    pressure_sealing = NumberWithUnit(-20, bounds=(-100, 0), doc='Pressure for sealing', unit='mbar')
+    pressure_ramp_increment = NumberWithUnit(-25, bounds=(-100, 0), doc='Pressure ramp increment', unit='mbar')
+    pressure_ramp_max = NumberWithUnit(-300., bounds=(-1000, 0), doc='Pressure ramp maximum', unit='mbar')
+    pressure_ramp_duration = NumberWithUnit(1.15, bounds=(0, 10), doc='Pressure ramp duration', unit='s')
 
     # Normal resistance range
-    Rmin = param.Number(2e6, bounds=(0, 1000e6), doc='Minimum normal resistance')
-    Rmax = param.Number(25e6, bounds=(0, 1000e6), doc='Maximum normal resistance')
-    max_cell_R = param.Number(300e6, bounds=(0, 1000e6), doc='Maximum cell resistance')
-    cell_distance = param.Number(10, bounds=(0, 100), doc='Initial distance above the target cell')
-    max_distance = param.Number(20, bounds=(0, 100), doc='Maximum length of movement during approach')
+    min_R = NumberWithUnit(2e6, bounds=(0, 1000e6), doc='Minimum normal resistance', unit='MΩ', magnitude=1e6)
+    max_R = NumberWithUnit(25e6, bounds=(0, 1000e6), doc='Maximum normal resistance', unit='MΩ', magnitude=1e6)
+    max_cell_R = NumberWithUnit(300e6, bounds=(0, 1000e6), doc='Maximum cell resistance', unit='MΩ', magnitude=1e6)
+    cell_distance = NumberWithUnit(10, bounds=(0, 100), doc='Initial distance above the target cell', unit='μm')
+    max_distance = NumberWithUnit(20, bounds=(0, 100), doc='Maximum length of movement during approach', unit='μm')
 
-    max_R_increase = param.Number(1e6, bounds=(0, 100), doc='Increase in resistance indicating obstruction')
+    max_R_increase = NumberWithUnit(1e6, bounds=(0, 100e6), doc='Increase in resistance indicating obstruction', unit='MΩ', magnitude=1e6)
     cell_R_increase = param.Number(.15, bounds=(0, 1), doc='Proportional increase in resistance indicating cell presence')
-    gigaseal_R = param.Number(1e9, bounds=(100e6, 10e9), doc='Gigaseal resistance')
+    gigaseal_R = NumberWithUnit(1000e6, bounds=(100e6, 10000e6), doc='Gigaseal resistance', unit='MΩ', magnitude=1e6)
 
-    seal_min_time = param.Number(15, bounds=(0, 60), doc='Minimum time for seal (in s)')
-    seal_deadline = param.Number(90., bounds=(0, 300), doc='Maximum time for seal formation')
+    seal_min_time = NumberWithUnit(15, bounds=(0, 60), doc='Minimum time for seal', unit='s')
+    seal_deadline = NumberWithUnit(90., bounds=(0, 300), doc='Maximum time for seal formation', unit='s')
 
-    Vramp_duration = param.Number(10., bounds=(0, 60), doc='Voltage ramp duration (in s)')
-    Vramp_amplitude = param.Number(-.070, bounds=(-0.2, 0), doc='Voltage ramp amplitude (in V)')
+    Vramp_duration = NumberWithUnit(10., bounds=(0, 60), doc='Voltage ramp duration', unit='s')
+    Vramp_amplitude = NumberWithUnit(-70e-3, bounds=(-200e-3, 0), doc='Voltage ramp amplitude', unit='mV', magnitude=1e-3)
 
     zap = param.Boolean(False, doc='Zap the cell to break the seal')
 
+    categories = [('Pressure', ['pressure_near', 'pressure_sealing',
+                                'pressure_ramp_increment', 'pressure_ramp_max',
+                                'pressure_ramp_duration']),
+                  ('Resistance', ['min_R', 'max_R', 'max_R_increase',
+                                  'cell_R_increase', 'max_cell_R',
+                                  'gigaseal_R']),
+                  ('Distance', ['cell_distance', 'max_distance']),
+                  ('Seal', ['seal_min_time', 'seal_deadline', 'zap']),
+                  ('Voltage ramp', ['Vramp_duration', 'Vramp_amplitude'])]
+
 
 class AutoPatcher(TaskExecutor):
-    def __init__(self, amplifier, pressure, calibrated_unit, microscope):
+    def __init__(self, amplifier, pressure, calibrated_unit, microscope, config):
         super(AutoPatcher, self).__init__()
-        self.config = PatchConfig()
+        self.config = config
         self.amplifier = amplifier
         self.pressure = pressure
         self.calibrated_unit = calibrated_unit
@@ -137,7 +158,7 @@ class AutoPatcher(TaskExecutor):
                     # Release pressure
                     self.info("Releasing pressure")
                     self.pressure.set_pressure(0)
-                    time.sleep(10)
+                    self.sleep(10)
                     if R > oldR * (1 + self.config.cell_R_increase):
                         # Still higher, we are near the cell
                         self.debug("Sealing, R = " + str(self.amplifier.resistance()/1e6))
@@ -178,13 +199,15 @@ class AutoPatchController(TaskController):
     '''
     def __init__(self, amplifier, pressure, pipette_controller):
         super(AutoPatchController, self).__init__()
+        self.config = PatchConfig(name='Patch configuration')
         self.amplifier = amplifier
         self.pressure = pressure
         self.pipette_controller = pipette_controller
         self.autopatcher_by_unit = {}
         for idx, calibrated_unit in enumerate(self.pipette_controller.calibrated_units):
             autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit,
-                                      calibrated_unit.microscope)
+                                      calibrated_unit.microscope,
+                                      config=self.config)
             self.autopatcher_by_unit[idx] = autopatcher
             self.executors.add(autopatcher)
         # Define commands
