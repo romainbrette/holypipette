@@ -9,42 +9,36 @@ class RequestedAbortException(Exception):
     pass
 
 
-class LoggingObject(object):
-    def __init__(self):
-        self.logger = None
+def console_logger():
+    root_logger = logging.getLogger()
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s [%(name)s - thread %(thread)d]')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.DEBUG)
+    root_logger.addHandler(handler)
 
-    def _ensure_logger(self):
-        if self.logger is None:
-            self.logger = logging.getLogger(__name__)
-            self.logger.setLevel(logging.DEBUG)
-        # TODO: Move this part into some global logger object configuration?
-        root_logger = logging.getLogger()
-        if not len(root_logger.handlers):
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s [%(name)s - thread %(thread)d]')
-            handler.setFormatter(formatter)
-            handler.setLevel(logging.DEBUG)
-            # TODO: Format log messages
-            root_logger.addHandler(handler)
+
+class LoggingObject(object):
+    @property
+    def logger(self):
+        if getattr(self, '._logger', None) is None:
+            self._logger = logging.getLogger(__name__)
+            self._logger.setLevel(logging.DEBUG)
+        return self._logger
 
     def debug(self, message, *args, **kwds):
-        self._ensure_logger()
         self.logger.debug(message, *args, **kwds)
 
     def info(self, message, *args, **kwds):
-        self._ensure_logger()
         self.logger.info(message, *args, **kwds)
 
     def warn(self, message, *args, **kwds):
-        self._ensure_logger()
         self.logger.warn(message, *args, **kwds)
 
     def error(self, message, *args, **kwds):
-        self._ensure_logger()
         self.logger.error(message, *args, **kwds)
 
     def exception(self, message, *args, **kwds):
-        self._ensure_logger()
         self.logger.exception(message, *args, **kwds)
 
 
@@ -61,7 +55,7 @@ def check_for_abort(obj, func):
 
 class TaskExecutor(LoggingObject):
     def __init__(self):
-        self.logger = None
+        super(TaskExecutor, self).__init__()
         self.error_occurred = False
         self.abort_requested = False
         self.saved_state = None

@@ -3,6 +3,8 @@ from __future__ import absolute_import
 
 import collections
 import functools
+import logging
+import datetime
 
 import param
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -27,6 +29,147 @@ def draw_cross(pixmap):
     painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
     painter.end()
 
+
+class Logger(QtCore.QAbstractTableModel, logging.Handler):
+    def __init__(self):
+        super(Logger, self).__init__()
+        self.messages = []
+
+    def emit(self, record):
+        entry = (record.levelno,
+                 datetime.datetime.strptime(record.asctime, '%Y-%m-%d %H:%M:%S,%f'),
+                 record.name,
+                 self.format(record),
+                 record.thread)  # Not displayed by default
+        self.beginInsertRows(QtCore.QModelIndex(),
+                             len(self.messages), len(self.messages))
+        self.messages.append(entry)
+        self.endInsertRows()
+
+    def rowCount(self, parent=None):
+        return len(self.messages)
+
+    def columnCount(self, parent=None):
+        return 4
+
+    def headerData(self, section, orientation, role):
+        if role != Qt.DisplayRole:
+            return
+        if orientation == Qt.Horizontal:
+            return ['', 'time', 'origin', 'message'][section]
+
+    def data(self, index, role):
+        if not index.isValid():
+            return None
+        if index.row() >= len(self.messages) or index.row() < 0:
+            return None
+
+        level, asctime, name, message, _ = self.messages[index.row()]
+        if role == Qt.DisplayRole or role == Qt.ToolTipRole:
+            if index.column() == 0:
+                if level == logging.DEBUG:
+                    return 'D'
+                elif level == logging.INFO:
+                    return 'I'
+                elif level == logging.WARN:
+                    return 'W'
+                elif level == logging.ERROR:
+                    return 'E'
+                else:
+                    return None
+            elif index.column() == 1:
+                return asctime.strftime('%H:%M:%S,%f')[:-3]  # ms instead of us
+            elif index.column() == 2:
+                return name
+            elif index.column() == 3:
+                return message
+            else:
+                return None
+        if role == Qt.ForegroundRole:
+            if level == logging.WARN:
+                return QtGui.QColor('darkorange')
+            elif level == logging.ERROR:
+                return QtGui.QColor('darkred')
+
+    def save_to_file(self, filename):
+        with open(filename, 'w') as f:
+            for entry in self.messages:
+                level, asctime, name, message, thread = entry
+                fmt = '{level} {time} {origin} {thread_id}: {message}\n'
+                level_name = {logging.DEBUG: 'DEBUG',
+                             logging.INFO: 'INFO',
+                             logging.WARN: 'WARN',
+                             logging.ERROR: 'ERROR'}[level]
+                f.write(fmt.format(level=level_name,
+                                   time=asctime.isoformat(' '),
+                                   origin=name,
+                                   thread_id=thread,
+                                   message=message))
+
+class LogViewerWindow(QtWidgets.QMainWindow):
+    close_signal = QtCore.pyqtSignal()
+    levels = collections.OrderedDict([('DEBUG',logging.DEBUG),
+                                      ('INFO', logging.INFO),
+                                      ('WARN', logging.WARN),
+                                      ('ERROR', logging.ERROR)])
+
+    def __init__(self, parent):
+        super(LogViewerWindow, self).__init__(parent=parent)
+        self.setWindowTitle('Log')
+        self.setAttribute(Qt.WA_ShowWithoutActivating)
+        # self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        self.log_view = QtWidgets.QTableView()
+        self.logger = Logger()
+        self.log_view.setModel(self.logger)
+        self.log_view.horizontalHeader().setStretchLastSection(True)
+        self.log_view.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        # self.log_view.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.log_view.setShowGrid(False)
+        self.log_view.setAlternatingRowColors(True)
+        self.logger.rowsInserted.connect(self.log_view.scrollToBottom)
+        logging.getLogger().addHandler(self.logger)
+        logging.getLogger().setLevel(logging.DEBUG)
+        self.current_levelno = logging.DEBUG
+        central_widget = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout()
+        self.level_selection = QtWidgets.QComboBox()
+        self.level_selection.insertItems(0, self.levels.keys())
+        self.level_selection.currentIndexChanged.connect(self.set_level)
+        top_row = QtWidgets.QHBoxLayout()
+        top_row.addWidget(self.level_selection)
+        self.save_button = QtWidgets.QToolButton(clicked=self.save_log)
+        self.save_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton))
+        top_row.addWidget(self.save_button)
+        layout.addLayout(top_row)
+        layout.addWidget(self.log_view)
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
+
+    def closeEvent(self, event):
+        self.close_signal.emit()
+        super(LogViewerWindow, self).closeEvent(event)
+
+    def set_level(self, level_idx):
+        levelno = self.levels.values()[level_idx]
+        if self.current_levelno == levelno:
+            return
+        for row in range(self.logger.rowCount()):
+            if self.logger.messages[row][0] >= levelno:
+                self.log_view.showRow(row)
+            else:
+                self.log_view.hideRow(row)
+        self.current_levelno = levelno
+
+    def save_log(self):
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Log File',
+                                                            filter='Text files(*.txt)')
+        if not filename:
+            return
+        try:
+            self.logger.save_to_file(filename)
+        except (OSError, IOError):
+            logging.getLogger(__name__).exception('Saving log file to "{}" '
+                                                  'failed.'.format(filename))
 
 class KeyboardHelpWindow(QtWidgets.QMainWindow):
 
@@ -134,10 +277,14 @@ class BaseGui(QtWidgets.QMainWindow):
         self.status_bar.addWidget(self.task_progress, 1)
         self.status_label = QtWidgets.QLabel()
         self.status_bar.addPermanentWidget(self.status_label)
-        self.help_button = QtWidgets.QPushButton(clicked=self.toggle_help)
+        self.help_button = QtWidgets.QToolButton(clicked=self.toggle_help)
         self.help_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxQuestion))
         self.help_button.setCheckable(True)
+        self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
+        self.log_button.setText('L')
+        self.log_button.setCheckable(True)
         self.status_bar.addPermanentWidget(self.help_button)
+        self.status_bar.addPermanentWidget(self.log_button)
         self.status_bar.setSizeGripEnabled(False)
         self.setStatusBar(self.status_bar)
         self.status_messages = collections.OrderedDict()
@@ -147,6 +294,9 @@ class BaseGui(QtWidgets.QMainWindow):
         self.help_window.setFocusPolicy(Qt.NoFocus)
         self.help_window.setVisible(False)
         self.help_window.close_signal.connect(lambda: self.help_button.setChecked(False))
+        self.log_window = LogViewerWindow(self)
+        self.log_window.setFocusPolicy(Qt.NoFocus)
+        self.log_window.close_signal.connect(lambda: self.log_button.setChecked(False))
         self.running_task = None
 
     def initialize(self):
@@ -159,6 +309,9 @@ class BaseGui(QtWidgets.QMainWindow):
         help = Command('help', 'General', 'Toggle display of keyboard/mouse commands')
         self.register_key_action(Qt.Key_Question, None, help,
                                  func=lambda arg: self.help_button.click())
+        logger = Command('log', 'General', 'Toggle display of log output')
+        self.register_key_action(Qt.Key_L, None, logger,
+                                 func=lambda arg: self.log_button.click())
         exit = Command('exit', 'General', 'Exit the application')
         self.register_key_action(Qt.Key_Escape, None, exit,
                                  func=lambda arg: self.close())
@@ -237,6 +390,13 @@ class BaseGui(QtWidgets.QMainWindow):
         else:
             self.help_window.setVisible(False)
 
+    def toggle_log(self):
+        if self.log_button.isChecked():
+            self.log_window.setVisible(True)
+            # We need to keep the focus
+            self.setFocus()
+        else:
+            self.log_window.setVisible(False)
 
     @QtCore.pyqtSlot('QString', 'QString')
     def set_status_message(self, category, message):
@@ -299,7 +459,6 @@ class ConfigGui(QtWidgets.QWidget):
         setattr(self.config, name, value)
 
     def set_numerical_value_with_unit(self, name, magnitude, value):
-        print 'setting ', name, 'to ', value*magnitude
         setattr(self.config, name, value*magnitude)
 
     def set_boolean_value(self, name, widget):

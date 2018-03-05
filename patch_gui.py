@@ -2,11 +2,14 @@ import sys
 
 from PyQt5 import QtWidgets
 
+from base.executor import console_logger
 from controller import AutoPatchController
 from controller.pipettes import PipetteController
 from gui.patch import PatchGui
 
 from setup_script import *
+
+console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
 
