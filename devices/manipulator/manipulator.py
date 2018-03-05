@@ -118,7 +118,7 @@ class Manipulator(TaskExecutor):
         while array(previous_position != new_position).any():
             previous_position = new_position
             new_position = self.position_group(axes)
-            time.sleep(0.1) # 100 us
+            self.sleep(0.1)  # 100 ms
 
     def wait_until_reached(self, position, axes = None, precision = 0.5, timeout = 10):
         """
@@ -146,4 +146,4 @@ class Manipulator(TaskExecutor):
                 current_position = array([self.position(axes[0])])
             else:
                 current_position = self.position_group(axes)
-            time.sleep(0.1) # 100 us
+            self.sleep(0.1)  # 100 ms

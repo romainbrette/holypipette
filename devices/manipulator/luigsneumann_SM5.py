@@ -48,7 +48,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         # Initialize ramp length of all axes to 210 ms
         for axis in range(1,3):
             self.set_ramp_length(axis,3)
-            time.sleep(.05)
+            self.sleep(.05)
 
     def send_command(self, ID, data, nbytes_answer, ack_ID=''):
         '''
@@ -146,7 +146,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
     def absolute_move_group(self, x, axes):
         for i in range(len(x)):
             self.absolute_move(x[i], axes[i])
-            time.sleep(0.05)
+            self.sleep(0.05)
 
     def relative_move(self, x, axis):
         '''

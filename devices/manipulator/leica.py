@@ -88,7 +88,7 @@ class Leica(Microscope):
 
     def wait_until_still(self):
         self.mmc.waitForSystem()
-        time.sleep(.7) # That's a very long time!
+        self.sleep(.7) # That's a very long time!
 
     def stop(self):
         self.mmc.stop()

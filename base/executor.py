@@ -105,6 +105,7 @@ class TaskExecutor(LoggingObject):
         requests'''
         check_every = 0.25
         start = time.time()
+        self.abort_if_requested()
         while time.time() - start < (seconds-check_every):
             time.sleep(check_every)
             self.abort_if_requested()

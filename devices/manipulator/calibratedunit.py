@@ -12,11 +12,8 @@ from manipulatorunit import *
 from numpy import array, ones, zeros, eye, dot, arange, vstack, sign, pi, arcsin, mean, std, mgrid
 from numpy.linalg import inv, pinv, norm
 from vision.templatematching import templatematching
-from time import sleep
 from vision.crop import *
 from vision.findpipette import *
-import cv2
-from time import sleep, time
 
 __all__ = ['CalibratedUnit','CalibrationError','CalibratedStage',
            'stack_depth']
@@ -229,7 +226,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Check microscope position
         if abs(z0-self.microscope.position())>position_tolerance:
             raise CalibrationError('Microscope has not returned to its initial position.')
-        sleep(sleep_time)
+        self.sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, stack[stack_depth])
 
@@ -281,7 +278,7 @@ class CalibratedUnit(ManipulatorUnit):
         images=[]
         for _ in range(10):
             images.append(std(self.camera.snap()))
-            sleep(0.1)
+            self.sleep(0.1)
         I0 = mean(images)
         sigma = I0*.2 # allow for a 20% change
         self.debug('Contrast: '+str(I0)+" +- "+str(sigma))
@@ -414,11 +411,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.microscope.relative_move(estimate[2])
         self.microscope.wait_until_still()
 
-        self.abort_if_requested()
-
         # Locate pipette
-        sleep(sleep_time)
-        self.abort_if_requested()
+        self.sleep(sleep_time)
         x, y, z = self.locate_pipette()
         self.abort_if_requested()
         # Focus, move stage and locate again
@@ -429,8 +423,7 @@ class CalibratedUnit(ManipulatorUnit):
             self.stage.wait_until_still()
         self.abort_if_requested()
         self.microscope.wait_until_still()
-        self.abort_if_requested()
-        sleep(sleep_time)
+        self.sleep(sleep_time)
         self.abort_if_requested()
         x, y, z = self.locate_pipette()
 
@@ -463,8 +456,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.wait_until_still()
 
         # Locate pipette
-        sleep(sleep_time)
-        self.abort_if_requested()
+        self.sleep(sleep_time)
         _, _, z = self.locate_pipette()
 
         self.abort_if_requested()
@@ -472,9 +464,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
-        self.abort_if_requested()
-        sleep(sleep_time)
-        self.abort_if_requested()
+        self.sleep(sleep_time)
         x, y, z = self.locate_pipette()
 
         return x,y,z
@@ -894,8 +884,7 @@ class CalibratedStage(CalibratedUnit):
         template = crop_center(self.camera.snap())
 
         # Calculate the location of the template in the image
-        sleep(sleep_time)
-        self.abort_if_requested()
+        self.sleep(sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
@@ -908,7 +897,7 @@ class CalibratedStage(CalibratedUnit):
             self.abort_if_requested()
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
-            sleep(sleep_time)
+            self.sleep(sleep_time)
             self.abort_if_requested()
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
@@ -942,8 +931,7 @@ class CalibratedStage(CalibratedUnit):
             self.abort_if_requested()
             self.reference_move(ri)
             self.wait_until_still()
-            sleep(sleep_time)
-            self.abort_if_requested()
+            self.sleep(sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
@@ -1010,7 +998,7 @@ class CalibratedStage(CalibratedUnit):
                     column+=xdirection
                     self.reference_relative_move([-dx*xdirection,0,0]) # sign: it's a compensatory move
                     self.wait_until_still()
-                    sleep(0.1)
+                    self.sleep(0.1)
                     img = self.camera.snap()
                     big_image[row * dy:(row + 1) * dy, column * dx:(column + 1) * dx] = img
                 if row<ny-1:

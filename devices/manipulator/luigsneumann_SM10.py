@@ -323,7 +323,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
             ID = '0141'
         for _ in range(int(abs(steps))):
             self.send_command(ID, [axis], 0)
-            time.sleep(0.02)
+            self.sleep(0.02)
 
     def set_single_step_distance(self, axis, distance):
         '''
@@ -419,12 +419,12 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         axes4 = [0, 0, 0, 0]
         axes4[:len(axes)] = axes
         data = [0xA0] + axes + [0]
-        time.sleep(0.3)  # right after a motor command the motors are not moving yet
+        self.sleep(0.3)  # right after a motor command the motors are not moving yet
         ret = struct.unpack('20B', self.send_command('A120', data, 20))
         moving = [ret[6 + i*4] for i in range(len(axes))]
         is_moving = any(moving)
         while is_moving:
-            time.sleep(0.05)
+            self.sleep(0.05)
             ret = struct.unpack('20B', self.send_command('A120', data, 20))
             moving = [ret[6 + i * 4] for i in range(len(axes))]
             is_moving = any(moving)

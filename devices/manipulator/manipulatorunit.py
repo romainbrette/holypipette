@@ -4,7 +4,6 @@ It is essentially a subset of a Manipulator
 """
 from manipulator import Manipulator
 from numpy import ndarray, sign, ones, arange
-from time import sleep
 
 __all__ = ['ManipulatorUnit']
 
@@ -58,7 +57,7 @@ class ManipulatorUnit(Manipulator):
             self.dev.absolute_move_group(x, self.axes)
         else:
             self.dev.absolute_move(x, self.axes[axis])
-        sleep(.05)
+        self.sleep(.05)
 
     def absolute_move_group(self, x, axes):
         ## What is this??
@@ -75,7 +74,7 @@ class ManipulatorUnit(Manipulator):
             raise ValueError('Length of arrays do not match.')
         '''
         self.dev.absolute_move_group(x, axes)
-        sleep(.05)
+        self.sleep(.05)
 
     def relative_move(self, x, axis = None):
         '''
@@ -90,7 +89,7 @@ class ManipulatorUnit(Manipulator):
             self.dev.relative_move_group(x, self.axes)
         else:
             self.dev.relative_move(x, self.axes[axis])
-        sleep(.05)
+        self.sleep(.05)
 
     def stop(self, axis = None):
         """
@@ -138,7 +137,7 @@ class ManipulatorUnit(Manipulator):
                 self.wait_until_still(i)
         else:
             self.dev.wait_until_still([self.axes[axes]])
-        sleep(.05)
+        self.sleep(.05)
 
     def wait_until_reached(self, position, axes = None, precision = 0.5, timeout = 10):
         """
