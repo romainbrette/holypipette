@@ -270,7 +270,24 @@ class KeyboardHelpWindow(QtWidgets.QMainWindow):
         super(KeyboardHelpWindow, self).closeEvent(event)
 
 
+class LogNotifyHandler(logging.Handler):
+    def __init__(self, signal):
+        super(LogNotifyHandler, self).__init__()
+        self.signal = signal
+
+    def emit(self, record):
+        self.format(record)
+        if record.exc_info is None:
+            message = record.msg
+        else:
+            _, exc, _ = record.exc_info
+            message = '{} ({})'.format(record.msg, str(exc))
+        self.signal.emit(message)
+
+
 class BaseGui(QtWidgets.QMainWindow):
+    log_signal = QtCore.pyqtSignal('QString')
+
     def __init__(self):
         super(BaseGui, self).__init__()
         self.status_bar = QtWidgets.QStatusBar()
@@ -312,6 +329,16 @@ class BaseGui(QtWidgets.QMainWindow):
         self.log_window.setFocusPolicy(Qt.NoFocus)
         self.log_window.close_signal.connect(lambda: self.log_button.setChecked(False))
         self.running_task = None
+
+        # Display error messages directly in the status bar
+        handler = LogNotifyHandler(self.log_signal)
+        handler.setLevel(logging.ERROR)
+        logging.getLogger('holypipette').addHandler(handler)
+        self.log_signal.connect(self.error_status)
+
+    @QtCore.pyqtSlot('QString')
+    def error_status(self, message):
+        self.status_bar.showMessage(message, 5000)
 
     def initialize(self):
         for controller, signal in self.controller_signals.items():
@@ -356,19 +383,13 @@ class BaseGui(QtWidgets.QMainWindow):
         if self.running_task is None:
             return  # Nothing to do
 
-        # 0 = normal exit, 1 = error, 2 = abort
         self.task_progress.setVisible(False)
         self.task_abort_button.setVisible(False)
-        if exit_reason == 0:
-            text = "Task '{}' finished successfully.".format(self.running_task)
-        elif exit_reason == 1:
-            text = "Task '{}' failed (see log for details).".format(self.running_task)
-        elif exit_reason == 2:
+        # 0: correct execution (no need to show a message)
+        # 1: an error occurred (error will be displayed via `error_status`)
+        if exit_reason == 2:
             text = "Task '{}' aborted.".format(self.running_task)
-        else:
-            #TODO Warning
-            text = "Task {} ended for unknown reason".format(self.running_task)
-        self.status_bar.showMessage(text, 5000)
+            self.status_bar.showMessage(text, 5000)
         self.running_task = None
 
     def keyPressEvent(self, event):
