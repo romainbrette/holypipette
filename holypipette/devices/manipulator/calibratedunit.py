@@ -518,17 +518,17 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.info('First matrix estimation (move each axis once)')
         # *** First pass: move each axis once and estimate matrix ***
-        self.M = 0*self.M # Erase current matrix
+        M = zeros((3, len(self.axes)))
         distance = stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             self.debug('Moving axis {}'.format(axis))
-            x,y,z = self.move_and_track(distance, axis, move_stage=False)
-            z+= self.microscope.position()
+            x, y, z = self.move_and_track(distance, axis, move_stage=False)
+            z += self.microscope.position()
             self.debug('x={}, y={}, z={}'.format(x, y, z))
-            self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
+            M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
             oldx, oldy, oldz = x, y, z
-        self.debug('Matrix:' + str(self.M))
+        self.debug('Matrix:' + str(M))
 
         # *** Calculate up directions ***
         self.calculate_up_directions()
@@ -536,7 +536,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.info('Moving back to initial position')
         # Move back to initial position
         oldx, oldy, oldz = self.move_back(z0, u0, None)  # The pipette could have moved
-        oldz+=self.microscope.position()
+        oldz += self.microscope.position()
 
         # Calculate floor (min Z)
         if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
@@ -587,7 +587,7 @@ class CalibratedUnit(ManipulatorUnit):
 
                 # Update matrix
                 z += self.microscope.position()
-                self.M[:, axis] = -(array([x - oldx, y - oldy, z - oldz])+oldrs-rs) / distance*self.up_direction[axis]
+                M[:, axis] = -(array([x - oldx, y - oldy, z - oldz])+oldrs-rs) / distance*self.up_direction[axis]
                 oldx, oldy, oldz = x, y, z
                 oldrs = rs
 
@@ -599,20 +599,25 @@ class CalibratedUnit(ManipulatorUnit):
             rs = self.stage.reference_position()
             # Update matrix
             z += self.microscope.position()
-            self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
+            M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
             oldx, oldy, oldz = x, y, z
 
-        self.debug('Matrix:' + str(self.M))
+        self.debug('Final Matrix:' + str(M))
 
         # *** Compute the (pseudo-)inverse ***
-        self.Minv = pinv(self.M)
+        Minv = pinv(M)
 
         # *** Calculate offset ***0
         #    Offset is such that the initial position is the position on screen in the reference system
-        self.r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
+        r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
 
+        # Store the new values
+        self.M = M
+        self.Minv = Minv
+        self.r0 = r0
         self.calibrated = True
 
+    # TODO: Is this function still used?
     def calibrate2(self):
         '''
         Automatic calibration.
@@ -736,7 +741,6 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.calibrated = True
 
-
     def recalibrate(self):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
@@ -746,7 +750,8 @@ class CalibratedUnit(ManipulatorUnit):
         u0 = self.position()
         z0 = self.microscope.position()
         stager0 = self.stage.reference_position()
-        self.r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
+        r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
+        self.r0 = r0
 
     def manual_calibration(self, landmarks):
         '''
@@ -767,16 +772,20 @@ class CalibratedUnit(ManipulatorUnit):
         self.debug('r: '+str(r))
         self.debug('rs: ' + str(rs))
         self.debug('u: '+str(u))
-        self.M = dot(r-rs,inv(u))
-        self.debug('Matrix: ' + str(self.M))
+        M = dot(r-rs,inv(u))
+        self.debug('Matrix: ' + str(M))
 
         # 4) Recompute the matrix and the (pseudo) inverse
-        self.Minv = pinv(self.M)
+        Minv = pinv(M)
 
         # 5) Calculate conversion factor.
 
         # Offset (doesn't seem to be right)
-        self.r0 = r0-rs0-dot(self.M, u0)
+        r0 = r0-rs0-dot(M, u0)
+        self.M = M
+        self.Minv = Minv
+        self.r0 = r0
+        self.calibrated = True
 
     def auto_recalibrate(self, center=True):
         '''
@@ -886,6 +895,8 @@ class CalibratedStage(CalibratedUnit):
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
+        M = zeros((3, len(self.axes)))
+
         # Store current position
         u0 = self.position()
         self.info('Small movements for each axis')
@@ -902,14 +913,19 @@ class CalibratedStage(CalibratedUnit):
             self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
 
             # 2) Compute the matrix from unit to camera (first in pixels)
-            self.M[:,axis] = array([x-x0, y-y0, 0])/distance
-            self.debug('Matrix column:' + str(self.M[:, axis]))
+            M[:,axis] = array([x-x0, y-y0, 0])/distance
+            self.debug('Matrix column:' + str(M[:, axis]))
             x0, y0 = x, y # this is the position before the next move
 
         # Compute the (pseudo-)inverse
-        self.Minv = pinv(self.M)
+        Minv = pinv(M)
         # Offset is such that the initial position is zero in the reference system
-        self.r0 = -dot(self.M, u0)
+        r0 = -dot(M, u0)
+
+        # Store the results
+        self.M = M
+        self.Minv = Minv
+        self.r0 = r0
         self.calibrated = True
 
         self.info('Large displacements')
@@ -943,16 +959,21 @@ class CalibratedStage(CalibratedUnit):
         u = vstack((ux,uy)).T
         self.debug('r: '+str(r))
         self.debug('u: '+str(u))
-        self.M[:2,:] = dot(r,inv(u))
-        self.debug('Matrix: ' + str(self.M))
+        M[:2, :] = dot(r, inv(u))
+        self.debug('Matrix: ' + str(M))
 
         # 4) Recompute the matrix and the (pseudo) inverse
-        self.Minv = pinv(self.M)
+        Minv = pinv(M)
 
         # 5) Calculate conversion factor.
 
         # 6) Offset is such that the initial position is zero in the reference system
-        self.r0 = -dot(self.M, u0)
+        r0 = -dot(M, u0)
+
+        # Store results
+        self.M = M
+        self.Minv = Minv
+        self.r0 = r0
 
         self.info('Moving back')
         # Move back
