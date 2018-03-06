@@ -27,6 +27,7 @@ class TaskExecutor(LoggingObject):
         self.error_occurred = False
         self.abort_requested = False
         self.saved_state = None
+        self.saved_state_question = None
         # Overwrite the logging functions so that they check for `abort_requested`
         self.debug = check_for_abort(self, self.debug)
         self.info = check_for_abort(self, self.info)
@@ -72,11 +73,16 @@ class TaskExecutor(LoggingObject):
             time.sleep(check_every)
             self.abort_if_requested()
 
-        time.sleep(seconds - (time.time() - start))
+        remaining = seconds - (time.time() - start)
+        if remaining > 0:
+            time.sleep(remaining)
         self.abort_if_requested()
 
     def save_state(self):
         pass
 
-    def reset_state(self):
+    def delete_state(self):
+        pass
+
+    def recover_state(self):
         pass
