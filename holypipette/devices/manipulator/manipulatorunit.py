@@ -73,7 +73,7 @@ class ManipulatorUnit(Manipulator):
         if len(pos) != len(axes):
             raise ValueError('Length of arrays do not match.')
         '''
-        self.dev.absolute_move_group(x, axes)
+        self.dev.absolute_move_group(x, self.axes[axes])
         self.sleep(.05)
 
     def relative_move(self, x, axis = None):
