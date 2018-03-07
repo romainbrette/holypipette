@@ -5,6 +5,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 
 from holypipette.controller.camera import CameraController
+from holypipette.executor import TaskExecutor
 from .livefeed import LiveFeedQt
 from .base import BaseGui
 
@@ -27,6 +28,7 @@ def draw_cross(pixmap):
 class CameraGui(BaseGui):
 
     camera_signal = QtCore.pyqtSignal('QString', object)
+    camera_reset_signal = QtCore.pyqtSignal(TaskExecutor)
 
     def __init__(self, camera, image_edit=None, display_edit=draw_cross):
         super(CameraGui, self).__init__()
@@ -39,7 +41,8 @@ class CameraGui(BaseGui):
                                 display_edit=self.display_edit)
         self.setFocus()  # Need this to handle arrow keys, etc.
         self.setCentralWidget(self.video)
-        self.controller_signals = {self.camera_controller: self.camera_signal}
+        self.controller_signals = {self.camera_controller: (self.camera_signal,
+                                                            self.camera_reset_signal)}
 
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
@@ -97,8 +100,8 @@ class CameraGui(BaseGui):
             if command.task_description is not None:
                 self.start_task(command.task_description, command.controller)
             if command.controller in self.controller_signals:
-                signal = self.controller_signals[command.controller]
-                signal.emit(command.name, position)
+                command_signal, _ = self.controller_signals[command.controller]
+                command_signal.emit(command.name, position)
             elif func is not None:
                 func(position)
             else:

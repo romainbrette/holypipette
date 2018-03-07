@@ -329,6 +329,7 @@ class BaseGui(QtWidgets.QMainWindow):
         self.log_window.setFocusPolicy(Qt.NoFocus)
         self.log_window.close_signal.connect(lambda: self.log_button.setChecked(False))
         self.running_task = None
+        self.running_task_controller = None
 
         # Display error messages directly in the status bar
         handler = LogNotifyHandler(self.log_signal)
@@ -341,8 +342,9 @@ class BaseGui(QtWidgets.QMainWindow):
         self.status_bar.showMessage(message, 5000)
 
     def initialize(self):
-        for controller, signal in self.controller_signals.items():
-            signal.connect(controller.command_received)
+        for controller, (command_signal, reset_signal) in self.controller_signals.items():
+            command_signal.connect(controller.command_received)
+            reset_signal.connect(controller.reset_requested)
             controller.task_finished.connect(self.task_finished)
         self.register_commands()
 
@@ -378,8 +380,8 @@ class BaseGui(QtWidgets.QMainWindow):
         self.task_abort_button.setEnabled(False)
         self.running_task_controller.abort_task()
 
-    @QtCore.pyqtSlot(int)
-    def task_finished(self, exit_reason):
+    @QtCore.pyqtSlot(int, object)
+    def task_finished(self, exit_reason, executor):
         if self.running_task is None:
             return  # Nothing to do
 
@@ -390,7 +392,21 @@ class BaseGui(QtWidgets.QMainWindow):
         if exit_reason == 2:
             text = "Task '{}' aborted.".format(self.running_task)
             self.status_bar.showMessage(text, 5000)
+
+        # If the task was aborted or failed, and the "executor" object has a
+        # saved state (e.g. the position of the pipette), ask the user whether
+        # they want to reset the state
+        if exit_reason != 0 and executor is not None and executor.has_saved_state():
+            reply = QtWidgets.QMessageBox.question(self, "Reset",
+                                                   executor.saved_state_question,
+                                                   QtWidgets.QMessageBox.Yes |
+                                                   QtWidgets.QMessageBox.No)
+            if reply == QtWidgets.QMessageBox.Yes:
+                _, reset_signal = self.controller_signals[self.running_task_controller]
+                reset_signal.emit(executor)
+
         self.running_task = None
+        self.running_task_controller = None
 
     def keyPressEvent(self, event):
         # Look for an exact match first (key + modifier)
@@ -410,8 +426,8 @@ class BaseGui(QtWidgets.QMainWindow):
             if command.task_description is not None:
                 self.start_task(command.task_description, command.controller)
             if command.controller in self.controller_signals:
-                signal = self.controller_signals[command.controller]
-                signal.emit(command.name, argument)
+                command_signal, _ = self.controller_signals[command.controller]
+                command_signal.emit(command.name, argument)
             elif func is not None:
                 func(argument)
             else:

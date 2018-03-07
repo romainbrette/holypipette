@@ -3,12 +3,14 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
 
+from holypipette.executor import TaskExecutor
 from holypipette.gui import CameraGui
 
 
 class ManipulatorGui(CameraGui):
 
     pipette_command_signal = QtCore.pyqtSignal('QString', object)
+    pipette_reset_signal = QtCore.pyqtSignal(TaskExecutor)
 
     def __init__(self, camera, pipette_controller):
         super(ManipulatorGui, self).__init__(camera)
@@ -17,7 +19,8 @@ class ManipulatorGui(CameraGui):
         self.control_thread.setObjectName('PipetteControlThread')
         self.controller.moveToThread(self.control_thread)
         self.control_thread.start()
-        self.controller_signals[self.controller] = self.pipette_command_signal
+        self.controller_signals[self.controller] = (self.pipette_command_signal,
+                                                    self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
@@ -103,8 +106,8 @@ class ManipulatorGui(CameraGui):
                                      self.controller.commands['switch_manipulator'],
                                      argument=unit_number + 1)
 
-        # Load/save configurations
-        # TODO
+        self.register_key_action(Qt.Key_S, None,
+                                 self.controller.commands['save_configuration'])
 
         # Move pipette by clicking
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,

@@ -86,11 +86,11 @@ class PipetteController(TaskController):
 
     def handle_blocking_command(self, command, argument):
         if command == 'calibrate_stage':
-            self.execute(self.calibrated_stage, 'calibrate', final_task=False)
-            self.execute(self.calibrated_unit, 'analyze_calibration')
+            if self.execute(self.calibrated_stage, 'calibrate', final_task=False):
+                self.execute(self.calibrated_unit, 'analyze_calibration')
         elif command == 'calibrate_manipulator':
-            self.execute(self.calibrated_unit, 'calibrate', final_task=False)
-            self.execute(self.calibrated_unit, 'analyze_calibration')
+            if self.execute(self.calibrated_unit, 'calibrate', final_task=False):
+                self.execute(self.calibrated_unit, 'analyze_calibration')
         else:
             raise ValueError('Unknown blocking command: %s' % command)
 
@@ -133,4 +133,4 @@ class PipetteController(TaskController):
 
     def move_pipette(self, x, y):
         position = np.array([x, y, self.microscope.position()])
-        self.calibrated_unit.run('safe_move', position)
+        self.calibrated_unit.execute('safe_move', position)

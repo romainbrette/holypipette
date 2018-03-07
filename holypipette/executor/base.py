@@ -81,6 +81,9 @@ class TaskExecutor(LoggingObject):
     def save_state(self):
         pass
 
+    def has_saved_state(self):
+        return self.saved_state is not None
+
     def delete_state(self):
         pass
 

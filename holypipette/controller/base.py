@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from PyQt5 import QtCore
 
+from holypipette.executor import TaskExecutor
 from holypipette.log_utils import LoggingObject
 
 
@@ -24,7 +25,7 @@ class Command(object):
 class TaskController(QtCore.QObject, LoggingObject):
     #: Signals the end of a task with an "error code":
     #: 0: successful execution; 1: error during execution; 2: aborted
-    task_finished = QtCore.pyqtSignal(int)
+    task_finished = QtCore.pyqtSignal(int, object)
 
     def __init__(self):
         super(TaskController, self).__init__()
@@ -54,16 +55,39 @@ class TaskController(QtCore.QObject, LoggingObject):
         except Exception:
             self.exception("An error occured dealing with command "
                            "{}".format(command))
-            self.task_finished.emit(1)
+            self.task_finished.emit(1, None)
 
     def execute(self, executor, func_name, final_task=True, *args, **kwds):
+        '''
+        Returns True for successful execution (can be used to launch a sequence
+        of tasks.
+        '''
+        executor.save_state()
         executor.execute(func_name, *args, **kwds)
+        # We send a reference to the "executor" with the task_finished signal,
+        # this can be used to ask the user for a state reset after a failed
+        # command (e.g. move back the pipette to its start position in case a
+        # calibration failed or was aborted)
         if executor.error_occurred:
-            self.task_finished.emit(1)
+            self.task_finished.emit(1, executor)
+            return False
         elif executor.abort_requested:
-            self.task_finished.emit(2)
-        elif final_task:
-            self.task_finished.emit(0)
+            self.task_finished.emit(2, executor)
+            return False
+        else:
+            executor.delete_state()
+            if final_task:
+                self.task_finished.emit(0, executor)
+            return True
+
+    @QtCore.pyqtSlot(TaskExecutor)
+    def reset_requested(self, executor):
+        try:
+            for e in self.executors:
+                e.abort_requested = False
+            executor.recover_state()
+        except Exception:
+            self.exception('Recovering the state for {} failed.'.format(executor))
 
     def abort_task(self):
         for e in self.executors:

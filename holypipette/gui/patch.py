@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 
 from holypipette.controller import Command
+from holypipette.executor import TaskExecutor
 from holypipette.gui import ConfigGui
 from holypipette.gui.manipulator import ManipulatorGui
 
@@ -11,6 +12,7 @@ from holypipette.gui.manipulator import ManipulatorGui
 class PatchGui(ManipulatorGui):
 
     patch_command_signal = QtCore.pyqtSignal('QString', object)
+    patch_reset_signal = QtCore.pyqtSignal(TaskExecutor)
 
     def __init__(self, camera, pipette_controller, patch_controller):
         super(PatchGui, self).__init__(camera, pipette_controller)
@@ -18,7 +20,8 @@ class PatchGui(ManipulatorGui):
         # the same for the patch controller
         self.patch_controller = patch_controller
         self.patch_controller.moveToThread(pipette_controller.thread())
-        self.controller_signals[self.patch_controller] = self.patch_command_signal
+        self.controller_signals[self.patch_controller] = (self.patch_command_signal,
+                                                          self.patch_reset_signal)
 
         self.splitter = QtWidgets.QSplitter()
         self.splitter.addWidget(self.video)
@@ -48,4 +51,5 @@ class PatchGui(ManipulatorGui):
             new_sizes = [current_sizes[0]-min_size, min_size]
         else:
             new_sizes = [current_sizes[0]+current_sizes[1], 0]
+            self.setFocus()
         self.splitter.setSizes(new_sizes)

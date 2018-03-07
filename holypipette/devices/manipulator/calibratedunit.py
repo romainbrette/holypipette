@@ -59,6 +59,9 @@ class CalibratedUnit(ManipulatorUnit):
         camera : a camera, ie, object with a snap() method (optional, for visual calibration)
         '''
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
+        self.saved_state_question = ('Move manipulator and stage back to '
+                                     'initial position?')
+
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
             self.fixed = True
@@ -83,6 +86,21 @@ class CalibratedUnit(ManipulatorUnit):
 
         # Dictionary of objectives and conditions (immersed/non immersed)
         #self.objective = dict()
+
+    def save_state(self):
+        if self.stage is not None:
+            self.stage.save_state()
+        self.saved_state = self.position()
+
+    def delete_state(self):
+        if self.stage is not None:
+            self.stage.delete_state()
+        self.saved_state = None
+
+    def recover_state(self):
+        if self.stage is not None:
+            self.stage.recover_state()
+        self.absolute_move(self.saved_state)
 
     def reference_position(self):
         '''
@@ -866,6 +884,7 @@ class CalibratedStage(CalibratedUnit):
     '''
     def __init__(self, unit, stage=None, microscope=None, camera = None):
         CalibratedUnit.__init__(self, unit, stage, microscope, camera)
+        self.saved_state_question = 'Move stage back to initial position?'
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
@@ -1034,6 +1053,7 @@ class FixedStage(CalibratedUnit):
     A stage that cannot move. This is used to simplify the code.
     '''
     def __init__(self):
+        self.stage = None
         self.r = array([0.,0.,0.]) # position in reference system
         self.u = array([0.,0.]) # position in stage system
         self.calibrated = True
