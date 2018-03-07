@@ -11,7 +11,7 @@ __all__ = ['LiveFeedQt']
 
 class LiveFeedQt(QtWidgets.QLabel):
     def __init__(self, camera, image_edit=None, display_edit=None,
-                 parent=None):
+                 mouse_handler=None, parent=None):
         super(LiveFeedQt, self).__init__(parent=parent)
         # The image_edit function (does nothing by default) gets the raw
         # unscaled image (i.e. a numpy array), while the display_edit
@@ -26,6 +26,7 @@ class LiveFeedQt(QtWidgets.QLabel):
             display_edit = lambda img: img
         self.display_edit = display_edit
 
+        self.mouse_handler = mouse_handler
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
 
@@ -38,6 +39,17 @@ class LiveFeedQt(QtWidgets.QLabel):
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
         timer.start(50) #20 Hz
+
+    def mousePressEvent(self, event):
+        # Ignore clicks that are not on the image
+        xs = event.x() - self.size().width()/2.0
+        ys = event.y() - self.size().height()/2.0
+        pixmap = self.pixmap()
+        if abs(xs) > pixmap.width()/2.0 or abs(ys) > pixmap.height()/2.0:
+            return
+
+        if self.mouse_handler is not None:
+            self.mouse_handler(event)
 
     @QtCore.pyqtSlot()
     def update_image(self):
@@ -73,7 +85,8 @@ class LiveFeedQt(QtWidgets.QLabel):
             size = self.size()
             width, height = size.width(), size.height()
             scaled_pixmap = pixmap.scaled(width, height,
-                                         Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                                          Qt.KeepAspectRatio,
+                                          Qt.SmoothTransformation)
             if self.display_edit is not None:
                 self.display_edit(scaled_pixmap)
             self.setPixmap(scaled_pixmap)

@@ -38,7 +38,8 @@ class CameraGui(BaseGui):
         self.display_edit_funcs = [draw_cross]
         self.video = LiveFeedQt(self.camera,
                                 image_edit=image_edit,
-                                display_edit=self.display_edit)
+                                display_edit=self.display_edit,
+                                mouse_handler=self.video_mouse_press)
         self.setFocus()  # Need this to handle arrow keys, etc.
         self.setCentralWidget(self.video)
         self.controller_signals = {self.camera_controller: (self.camera_signal,
@@ -75,7 +76,7 @@ class CameraGui(BaseGui):
                                                    command.category,
                                                    command.auto_description())
 
-    def mousePressEvent(self, event):
+    def video_mouse_press(self, event):
         # Look for an exact match first (key + modifier)
         event_tuple = (event.button(), int(event.modifiers()))
         description = self.mouse_actions.get(event_tuple, None)
