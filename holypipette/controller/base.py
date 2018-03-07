@@ -47,15 +47,30 @@ class TaskController(QtCore.QObject, LoggingObject):
             for e in self.executors:
                 e.error_occured = False
                 e.abort_requested = False
-            self.handle_command(command, argument)
+            if self.commands[command].task_description is None:
+                self.handle_command(command, argument)
+            else:
+                self.handle_blocking_command(command, argument)
         except Exception:
             self.exception("An error occured dealing with command "
                            "{}".format(command))
             self.task_finished.emit(1)
 
-    def handle_command(self, command, argument):
-        raise NotImplementedError()
+    def execute(self, executor, func_name, final_task=True, *args, **kwds):
+        executor.execute(func_name, *args, **kwds)
+        if executor.error_occurred:
+            self.task_finished.emit(1)
+        elif executor.abort_requested:
+            self.task_finished.emit(2)
+        elif final_task:
+            self.task_finished.emit(0)
 
     def abort_task(self):
         for e in self.executors:
             e.abort_requested = True
+
+    def handle_blocking_command(self, command, argument):
+        raise NotImplementedError()
+
+    def handle_command(self, command, argument):
+        raise NotImplementedError()

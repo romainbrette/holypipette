@@ -33,7 +33,7 @@ class TaskExecutor(LoggingObject):
         self.info = check_for_abort(self, self.info)
         self.warn = check_for_abort(self, self.warn)
 
-    def run(self, func_name, *args, **kwds):
+    def execute(self, func_name, *args, **kwds):
         func = getattr(self, func_name, None)
         if func is None:
             self.error('Object of type {} does not have a '

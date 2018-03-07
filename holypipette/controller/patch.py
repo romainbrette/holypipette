@@ -90,16 +90,17 @@ class AutoPatchController(TaskController):
                          'Patch cell at current position',
                          task_description='Patching cell')
 
-    def handle_command(self, command, argument):
+    def handle_blocking_command(self, command, argument):
         if self.amplifier is None or self.pressure is None:
             raise AutopatchError('Need access to amplifier and pressure controller')
 
         autopatcher = self.autopatcher_by_unit[self.pipette_controller.current_unit]
         if command == 'break_in':
-            autopatcher.break_in()
+            self.execute(autopatcher, 'break_in')
         elif command == 'patch_with_move':
-            autopatcher.patch(np.array(argument))
+            self.execute(autopatcher, 'patch', np.array(argument))
         elif command == 'patch_without_move':
-            autopatcher.patch()
+            self.execute(autopatcher, 'patch')
         else:
             raise ValueError('Unknown command: %s' % command)
+

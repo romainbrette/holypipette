@@ -55,7 +55,10 @@ class PipetteController(TaskController):
         self.add_command('switch_manipulator', 'Manipulators',
                          'Switch to manipulator {}',
                          default_arg=1)
-        # TODO: Load/save
+        self.add_command('load_configuration', 'Manipulators',
+                         'Load the calibration information for the current manipulator')
+        self.add_command('save_configuration', 'Manipulators',
+                         'Save the calibration information for the current manipulator')
         self.add_command('move_pipette', 'Manipulators',
                          'Move pipette to position')
 
@@ -70,10 +73,6 @@ class PipetteController(TaskController):
             self.calibrated_stage.relative_move(argument, axis=0)
         elif command == 'move_stage_vertical':
             self.calibrated_stage.relative_move(argument, axis=1)
-        elif command == 'calibrate_stage':
-            self.calibrate_stage()
-        elif command == 'calibrate_manipulator':
-            self.calibrate()
         elif command == 'switch_manipulator':
             self.switch_manipulator(argument)
         elif command == 'load_configuration':
@@ -84,6 +83,16 @@ class PipetteController(TaskController):
             self.move_pipette(argument[0], argument[1])
         else:
             raise ValueError('Unknown command: %s' % command)
+
+    def handle_blocking_command(self, command, argument):
+        if command == 'calibrate_stage':
+            self.execute(self.calibrated_stage, 'calibrate', final_task=False)
+            self.execute(self.calibrated_unit, 'analyze_calibration')
+        elif command == 'calibrate_manipulator':
+            self.execute(self.calibrated_unit, 'calibrate', final_task=False)
+            self.execute(self.calibrated_unit, 'analyze_calibration')
+        else:
+            raise ValueError('Unknown blocking command: %s' % command)
 
     def switch_manipulator(self, unit_number):
         '''
@@ -99,26 +108,6 @@ class PipetteController(TaskController):
         self.calibrated_unit = self.calibrated_units[self.current_unit]
         self.manipulator_switched.emit('Manipulators',
                                        'Manipulator: %d' % unit_number)
-
-    def calibrate(self):
-        self.calibrated_unit.run('calibrate')
-        if self.calibrated_unit.error_occurred:
-            self.task_finished.emit(1)
-        elif self.calibrated_unit.abort_requested:
-            self.task_finished.emit(2)
-        else:
-            self.calibrated_unit.run('analyze_calibration')
-            self.task_finished.emit(0)
-
-    def calibrate_stage(self):
-        self.calibrated_stage.run('calibrate')
-        if self.calibrated_stage.error_occurred:
-            self.task_finished.emit(1)
-        elif self.calibrated_stage.abort_requested:
-            self.task_finished.emit(2)
-        else:
-            self.calibrated_unit.run('analyze_calibration')
-            self.task_finished.emit(0)
 
     # TODO: Make the configuration system more general/clean
     def save_configuration(self):
