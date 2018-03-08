@@ -120,6 +120,7 @@ class Logger(QtCore.QAbstractTableModel, logging.Handler):
                                    thread_id=thread,
                                    message=message))
 
+
 class LogViewerWindow(QtWidgets.QMainWindow):
     close_signal = QtCore.pyqtSignal()
     levels = collections.OrderedDict([('DEBUG',logging.DEBUG),
@@ -184,6 +185,7 @@ class LogViewerWindow(QtWidgets.QMainWindow):
         except (OSError, IOError):
             logging.getLogger(__name__).exception('Saving log file to "{}" '
                                                   'failed.'.format(filename))
+
 
 class KeyboardHelpWindow(QtWidgets.QMainWindow):
 
@@ -461,14 +463,27 @@ class BaseGui(QtWidgets.QMainWindow):
 
 
 class ConfigGui(QtWidgets.QWidget):
+    value_changed_signal = QtCore.pyqtSignal('QString', object)
+
     def __init__(self, config):
         super(ConfigGui, self).__init__()
         self.config = config
+        self.config._value_changed = self.value_changed
+        self.value_changed_signal.connect(self.display_changed_value)
         layout = QtWidgets.QVBoxLayout()
+        top_row = QtWidgets.QHBoxLayout()
         self.title = QtWidgets.QLabel(config.name)
         self.title.setStyleSheet('font-weight: bold;')
-        layout.addWidget(self.title)
+        top_row.addWidget(self.title)
+        self.load_button = QtWidgets.QToolButton(clicked=self.load_config)
+        self.load_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogOpenButton))
+        top_row.addWidget(self.load_button)
+        self.save_button = QtWidgets.QToolButton(clicked=self.save_config)
+        self.save_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton))
+        top_row.addWidget(self.save_button)
+        layout.addLayout(top_row)
         all_params = config.params()
+        self.value_widgets = {}
         for category, params in config.categories:
             box = QtWidgets.QGroupBox(category)
             rows = QtWidgets.QVBoxLayout()
@@ -496,6 +511,7 @@ class ConfigGui(QtWidgets.QWidget):
                     value_widget.setChecked(getattr(config, param_name))
                     value_widget.stateChanged.connect(functools.partial(self.set_boolean_value, param_name, value_widget))
                 value_widget.setToolTip(param_obj.doc)
+                self.value_widgets[param_name] = value_widget
                 row.addWidget(label, stretch=1)
                 row.addWidget(value_widget)
                 if isinstance(param_obj, NumberWithUnit):
@@ -506,6 +522,22 @@ class ConfigGui(QtWidgets.QWidget):
             layout.addWidget(box)
         self.setLayout(layout)
 
+    def value_changed(self, key, value):
+        if key not in self.value_widgets:
+            return
+        # We do not update the GUI directly here (that's done in
+        # display_changed_value), because it is possible that this is triggered
+        # from code running in a different thread
+        self.value_changed_signal.emit(key, value)
+
+    @QtCore.pyqtSlot('QString', object)
+    def display_changed_value(self, key, value):
+        widget = self.value_widgets[key]
+        if isinstance(widget, QtWidgets.QCheckBox):
+            widget.setChecked(value)
+        else:
+            widget.setValue(value)
+
     def set_numerical_value(self, name, value):
         setattr(self.config, name, value)
 
@@ -514,3 +546,31 @@ class ConfigGui(QtWidgets.QWidget):
 
     def set_boolean_value(self, name, widget):
         setattr(self.config, name, widget.isChecked())
+
+    def save_config(self):
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save configuration",
+                                                            filter='Configuration files (*.cfg)')
+        if filename:
+            try:
+                self.config.to_file(filename)
+            except Exception as ex:
+                error_msg = ('Could not save configuration to ' 
+                             'file "{}"').format(filename)
+                logging.getLogger(__name__).exception(error_msg)
+                QtWidgets.QMessageBox.warning(self, 'Saving failed',
+                                              error_msg + '\n' + str(ex),
+                                              QtWidgets.QMessageBox.Ok)
+
+    def load_config(self):
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Load configuration",
+                                                            filter='Configuration files (*.cfg)')
+        if filename:
+            try:
+                self.config.from_file(filename)
+            except Exception as ex:
+                error_msg = ('Could not load configuration from ' 
+                             'file "{}"').format(filename)
+                logging.getLogger(__name__).exception(error_msg)
+                QtWidgets.QMessageBox.warning(self, 'Loading failed',
+                                              error_msg + '\n' + str(ex),
+                                              QtWidgets.QMessageBox.Ok)

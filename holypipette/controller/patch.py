@@ -4,24 +4,14 @@ Control of automatic patch clamp algorithm
 '''
 import numpy as np
 
-import param
-
+from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.controller import TaskController
 from holypipette.executor import AutoPatcher, AutopatchError
 
 __all__ = ['AutoPatchController', 'PatchConfig']
 
 
-class NumberWithUnit(param.Number):
-    __slots__ = ['unit', 'magnitude']
-
-    def __init__(self, default, unit, magnitude=1.0, *args, **kwds):
-        super(NumberWithUnit, self).__init__(default=default, *args, **kwds)
-        self.unit = unit
-        self.magnitude = magnitude
-
-
-class PatchConfig(param.Parameterized):
+class PatchConfig(Config):
     # Note that the hardware uses mbar and um to measure pressure/distances,
     # therefore pressure and distance values are not defined with magnitude 1e-3
     # or 1e-6
@@ -41,7 +31,7 @@ class PatchConfig(param.Parameterized):
     max_distance = NumberWithUnit(20, bounds=(0, 100), doc='Maximum length of movement during approach', unit='μm')
 
     max_R_increase = NumberWithUnit(1e6, bounds=(0, 100e6), doc='Increase in resistance indicating obstruction', unit='MΩ', magnitude=1e6)
-    cell_R_increase = param.Number(.15, bounds=(0, 1), doc='Proportional increase in resistance indicating cell presence')
+    cell_R_increase = Number(.15, bounds=(0, 1), doc='Proportional increase in resistance indicating cell presence')
     gigaseal_R = NumberWithUnit(1000e6, bounds=(100e6, 10000e6), doc='Gigaseal resistance', unit='MΩ', magnitude=1e6)
 
     seal_min_time = NumberWithUnit(15, bounds=(0, 60), doc='Minimum time for seal', unit='s')
@@ -50,7 +40,7 @@ class PatchConfig(param.Parameterized):
     Vramp_duration = NumberWithUnit(10., bounds=(0, 60), doc='Voltage ramp duration', unit='s')
     Vramp_amplitude = NumberWithUnit(-70e-3, bounds=(-200e-3, 0), doc='Voltage ramp amplitude', unit='mV', magnitude=1e-3)
 
-    zap = param.Boolean(False, doc='Zap the cell to break the seal')
+    zap = Boolean(False, doc='Zap the cell to break the seal')
 
     categories = [('Pressure', ['pressure_near', 'pressure_sealing',
                                 'pressure_ramp_increment', 'pressure_ramp_max',
