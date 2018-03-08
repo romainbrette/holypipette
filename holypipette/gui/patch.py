@@ -28,6 +28,7 @@ class PatchGui(ManipulatorGui):
         self.config_gui = ConfigGui(self.patch_controller.config)
         self.splitter.addWidget(self.config_gui)
         self.setCentralWidget(self.splitter)
+        self.splitter.splitterMoved.connect(self.splitter_size_changed)
 
     def register_commands(self):
         super(PatchGui, self).register_commands()
@@ -42,6 +43,12 @@ class PatchGui(ManipulatorGui):
                                  'Show/hide the configuration pane')
         self.register_key_action(Qt.Key_P, None, config_command,
                                  func=self.toggle_configuration_display)
+
+    @QtCore.pyqtSlot(int, int)
+    def splitter_size_changed(self, pos, index):
+        # If the splitter is moved all the way to the right, get back the focus
+        if self.splitter.sizes()[1] == 0:
+            self.setFocus()
 
     def toggle_configuration_display(self, arg):
         # We get arg=None as the argument, just ignore it

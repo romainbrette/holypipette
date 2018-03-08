@@ -46,6 +46,7 @@ class LiveFeedQt(QtWidgets.QLabel):
         ys = event.y() - self.size().height()/2.0
         pixmap = self.pixmap()
         if abs(xs) > pixmap.width()/2.0 or abs(ys) > pixmap.height()/2.0:
+            self.setFocus()
             return
 
         if self.mouse_handler is not None:
