@@ -1,7 +1,7 @@
 # coding=utf-8
 from __future__ import absolute_import
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
 from holypipette.controller.camera import CameraController
@@ -41,9 +41,26 @@ class CameraGui(BaseGui):
                                 display_edit=self.display_edit,
                                 mouse_handler=self.video_mouse_press)
         self.setFocus()  # Need this to handle arrow keys, etc.
-        self.setCentralWidget(self.video)
         self.controller_signals = {self.camera_controller: (self.camera_signal,
                                                             self.camera_reset_signal)}
+
+        # Add an (optional) area for configuration options
+        self.splitter = QtWidgets.QSplitter()
+        self.splitter.addWidget(self.video)
+        self.config_tab = QtWidgets.QTabWidget()
+        self.splitter.addWidget(self.config_tab)
+        self.setCentralWidget(self.splitter)
+        self.splitter.setSizes([1, 0])
+        self.splitter.splitterMoved.connect(self.splitter_size_changed)
+
+    @QtCore.pyqtSlot(int, int)
+    def splitter_size_changed(self, pos, index):
+        # If the splitter is moved all the way to the right, get back the focus
+        if self.splitter.sizes()[1] == 0:
+            self.setFocus()
+
+    def add_config_gui(self, config_gui, name):
+        self.config_tab.addTab(config_gui, name)
 
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
@@ -107,3 +124,14 @@ class CameraGui(BaseGui):
                 func(position)
             else:
                 raise AssertionError('Need a controller or a function')
+
+    def toggle_configuration_display(self, arg):
+        # We get arg=None as the argument, just ignore it
+        current_sizes = self.splitter.sizes()
+        if current_sizes[1] == 0:
+            min_size = self.config_tab.sizeHint().width()
+            new_sizes = [current_sizes[0]-min_size, min_size]
+        else:
+            new_sizes = [current_sizes[0]+current_sizes[1], 0]
+            self.setFocus()
+        self.splitter.setSizes(new_sizes)

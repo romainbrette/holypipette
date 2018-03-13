@@ -466,16 +466,19 @@ class BaseGui(QtWidgets.QMainWindow):
 class ConfigGui(QtWidgets.QWidget):
     value_changed_signal = QtCore.pyqtSignal('QString', object)
 
-    def __init__(self, config):
+    def __init__(self, config, show_name=False):
         super(ConfigGui, self).__init__()
         self.config = config
         self.config._value_changed = self.value_changed
         self.value_changed_signal.connect(self.display_changed_value)
         layout = QtWidgets.QVBoxLayout()
         top_row = QtWidgets.QHBoxLayout()
-        self.title = QtWidgets.QLabel(config.name)
-        self.title.setStyleSheet('font-weight: bold;')
-        top_row.addWidget(self.title)
+        if show_name:
+            self.title = QtWidgets.QLabel(config.name)
+            self.title.setStyleSheet('font-weight: bold;')
+            top_row.addWidget(self.title)
+        else:
+            top_row.setAlignment(Qt.AlignRight)
         self.load_button = QtWidgets.QToolButton(clicked=self.load_config)
         self.load_button.setIcon(qta.icon('fa.upload'))
         top_row.addWidget(self.load_button)
