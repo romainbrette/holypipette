@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 A class to handle a manipulator unit with coordinates calibrated to the reference system of a camera.
 It contains methods to calibrate the unit.
@@ -13,17 +14,27 @@ from numpy import array, zeros, dot, arange, vstack, sign, pi, arcsin, mean, std
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
 
-__all__ = ['CalibratedUnit','CalibrationError','CalibratedStage',
-           'stack_depth']
+__all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage']
 
 verbose = True
 
 ##### Calibration parameters #####
+from holypipette.config import Config, NumberWithUnit, Number
 
-position_tolerance = 0.5 # in um
-sleep_time = 1. # Sleep time before taking pictures after a pipette move, because the pipette might vibrate
-stack_depth = 8 # Depth in um of the vertical stack of photos (+- stack_depth)
-calibration_moves = 13 # Number of calibration moves: total distance is 2^calibration_moves
+
+class CalibrationConfig(Config):
+    position_tolerance = NumberWithUnit(0.5, unit='μm',
+                                        doc='Position tolerance', bounds=(0, 10))
+    sleep_time = NumberWithUnit(1., unit='s', doc='Sleep time before taking pictures after a pipette move, because the pipette might vibrate',
+                                bounds=(0, 2))
+    stack_depth = NumberWithUnit(8, unit='μm', doc='Depth of the vertical stack of photos (+- stack_depth)',
+                                 bounds=(0, 20))
+    calibration_moves = Number(13, doc='Number of calibration moves: total distance is 2^calibration_moves',
+                               bounds=(1, 20))
+
+    categories = [('Calibration', ['sleep_time', 'position_tolerance',
+                                   'stack_depth', 'calibration_moves'])]
+
 
 class CalibrationError(Exception):
     def __init__(self, message='Device is not calibrated'):
@@ -45,7 +56,8 @@ class CalibrationError(Exception):
 #         self.offset = offset
 
 class CalibratedUnit(ManipulatorUnit):
-    def __init__(self, unit, stage=None, microscope=None, camera=None):
+    def __init__(self, unit, stage=None, microscope=None, camera=None,
+                 config=None):
         '''
         A manipulator unit calibrated to a fixed reference coordinate system.
         The stage refers to a platform on which the unit is mounted, which can
@@ -61,7 +73,9 @@ class CalibratedUnit(ManipulatorUnit):
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         self.saved_state_question = ('Move manipulator and stage back to '
                                      'initial position?')
-
+        if config is None:
+            config = CalibrationConfig(name='Calibration config')
+        self.config = config
         if stage is None: # In this case we assume the unit is on a fixed element.
             self.stage = FixedStage()
             self.fixed = True
@@ -234,17 +248,17 @@ class CalibratedUnit(ManipulatorUnit):
         self.info("Pipette cardinal position: "+str(self.pipette_position))
 
         z0 = self.microscope.position()
-        z = z0 + arange(-stack_depth, stack_depth + 1)  # +- stack_depth um around current position
+        z = z0 + arange(-self.config.stack_depth, self.config.stack_depth + 1)  # +- stack_depth um around current position
         stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position),
                                       save = 'series')
         # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
 
         # Check microscope position
-        if abs(z0-self.microscope.position())>position_tolerance:
+        if abs(z0-self.microscope.position())>self.config.position_tolerance:
             raise CalibrationError('Microscope has not returned to its initial position.')
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[stack_depth])
+        x0, y0, _ = templatematching(image, stack[self.config.stack_depth])
 
         # Calculate minimum correlation with stack images
         image = stack[len(stack)/2] # Focused image
@@ -362,12 +376,12 @@ class CalibratedUnit(ManipulatorUnit):
         image = self.camera.snap()
 
         # Error margins for position estimation
-        template_height, template_width = stack[stack_depth].shape
+        template_height, template_width = stack[self.config.stack_depth].shape
         xmargin = template_width / 4
         ymargin = template_height / 4
 
         # First template matching to estimate pipette position on screen
-        xt, yt, _ = templatematching(image, stack[stack_depth])
+        xt, yt, _ = templatematching(image, stack[self.config.stack_depth])
 
         image = self.camera.snap()
         # Crop image around estimated position
@@ -383,7 +397,7 @@ class CalibratedUnit(ManipulatorUnit):
             yt += dy
             if val > valmax:
                 valmax = val
-                x, y, z = xt, yt, stack_depth - i  # note the sign for z
+                x, y, z = xt, yt, self.config.stack_depth - i  # note the sign for z
 
         self.debug('Correlation=' + str(valmax))
         if valmax < threshold:
@@ -428,7 +442,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.microscope.wait_until_still()
 
         # Locate pipette
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         x, y, z = self.locate_pipette()
         self.abort_if_requested()
         # Focus, move stage and locate again
@@ -439,7 +453,7 @@ class CalibratedUnit(ManipulatorUnit):
             self.stage.wait_until_still()
         self.abort_if_requested()
         self.microscope.wait_until_still()
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         self.abort_if_requested()
         x, y, z = self.locate_pipette()
 
@@ -472,7 +486,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.wait_until_still()
 
         # Locate pipette
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         _, _, z = self.locate_pipette()
 
         self.abort_if_requested()
@@ -480,7 +494,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Focus and locate again
         self.microscope.relative_move(z)
         self.microscope.wait_until_still()
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         x, y, z = self.locate_pipette()
 
         return x,y,z
@@ -521,7 +535,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # *** Calculate image borders ***
 
-        template_height, template_width = self.photos[stack_depth].shape
+        template_height, template_width = self.photos[self.config.stack_depth].shape
         width, height = self.camera.width, self.camera.height
         # We use a margin of 1/4 of the template
         left_border = -(width/2-(template_width*3)/4)
@@ -537,7 +551,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.info('First matrix estimation (move each axis once)')
         # *** First pass: move each axis once and estimate matrix ***
         M = zeros((3, len(self.axes)))
-        distance = stack_depth*.5
+        distance = self.config.stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             self.debug('Moving axis {}'.format(axis))
@@ -570,7 +584,9 @@ class CalibratedUnit(ManipulatorUnit):
             distance = min_distance * 1.
             oldrs = self.stage.reference_position()
             move_stage = False
-            while (distance<2000): # just for testing
+            moves = 0
+            while moves < self.config.calibration_moves: # just for testing
+                moves += 1
                 distance *= 2
                 self.debug('Distance ' + str(distance))
 
@@ -650,7 +666,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # *** Calculate image borders ***
 
-        template_height, template_width = self.photos[stack_depth].shape
+        template_height, template_width = self.photos[self.config.stack_depth].shape
         width, height = self.camera.width, self.camera.height
         # We use a margin of 1/4 of the template
         left_border = -(width/2-(template_width*3)/4)
@@ -665,7 +681,7 @@ class CalibratedUnit(ManipulatorUnit):
 
         # *** First pass: move each axis once and estimate matrix ***
         self.Minv = 0*self.Minv # Erase current matrix
-        distance = stack_depth*.5
+        distance = self.config.stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             x,y,z = self.move_and_track(distance, axis, move_stage=False)
@@ -882,8 +898,10 @@ class CalibratedStage(CalibratedUnit):
     microscope : ManipulatorUnit for the microscope (single axis)
     camera : a camera, ie, object with a snap() method (optional, for visual calibration)
     '''
-    def __init__(self, unit, stage=None, microscope=None, camera = None):
-        CalibratedUnit.__init__(self, unit, stage, microscope, camera)
+    def __init__(self, unit, stage=None, microscope=None, camera=None,
+                 config=None):
+        CalibratedUnit.__init__(self, unit, stage, microscope, camera,
+                                config=config)
         self.saved_state_question = 'Move stage back to initial position?'
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
@@ -910,7 +928,7 @@ class CalibratedStage(CalibratedUnit):
         template = crop_center(self.camera.snap())
 
         # Calculate the location of the template in the image
-        self.sleep(sleep_time)
+        self.sleep(self.config.sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
 
@@ -925,7 +943,7 @@ class CalibratedStage(CalibratedUnit):
             self.abort_if_requested()
             self.relative_move(distance, axis) # there could be a keyword blocking = True
             self.wait_until_still(axis)
-            self.sleep(sleep_time)
+            self.sleep(self.config.sleep_time)
             self.abort_if_requested()
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
@@ -964,7 +982,7 @@ class CalibratedStage(CalibratedUnit):
             self.abort_if_requested()
             self.reference_move(ri)
             self.wait_until_still()
-            self.sleep(sleep_time)
+            self.sleep(self.config.sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
             self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))

@@ -38,7 +38,3 @@ class PatchGui(ManipulatorGui):
         self.register_key_action(Qt.Key_B, None,
                                  self.patch_controller.commands['break_in'])
 
-        config_command = Command('patch_config', 'Patch',
-                                 'Show/hide the configuration pane')
-        self.register_key_action(Qt.Key_P, None, config_command,
-                                 func=self.toggle_configuration_display)

@@ -5,7 +5,7 @@ import numpy as np
 from PyQt5 import QtCore
 
 from holypipette.controller import TaskController
-from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage
+from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage, CalibrationConfig
 
 
 class PipetteController(TaskController):
@@ -20,17 +20,20 @@ class PipetteController(TaskController):
         super(PipetteController, self).__init__()
         self.microscope = microscope
         self.camera = camera
-        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera)
+        # Create a common calibration configuration for all stages/manipulators
+        self.calibration_config = CalibrationConfig(name='Calibration config')
+        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera,
+                                                config=self.calibration_config)
         self.calibrated_units = [CalibratedUnit(unit,
                                                 self.calibrated_stage,
                                                 microscope,
-                                                camera)
+                                                camera,
+                                                config=self.calibration_config)
                                  for unit in units]
 
         self.executors.add(self.calibrated_stage)
         for calibrated_unit in self.calibrated_units:
             self.executors.add(calibrated_unit)
-
 
         if config_filename is None:
             config_filename = os.path.join(os.path.expanduser('~'),

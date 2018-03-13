@@ -472,6 +472,7 @@ class ConfigGui(QtWidgets.QWidget):
         self.config._value_changed = self.value_changed
         self.value_changed_signal.connect(self.display_changed_value)
         layout = QtWidgets.QVBoxLayout()
+        layout.setAlignment(Qt.AlignTop)
         top_row = QtWidgets.QHBoxLayout()
         if show_name:
             self.title = QtWidgets.QLabel(config.name)

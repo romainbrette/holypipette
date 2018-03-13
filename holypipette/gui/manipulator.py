@@ -3,8 +3,9 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
 
+from holypipette.controller import Command
 from holypipette.executor import TaskExecutor
-from holypipette.gui import CameraGui
+from holypipette.gui import CameraGui, ConfigGui
 
 
 class ManipulatorGui(CameraGui):
@@ -22,6 +23,10 @@ class ManipulatorGui(CameraGui):
         self.controller_signals[self.controller] = (self.pipette_command_signal,
                                                     self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
+
+        self.calibration_config_gui = ConfigGui(self.controller.calibration_config)
+        self.add_config_gui(self.calibration_config_gui,
+                            self.controller.calibration_config.name)
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
         if autoscale and not text:
@@ -112,3 +117,9 @@ class ManipulatorGui(CameraGui):
         # Move pipette by clicking
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
                                    self.controller.commands['move_pipette'])
+
+        # Show configuration pane
+        config_command = Command('config_pane', 'General',
+                                 'Show/hide the configuration pane')
+        self.register_key_action(Qt.Key_P, None, config_command,
+                                 func=self.toggle_configuration_display)
