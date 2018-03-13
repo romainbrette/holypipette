@@ -10,6 +10,7 @@ import traceback
 import param
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
+import qtawesome as qta
 
 from holypipette.controller import Command
 
@@ -153,7 +154,7 @@ class LogViewerWindow(QtWidgets.QMainWindow):
         top_row = QtWidgets.QHBoxLayout()
         top_row.addWidget(self.level_selection)
         self.save_button = QtWidgets.QToolButton(clicked=self.save_log)
-        self.save_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton))
+        self.save_button.setIcon(qta.icon('fa.download'))
         top_row.addWidget(self.save_button)
         layout.addLayout(top_row)
         layout.addWidget(self.log_view)
@@ -293,8 +294,8 @@ class BaseGui(QtWidgets.QMainWindow):
     def __init__(self):
         super(BaseGui, self).__init__()
         self.status_bar = QtWidgets.QStatusBar()
-        self.task_abort_button = QtWidgets.QPushButton(clicked=self.abort_task)
-        self.task_abort_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogCancelButton))
+        self.task_abort_button = QtWidgets.QToolButton(clicked=self.abort_task)
+        self.task_abort_button.setIcon(qta.icon('fa.ban'))
         self.task_abort_button.setVisible(False)
         self.status_bar.addWidget(self.task_abort_button)
         self.task_progress = QtWidgets.QProgressBar(parent=self)
@@ -311,10 +312,10 @@ class BaseGui(QtWidgets.QMainWindow):
         self.status_label = QtWidgets.QLabel()
         self.status_bar.addPermanentWidget(self.status_label)
         self.help_button = QtWidgets.QToolButton(clicked=self.toggle_help)
-        self.help_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_MessageBoxQuestion))
+        self.help_button.setIcon(qta.icon('fa.question-circle'))
         self.help_button.setCheckable(True)
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
-        self.log_button.setText('L')
+        self.log_button.setIcon(qta.icon('fa.file'))
         self.log_button.setCheckable(True)
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.addPermanentWidget(self.log_button)
@@ -476,10 +477,10 @@ class ConfigGui(QtWidgets.QWidget):
         self.title.setStyleSheet('font-weight: bold;')
         top_row.addWidget(self.title)
         self.load_button = QtWidgets.QToolButton(clicked=self.load_config)
-        self.load_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogOpenButton))
+        self.load_button.setIcon(qta.icon('fa.upload'))
         top_row.addWidget(self.load_button)
         self.save_button = QtWidgets.QToolButton(clicked=self.save_config)
-        self.save_button.setIcon(self.style().standardIcon(QtWidgets.QStyle.SP_DialogSaveButton))
+        self.save_button.setIcon(qta.icon('fa.download'))
         top_row.addWidget(self.save_button)
         layout.addLayout(top_row)
         all_params = config.params()
