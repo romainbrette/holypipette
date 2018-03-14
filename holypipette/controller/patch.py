@@ -59,7 +59,7 @@ class AutoPatchController(TaskController):
     '''
     def __init__(self, amplifier, pressure, pipette_controller):
         super(AutoPatchController, self).__init__()
-        self.config = PatchConfig(name='Patch configuration')
+        self.config = PatchConfig(name='Patch config')
         self.amplifier = amplifier
         self.pressure = pressure
         self.pipette_controller = pipette_controller

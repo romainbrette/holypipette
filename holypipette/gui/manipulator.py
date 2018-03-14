@@ -24,9 +24,7 @@ class ManipulatorGui(CameraGui):
                                                     self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
 
-        self.calibration_config_gui = ConfigGui(self.controller.calibration_config)
-        self.add_config_gui(self.calibration_config_gui,
-                            self.controller.calibration_config.name)
+        self.add_config_gui(self.controller.calibration_config)
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
         if autoscale and not text:

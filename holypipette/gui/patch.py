@@ -22,12 +22,7 @@ class PatchGui(ManipulatorGui):
         self.patch_controller.moveToThread(pipette_controller.thread())
         self.controller_signals[self.patch_controller] = (self.patch_command_signal,
                                                           self.patch_reset_signal)
-
-
-        self.patch_config_gui = ConfigGui(self.patch_controller.config,
-                                          show_name=False)
-        self.add_config_gui(self.patch_config_gui,
-                            self.patch_controller.config.name)
+        self.add_config_gui(self.patch_controller.config)
 
     def register_commands(self):
         super(PatchGui, self).register_commands()

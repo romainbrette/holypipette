@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 
 from holypipette.controller.camera import CameraController
 from holypipette.executor import TaskExecutor
+from holypipette.gui import ConfigGui
 from .livefeed import LiveFeedQt
 from .base import BaseGui
 
@@ -59,8 +60,9 @@ class CameraGui(BaseGui):
         if self.splitter.sizes()[1] == 0:
             self.setFocus()
 
-    def add_config_gui(self, config_gui, name):
-        self.config_tab.addTab(config_gui, name)
+    def add_config_gui(self, config):
+        config_gui = ConfigGui(config)
+        self.config_tab.addTab(config_gui, config.name)
 
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
