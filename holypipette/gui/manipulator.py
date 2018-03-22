@@ -116,6 +116,18 @@ class ManipulatorGui(CameraGui):
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
                                    self.controller.commands['move_pipette'])
 
+        # Microscope control
+        self.register_key_action(Qt.Key_PageUp, None,
+                                 self.controller.commands['move_microscope'],
+                                 argument=10)
+        self.register_key_action(Qt.Key_PageDown, None,
+                                 self.controller.commands['move_microscope'],
+                                 argument=-10)
+        self.register_key_action(Qt.Key_F, None,
+                                 self.controller.commands['set_floor'])
+        self.register_key_action(Qt.Key_G, None,
+                                 self.controller.commands['go_to_floor'])
+
         # Show configuration pane
         config_command = Command('config_pane', 'General',
                                  'Show/hide the configuration pane')

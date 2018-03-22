@@ -1,3 +1,4 @@
+# coding=utf-8
 import cPickle as pickle
 import os
 
@@ -43,15 +44,17 @@ class PipetteController(TaskController):
         self.calibrated_unit = None
 
         # Define commands
+        # Stage
         self.add_command('move_stage_vertical', 'Stage',
-                         'Move stage vertically by {:.0f}um',
+                         'Move stage vertically by {:.0f}μm',
                          default_arg=10)
         self.add_command('move_stage_horizontal', 'Stage',
-                         'Move stage horizontally by {:.0f}um',
+                         'Move stage horizontally by {:.0f}μm',
                          default_arg=10)
         self.add_command('calibrate_stage', 'Stage',
                          'Calibrate stage only',
                          task_description='Calibrating stage')
+        # Manipulators
         self.add_command('calibrate_manipulator', 'Manipulators',
                          'Calibrate stage and manipulator',
                          task_description='Calibrating stage and manipulator')
@@ -59,11 +62,22 @@ class PipetteController(TaskController):
                          'Switch to manipulator {}',
                          default_arg=1)
         self.add_command('load_configuration', 'Manipulators',
-                         'Load the calibration information for the current manipulator')
+                         'Load the calibration information for the current '
+                         'manipulator')
         self.add_command('save_configuration', 'Manipulators',
-                         'Save the calibration information for the current manipulator')
+                         'Save the calibration information for the current '
+                         'manipulator')
         self.add_command('move_pipette', 'Manipulators',
                          'Move pipette to position')
+        # Microscope
+        self.add_command('move_microscope', 'Microscope',
+                         'Move microscope by {:.0f}μm',
+                         default_arg=10)
+        self.add_command('set_floor', 'Microscope',
+                         'Set the position of the floor (cover slip)')
+        self.add_command('go_to_floor', 'Microscope',
+                         'Go to the floor (cover slip)',
+                         task_description='Go to the floor (cover slip)')
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
@@ -84,6 +98,10 @@ class PipetteController(TaskController):
             self.save_configuration()
         elif command == 'move_pipette':
             self.move_pipette(argument[0], argument[1])
+        elif command == 'move_microscope':
+            self.microscope.relative_move(argument)
+        elif command == 'set_floor':
+            self.microscope.floor_Z = self.microscope.position()
         else:
             raise ValueError('Unknown command: %s' % command)
 
@@ -94,6 +112,9 @@ class PipetteController(TaskController):
         elif command == 'calibrate_manipulator':
             if self.execute(self.calibrated_unit, 'calibrate', final_task=False):
                 self.execute(self.calibrated_unit, 'analyze_calibration')
+        elif command == 'go_to_floor':
+            self.execute(self.microscope, 'absolute_move',
+                         x=self.microscope.floor_Z)
         else:
             raise ValueError('Unknown blocking command: %s' % command)
 
