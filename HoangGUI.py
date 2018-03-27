@@ -107,6 +107,16 @@ class TestGui(QtWidgets.QMainWindow):
                     self.patch_signal.emit()
                 elif event.modifiers() == Qt.ControlModifier:
                     self.patch_nomove_signal.emit()
+
+                ##### HOANG
+                # Integrated patching and cleaning (1 neuron)
+                elif event.modifiers() == Qt.AltModifier:
+                    global z3, u3
+                    z3 = microscope.position()
+                    u3 = calibrated_unit.position()
+                    self.patch_signal.emit()
+                    self.pipette_cleaning_signal.emit()
+
                 else:
                     self.move_signal.emit()
             except Exception:
@@ -267,22 +277,18 @@ class TestGui(QtWidgets.QMainWindow):
                 print("Washing bath location: Done. Locate the rinsing bath and press F4")
             #Store the position of the rinsing bath
             elif event.key() == Qt.Key_F4:
-                global u5
-                u5 = calibrated_unit.position()
-                print("bath location process: Done. Ready for pipette cleaning!")
+                if amplifier is None:
+                    print("Amplifier not available. Aborting.")
+                    return
+                else:
+                    global u5
+                    u5 = calibrated_unit.position()
+                    print("Bath location process: Done. Ready for pipette cleaning!")
             elif event.key() == Qt.Key_F2:
                 global z3, u3
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
                 self.pipette_cleaning_signal.emit()
-            #Pipette cleaning TESTING
-            elif event.key() == Qt.Key_F5:
-                if amplifier is None:
-                    print("Amplifier not available. Aborting.")
-                    return
-                else:
-                    R = amplifier.resistance()
-                    message("Resistance:" + str(R / 1e6))
 
         except Exception:
             print(traceback.format_exc())
