@@ -33,7 +33,7 @@ class TaskExecutor(LoggingObject):
         self.info = check_for_abort(self, self.info)
         self.warn = check_for_abort(self, self.warn)
 
-    def execute(self, func_name, *args, **kwds):
+    def execute(self, func_name, **kwds):
         func = getattr(self, func_name, None)
         if func is None:
             self.error('Object of type {} does not have a '
@@ -45,7 +45,7 @@ class TaskExecutor(LoggingObject):
         try:
             self.error_occurred = False
             self.abort_requested = False
-            func(*args, **kwds)
+            func(**kwds)
         except RequestedAbortException:
             # We don't want the debug command to raise the exception again,
             # so temporarily disable the `abort_requested` attribute
