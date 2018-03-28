@@ -68,10 +68,6 @@ class CameraGui(BaseGui):
         for func in self.display_edit_funcs:
             func(pixmap)
 
-    def initialize(self):
-        super(CameraGui, self).initialize()
-        self.camera_controller.connect(self)
-
     def register_commands(self):
         super(CameraGui, self).register_commands()
         self.register_key_action(Qt.Key_Plus, None,

@@ -349,6 +349,7 @@ class BaseGui(QtWidgets.QMainWindow):
             command_signal.connect(controller.command_received)
             reset_signal.connect(controller.reset_requested)
             controller.task_finished.connect(self.task_finished)
+            controller.connect(self)
         self.register_commands()
 
     def register_commands(self):

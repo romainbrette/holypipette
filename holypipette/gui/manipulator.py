@@ -62,10 +62,6 @@ class ManipulatorGui(CameraGui):
                 painter.drawText(c_x, c_y - 10, '{}µm'.format(length_in_um))
             painter.end()
 
-    def initialize(self):
-        super(ManipulatorGui, self).initialize()
-        self.controller.connect(self)
-
     def register_commands(self):
         super(ManipulatorGui, self).register_commands()
 

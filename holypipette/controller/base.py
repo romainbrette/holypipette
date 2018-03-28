@@ -242,13 +242,40 @@ class TaskController(QtCore.QObject, LoggingObject):
     # The following functions have to be implemented if the class declares any
     # blocking/non-blocking commands
     def handle_blocking_command(self, command, argument):
+        """
+        Handle a blocking command. Should execute all function calls via
+        `execute`.
+
+        Parameters
+        ----------
+        command : str
+            The name of the command.
+        argument : object
+            The argument provided with the command (may be ``None``).
+        """
         raise NotImplementedError()
 
     def handle_command(self, command, argument):
-        raise NotImplementedError()
+        """Handle a non-blocking command.
+
+        Parameters
+        ----------
+        command : str
+            The name of the command.
+        argument : object
+            The argument provided with the command (may be ``None``)."""
 
     # This function will be automatically called by the main GUI and can be
     # overwritten to connect signals in this class to the main GUI (e.g. to
     # update information in the status bar)
     def connect(self, main_gui):
+        """
+        Connect signals to slots in the main GUI. Will be called automatically
+        during initialization of the GUI.
+
+        Parameters
+        ----------
+        main_gui : `BaseGui`
+            The main GUI in control.
+        """
         pass
