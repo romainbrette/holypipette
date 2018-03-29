@@ -19,13 +19,13 @@ from gui import *
 from vision import *
 from autopatch import *
 import cv2
+import numpy as np
 
 import time
 from setup_script import *
 
 home = expanduser("~")
 config_filename = home+'/config_manipulator.cfg'
-
 # Catch segmentation faults and aborts
 def signal_handler(signum, frame):
     print("*** Received signal %d" % signum)
@@ -33,6 +33,7 @@ def signal_handler(signum, frame):
 
 signal.signal(signal.SIGSEGV, signal_handler)
 signal.signal(signal.SIGABRT, signal_handler)
+
 
 class TestGui(QtWidgets.QMainWindow):
     calibrate_signal = QtCore.pyqtSignal()
@@ -52,6 +53,12 @@ class TestGui(QtWidgets.QMainWindow):
     catch_signal = QtCore.pyqtSignal()
     ##### HOANG
     pipette_cleaning_signal = QtCore.pyqtSignal()
+    initial_location_signal = QtCore.pyqtSignal()
+    #movement_compensation_signal = QtCore.pyqtSignal()
+    move_patch_clean_signal = QtCore.pyqtSignal()
+
+
+
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -87,10 +94,15 @@ class TestGui(QtWidgets.QMainWindow):
         self.load()
         ##### HOANG
         self.pipette_cleaning_signal.connect(self.calibrator.do_cleaning_pipette)
+        self.initial_location_signal.connect(self.calibrator.do_initial_location)
+        #self.movement_compensation_signal.connect(self.calibrator.do_movement_compensate)
+        self.move_patch_clean_signal.connect(self.calibrator.do_move_patch_clean)
+
 
     def mouse_callback(self, event):
         # Click = move
         # Shift-click = move and patch
+        global moveList
         if event.button() == Qt.LeftButton:
             try:
                 x, y = event.x(), event.y()
@@ -107,18 +119,21 @@ class TestGui(QtWidgets.QMainWindow):
                     self.patch_signal.emit()
                 elif event.modifiers() == Qt.ControlModifier:
                     self.patch_nomove_signal.emit()
-
-                ##### HOANG
-                # Integrated patching and cleaning (1 neuron)
-                elif event.modifiers() == Qt.AltModifier:
-                    global z3, u3
-                    z3 = microscope.position()
-                    u3 = calibrated_unit.position()
-                    self.patch_signal.emit()
-                    self.pipette_cleaning_signal.emit()
-
                 else:
                     self.move_signal.emit()
+            except Exception:
+                print(traceback.format_exc())
+        ##### HOANG
+        # Integrated patching and cleaning (1 neuron)
+        if event.button() == Qt.RightButton:
+            try:
+                x, y = event.x(), event.y()
+                xs = x - self.video.size().width() / 2
+                ys = y - self.video.size().height() / 2
+                scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
+                xs *= scale
+                ys *= scale
+                moveList.append(array([xs, ys, microscope.position()]))
             except Exception:
                 print(traceback.format_exc())
 
@@ -284,11 +299,29 @@ class TestGui(QtWidgets.QMainWindow):
                     global u5
                     u5 = calibrated_unit.position()
                     print("Bath location process: Done. Ready for pipette cleaning!")
-            elif event.key() == Qt.Key_F2:
-                global z3, u3
+
+            # elif event.key() == Qt.Key_F2:
+            #     global z3, u3
+            #     z3 = microscope.position()
+            #     u3 = calibrated_unit.position()
+            #     self.pipette_cleaning_signal.emit()
+
+            elif event.key() == Qt.Key_I:
+                self.initial_location_signal.emit()
+
+            elif event.key() == Qt.Key_H:
+                global z3,u3,moveList
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
-                self.pipette_cleaning_signal.emit()
+                self.move_patch_clean_signal.emit()
+
+            elif event.key() == Qt.Key_N:
+                global z6,u6,us6
+                z6 = microscope.position()
+                u6 = calibrated_unit.position()
+                us6 = stage.position()
+
+
 
         except Exception:
             print(traceback.format_exc())
@@ -586,9 +619,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         #Step 1: Washing.
         print('Cleaning the pipette: Started')
         try:
-            #Move micrpscope above to avoid collision
-            microscope.absolute_move(0)
-            microscope.wait_until_still()
             #Move the pipette to the washing bath.
             calibrated_unit.absolute_move(u4[0],0)
             calibrated_unit.wait_until_still(0)
@@ -598,7 +628,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             calibrated_unit.wait_until_still(1)
             calibrated_unit.absolute_move(u4[2],2)
             calibrated_unit.wait_until_still(2)
-
             #Fill up with the Alconox
             pressure.set_pressure(-600)
             time.sleep(1)
@@ -633,11 +662,102 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             calibrated_unit.absolute_move(u3[0], 0)
             calibrated_unit.wait_until_still(0)
             #Move microscope back to original position
-            microscope.absolute_move(z3)
-            microscope.wait_until_still()
+
             print("Done")
         except Exception:
             print(traceback.format_exc())
+
+    @QtCore.pyqtSlot()
+    def do_initial_location(self):
+        print("Initial Location")
+        try:
+            microscope.absolute_move(z6)
+            microscope.wait_until_still()
+            calibrated_unit.absolute_move(u6)
+            if us6 is not None:
+                stage.absolute_move(us6)
+            stage.wait_until_still()
+            calibrated_unit.wait_until_still()
+
+        except Exception:
+            print(traceback.format_exc())
+        print("Done")
+
+    # @QtCore.pyqtSlot()
+    # def do_movement_compensate(self):
+    #     print("Initial Location")
+    #     try:
+    #         #calibrated_stage.reference_move
+    #     except Exception:
+    #         print(traceback.format_exc())
+    #     print("Done")
+
+    @QtCore.pyqtSlot()
+    def do_move_patch_clean(self):
+        global moveList
+        if (pressure is None):
+            print("Pressure controller not available. Aborting.")
+            return
+        try:
+            print(moveList)
+            for i in moveList:
+                print("Move to targeted cell")
+                self.move_position = i
+                calibrated_unit.safe_move(self.move_position, recalibrate=True)
+                print("Done. Starting patch-clamp")
+                autopatcher.run(move_position=None, message=message)
+                print("Done. Cleaning started!")
+                # Move the pipette to the washing bath.
+                calibrated_unit.absolute_move(u4[0], 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u4[2] - 5000, 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u4[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u4[2], 2)
+                calibrated_unit.wait_until_still(2)
+                # Fill up with the Alconox
+                pressure.set_pressure(-600)
+                time.sleep(1)
+                # 5 cycles of tip cleaning
+                for i in range(1, 5):
+                    pressure.set_pressure(-600)
+                    time.sleep(0.625)
+                    pressure.set_pressure(1000)
+                    time.sleep(0.375)
+
+                # Step 2: Rinsing.
+                # Move the pipette to the rinsing bath.
+                calibrated_unit.absolute_move(u5[2] - 5000, 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u5[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u5[0], 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u5[2], 2)
+                calibrated_unit.wait_until_still(2)
+                # Expel the remaining Alconox
+                pressure.set_pressure(1000)
+                time.sleep(6)
+
+                #Step 3: Move back.
+                calibrated_unit.absolute_move(0, 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u3[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u3[2], 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u3[0], 0)
+                calibrated_unit.wait_until_still(0)
+                # Move microscope back to original position
+
+            print("Done")
+            moveList = []
+        except Exception:
+            print(traceback.format_exc())
+
+
+
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
         self.show_paramecium = False
@@ -647,6 +767,7 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
 
         x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True,
                                         previous_x=None, previous_y=None)
+
         if x is not None:
             x, y = int(x), int(y)
             cv2.circle(img, (x,y), 50, (0, 0, 255))
@@ -697,7 +818,10 @@ def display_edit(img):
 
 ##### HOANG
 z3,u3,u4,u5 = None, None, None, None
-
+u6 = None
+us6 = None
+z6 = None
+moveList = []
 amplifier, pressure = None, None
 try:
     amplifier = MultiClampChannel()
@@ -716,6 +840,7 @@ calibrated_unit = calibrated_units[0]
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None
+
 landmark_u = [] # Landmark points
 landmark_r = []
 landmark_rs = []
