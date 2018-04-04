@@ -3,8 +3,8 @@ import sys
 from PyQt5 import QtWidgets
 
 from holypipette.log_utils import console_logger
-from holypipette.controller import AutoPatchController
-from holypipette.controller.pipettes import PipetteController
+from holypipette.interface import AutoPatchInterface
+from holypipette.interface.pipettes import PipetteInterface
 from holypipette.gui import PatchGui
 
 from setup_script import *
@@ -13,10 +13,10 @@ console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
 
-pipette_controller = PipetteController(stage, microscope, camera, units)
+pipette_controller = PipetteInterface(stage, microscope, camera, units)
 amplifier = None
 pressure = None
-patch_controller = AutoPatchController(amplifier, pressure, pipette_controller)
+patch_controller = AutoPatchInterface(amplifier, pressure, pipette_controller)
 gui = PatchGui(camera, pipette_controller, patch_controller)
 gui.initialize()
 gui.show()

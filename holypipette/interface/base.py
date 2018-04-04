@@ -12,7 +12,7 @@ from holypipette.log_utils import LoggingObject
 
 class Command(object):
     """
-    Simple container to store a "command" supported by a `TaskController`.
+    Simple container to store a "command" supported by a `TaskInterface`.
 
     Parameters
     ----------
@@ -29,9 +29,9 @@ class Command(object):
         then this description will be formatted with the argument, i.e. it can
         contain format specifications such as `{:.0f}` which will be replaced
         with the argument.
-    controller : `TaskController`, optional
-        The controller responsible for this command. Should always be defined
-        except for commands that do not need to be propagated to a controller,
+    interface : `TaskInterface`, optional
+        The interface responsible for this command. Should always be defined
+        except for commands that do not need to be propagated to a interface,
         e.g. GUI commands that trigger changes to the display (e.g. show the
         help window).
     default_arg : object, optional
@@ -43,12 +43,12 @@ class Command(object):
         that blocks all other commands (e.g. calibration). Setting it also marks
         this command as a blocking command.
     """
-    def __init__(self, name, category, description, controller=None, default_arg=None,
+    def __init__(self, name, category, description, interface=None, default_arg=None,
                  task_description=None):
         self.default_arg = default_arg
         self.description = description
         self.category = category
-        self.controller = controller
+        self.interface = interface
         self.name = name
         self.task_description = task_description
 
@@ -62,7 +62,7 @@ class Command(object):
         return self.description.format(argument)
 
 
-class TaskController(QtCore.QObject, LoggingObject):
+class TaskInterface(QtCore.QObject, LoggingObject):
     """
     Class defining the basic interface between the GUI and the objects
     controlling the hardware. Classes inheritting from this class should:
@@ -79,14 +79,14 @@ class TaskController(QtCore.QObject, LoggingObject):
     task_finished = QtCore.pyqtSignal(int, object)
 
     def __init__(self):
-        super(TaskController, self).__init__()
+        super(TaskInterface, self).__init__()
         self.executors = set()
         self.commands = OrderedDict()
 
     def add_command(self, name, category, description, default_arg=None,
                     task_description=None):
         """
-        Declare a command that is supported by this `TaskController`.
+        Declare a command that is supported by this `TaskInterface`.
 
         Parameters
         ----------
@@ -103,9 +103,9 @@ class TaskController(QtCore.QObject, LoggingObject):
             then this description will be formatted with the argument, i.e. it can
             contain format specifications such as `{:.0f}` which will be replaced
             with the argument.
-        controller : `TaskController`, optional
-            The controller responsible for this command. Should always be defined
-            except for commands that do not need to be propagated to a controller,
+        interface : `TaskInterface`, optional
+            The interface responsible for this command. Should always be defined
+            except for commands that do not need to be propagated to a interface,
             e.g. GUI commands that trigger changes to the display (e.g. show the
             help window).
         default_arg : object, optional
@@ -123,7 +123,7 @@ class TaskController(QtCore.QObject, LoggingObject):
                            "added ('{}')".format(name,
                                                  self.commands[name].description))
         command = Command(name, category, description,
-                          controller=self, default_arg=default_arg,
+                          interface=self, default_arg=default_arg,
                           task_description=task_description)
         self.commands[name] = command
 
@@ -131,7 +131,7 @@ class TaskController(QtCore.QObject, LoggingObject):
     def command_received(self, command, argument):
         """
         Slot that is triggered when the GUI triggers a command handled by this
-        `TaskController`. Depending on whether the command is blocking or
+        `TaskInterface`. Depending on whether the command is blocking or
         non-blocking, it will call `handle_blocking_command` or
         `handle_command`. If an error occurs in the handling of the command
         (e.g., the command cannot be executed because some hardware is missing),
@@ -154,7 +154,7 @@ class TaskController(QtCore.QObject, LoggingObject):
                 self.handle_command(command, argument)
         except Exception:
             self.exception("An error occured dealing with command "
-                           "{}".format(command))
+                           "{} (arguments: {})".format(command, argument))
             self.task_finished.emit(1, None)
 
     def execute(self, executor, func_name, final_task=True, **kwds):

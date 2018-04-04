@@ -5,11 +5,11 @@ import os
 import numpy as np
 from PyQt5 import QtCore
 
-from holypipette.controller import TaskController
+from holypipette.interface import TaskInterface
 from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage, CalibrationConfig
 
 
-class PipetteController(TaskController):
+class PipetteInterface(TaskInterface):
     '''
     Controller for the stage, the microscope, and several pipettes.
     '''
@@ -18,7 +18,7 @@ class PipetteController(TaskController):
 
     def __init__(self, stage, microscope, camera, units,
                  config_filename=None):
-        super(PipetteController, self).__init__()
+        super(PipetteInterface, self).__init__()
         self.microscope = microscope
         self.camera = camera
         # Create a common calibration configuration for all stages/manipulators

@@ -12,10 +12,8 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 import qtawesome as qta
 
-from holypipette.controller import Command
-
-# Add a cross to the display
-from holypipette.controller.patch import NumberWithUnit
+from holypipette.interface import Command
+from holypipette.interface.patch import NumberWithUnit
 
 
 def draw_cross(pixmap):
@@ -332,7 +330,8 @@ class BaseGui(QtWidgets.QMainWindow):
         self.log_window.setFocusPolicy(Qt.NoFocus)
         self.log_window.close_signal.connect(lambda: self.log_button.setChecked(False))
         self.running_task = None
-        self.running_task_controller = None
+        self.running_task_interface = None
+        self.interface_signals = {}
 
         # Display error messages directly in the status bar
         handler = LogNotifyHandler(self.log_signal)
@@ -345,11 +344,11 @@ class BaseGui(QtWidgets.QMainWindow):
         self.status_bar.showMessage(message, 5000)
 
     def initialize(self):
-        for controller, (command_signal, reset_signal) in self.controller_signals.items():
-            command_signal.connect(controller.command_received)
-            reset_signal.connect(controller.reset_requested)
-            controller.task_finished.connect(self.task_finished)
-            controller.connect(self)
+        for interface, (command_signal, reset_signal) in self.interface_signals.items():
+            command_signal.connect(interface.command_received)
+            reset_signal.connect(interface.reset_requested)
+            interface.task_finished.connect(self.task_finished)
+            interface.connect(self)
         self.register_commands()
 
     def register_commands(self):
@@ -371,18 +370,18 @@ class BaseGui(QtWidgets.QMainWindow):
                                                  command.category,
                                                  command.auto_description(argument))
 
-    def start_task(self, task_name, controller):
+    def start_task(self, task_name, interface):
         self.status_bar.clearMessage()
         self.task_progress_text.setText(task_name + '…')
         self.task_progress.setVisible(True)
         self.task_abort_button.setEnabled(True)
         self.task_abort_button.setVisible(True)
         self.running_task = task_name
-        self.running_task_controller = controller
+        self.running_task_interface = interface
 
     def abort_task(self):
         self.task_abort_button.setEnabled(False)
-        self.running_task_controller.abort_task()
+        self.running_task_interface.abort_task()
 
     @QtCore.pyqtSlot(int, object)
     def task_finished(self, exit_reason, executor):
@@ -406,11 +405,11 @@ class BaseGui(QtWidgets.QMainWindow):
                                                    QtWidgets.QMessageBox.Yes |
                                                    QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
-                _, reset_signal = self.controller_signals[self.running_task_controller]
+                _, reset_signal = self.interface_signals[self.running_task_interface]
                 reset_signal.emit(executor)
 
         self.running_task = None
-        self.running_task_controller = None
+        self.running_task_interface = None
 
     def keyPressEvent(self, event):
         # Look for an exact match first (key + modifier)
@@ -428,14 +427,14 @@ class BaseGui(QtWidgets.QMainWindow):
                 # help, etc.)
                 return
             if command.task_description is not None:
-                self.start_task(command.task_description, command.controller)
-            if command.controller in self.controller_signals:
-                command_signal, _ = self.controller_signals[command.controller]
+                self.start_task(command.task_description, command.interface)
+            if command.interface in self.interface_signals:
+                command_signal, _ = self.interface_signals[command.interface]
                 command_signal.emit(command.name, argument)
             elif func is not None:
                 func(argument)
             else:
-                raise AssertionError('Need a controller or a function')
+                raise AssertionError('Need a interface or a function')
 
     def toggle_help(self):
         if self.help_button.isChecked():

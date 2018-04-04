@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
 
-from holypipette.controller import Command
+from holypipette.interface import Command
 from holypipette.executor import TaskExecutor
 from holypipette.gui import CameraGui, ConfigGui
 
@@ -13,24 +13,24 @@ class ManipulatorGui(CameraGui):
     pipette_command_signal = QtCore.pyqtSignal('QString', object)
     pipette_reset_signal = QtCore.pyqtSignal(TaskExecutor)
 
-    def __init__(self, camera, pipette_controller):
+    def __init__(self, camera, pipette_interface):
         super(ManipulatorGui, self).__init__(camera)
-        self.controller = pipette_controller
+        self.interface = pipette_interface
         self.control_thread = QtCore.QThread()
         self.control_thread.setObjectName('PipetteControlThread')
-        self.controller.moveToThread(self.control_thread)
+        self.interface.moveToThread(self.control_thread)
         self.control_thread.start()
-        self.controller_signals[self.controller] = (self.pipette_command_signal,
-                                                    self.pipette_reset_signal)
+        self.interface_signals[self.interface] = (self.pipette_command_signal,
+                                                  self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
 
-        self.add_config_gui(self.controller.calibration_config)
+        self.add_config_gui(self.interface.calibration_config)
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
         if autoscale and not text:
             raise ValueError('Automatic scaling of the bar without showing text '
                              'will not be very helpful...')
-        stage = self.controller.calibrated_stage
+        stage = self.interface.calibrated_stage
         if stage.calibrated:
             pen_width = 4
             bar_length = stage.pixel_per_um()[0]
@@ -72,16 +72,16 @@ class ManipulatorGui(CameraGui):
                                    (Qt.AltModifier, 2.5),
                                    (Qt.ShiftModifier, 50)]:
             self.register_key_action(Qt.Key_Up, modifier,
-                                     self.controller.commands['move_stage_vertical'],
+                                     self.interface.commands['move_stage_vertical'],
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_Down, modifier,
-                                     self.controller.commands['move_stage_vertical'],
+                                     self.interface.commands['move_stage_vertical'],
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_Left, modifier,
-                                     self.controller.commands['move_stage_horizontal'],
+                                     self.interface.commands['move_stage_horizontal'],
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_Right, modifier,
-                                     self.controller.commands['move_stage_horizontal'],
+                                     self.interface.commands['move_stage_horizontal'],
                                      argument=distance, default_doc=False)
 
             # Manually document all arrows at once
@@ -94,35 +94,35 @@ class ManipulatorGui(CameraGui):
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
-                                 self.controller.commands['calibrate_stage'])
+                                 self.interface.commands['calibrate_stage'])
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.controller.commands['calibrate_manipulator'])
+                                 self.interface.commands['calibrate_manipulator'])
         # Pipette selection
-        number_of_units = len(self.controller.calibrated_units)
+        number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):
             key = QtGui.QKeySequence("%d" % (unit_number + 1))[0]
             self.register_key_action(key, None,
-                                     self.controller.commands['switch_manipulator'],
+                                     self.interface.commands['switch_manipulator'],
                                      argument=unit_number + 1)
 
         self.register_key_action(Qt.Key_S, None,
-                                 self.controller.commands['save_configuration'])
+                                 self.interface.commands['save_configuration'])
 
         # Move pipette by clicking
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
-                                   self.controller.commands['move_pipette'])
+                                   self.interface.commands['move_pipette'])
 
         # Microscope control
         self.register_key_action(Qt.Key_PageUp, None,
-                                 self.controller.commands['move_microscope'],
+                                 self.interface.commands['move_microscope'],
                                  argument=10)
         self.register_key_action(Qt.Key_PageDown, None,
-                                 self.controller.commands['move_microscope'],
+                                 self.interface.commands['move_microscope'],
                                  argument=-10)
         self.register_key_action(Qt.Key_F, None,
-                                 self.controller.commands['set_floor'])
+                                 self.interface.commands['set_floor'])
         self.register_key_action(Qt.Key_G, None,
-                                 self.controller.commands['go_to_floor'])
+                                 self.interface.commands['go_to_floor'])
 
         # Show configuration pane
         config_command = Command('config_pane', 'General',

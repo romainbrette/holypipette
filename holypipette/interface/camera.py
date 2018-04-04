@@ -1,12 +1,12 @@
 from PyQt5 import QtCore, QtWidgets
 
-from holypipette.controller import TaskController
+from holypipette.interface import TaskInterface
 
-class CameraController(TaskController):
+class CameraInterface(TaskInterface):
     updated_exposure = QtCore.pyqtSignal('QString', 'QString')
 
     def __init__(self, camera):
-        super(CameraController, self).__init__()
+        super(CameraInterface, self).__init__()
         self.camera = camera
         self.add_command('increase_exposure', 'Camera',
                          'Increase exposure time by {:.1f}ms',

@@ -4,7 +4,7 @@ from __future__ import absolute_import
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
-from holypipette.controller.camera import CameraController
+from holypipette.interface.camera import CameraInterface
 from holypipette.executor import TaskExecutor
 from holypipette.gui import ConfigGui
 from .livefeed import LiveFeedQt
@@ -35,15 +35,15 @@ class CameraGui(BaseGui):
         super(CameraGui, self).__init__()
         self.setWindowTitle("Camera GUI")
         self.camera = camera
-        self.camera_controller = CameraController(camera)
+        self.camera_interface = CameraInterface(camera)
         self.display_edit_funcs = [draw_cross]
         self.video = LiveFeedQt(self.camera,
                                 image_edit=image_edit,
                                 display_edit=self.display_edit,
                                 mouse_handler=self.video_mouse_press)
         self.setFocus()  # Need this to handle arrow keys, etc.
-        self.controller_signals = {self.camera_controller: (self.camera_signal,
-                                                            self.camera_reset_signal)}
+        self.interface_signals[self.camera_interface] = (self.camera_signal,
+                                                         self.camera_reset_signal)
 
         # Add an (optional) area for configuration options
         self.splitter = QtWidgets.QSplitter()
@@ -71,13 +71,13 @@ class CameraGui(BaseGui):
     def register_commands(self):
         super(CameraGui, self).register_commands()
         self.register_key_action(Qt.Key_Plus, None,
-                                 self.camera_controller.commands[
+                                 self.camera_interface.commands[
                                      'increase_exposure'])
         self.register_key_action(Qt.Key_Minus, None,
-                                 self.camera_controller.commands[
+                                 self.camera_interface.commands[
                                      'decrease_exposure'])
         self.register_key_action(Qt.Key_I, None,
-                                 self.camera_controller.commands['save_image'])
+                                 self.camera_interface.commands['save_image'])
 
     def close(self):
         del self.camera
@@ -114,14 +114,14 @@ class CameraGui(BaseGui):
             scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
             position = (xs * scale, ys * scale)
             if command.task_description is not None:
-                self.start_task(command.task_description, command.controller)
-            if command.controller in self.controller_signals:
-                command_signal, _ = self.controller_signals[command.controller]
+                self.start_task(command.task_description, command.interface)
+            if command.interface in self.interface_signals:
+                command_signal, _ = self.interface_signals[command.interface]
                 command_signal.emit(command.name, position)
             elif func is not None:
                 func(position)
             else:
-                raise AssertionError('Need a controller or a function')
+                raise AssertionError('Need a interface or a function')
 
     def toggle_configuration_display(self, arg):
         # We get arg=None as the argument, just ignore it

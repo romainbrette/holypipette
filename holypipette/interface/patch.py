@@ -5,10 +5,10 @@ Control of automatic patch clamp algorithm
 import numpy as np
 
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
-from holypipette.controller import TaskController
+from holypipette.interface import TaskInterface
 from holypipette.executor import AutoPatcher, AutopatchError
 
-__all__ = ['AutoPatchController', 'PatchConfig']
+__all__ = ['AutoPatchInterface', 'PatchConfig']
 
 
 class PatchConfig(Config):
@@ -53,16 +53,16 @@ class PatchConfig(Config):
                   ('Voltage ramp', ['Vramp_duration', 'Vramp_amplitude'])]
 
 
-class AutoPatchController(TaskController):
+class AutoPatchInterface(TaskInterface):
     '''
     A class to run automatic patch-clamp
     '''
-    def __init__(self, amplifier, pressure, pipette_controller):
-        super(AutoPatchController, self).__init__()
+    def __init__(self, amplifier, pressure, pipette_interface):
+        super(AutoPatchInterface, self).__init__()
         self.config = PatchConfig(name='Patch config')
         self.amplifier = amplifier
         self.pressure = pressure
-        self.pipette_controller = pipette_controller
+        self.pipette_controller = pipette_interface
         self.autopatcher_by_unit = {}
         for idx, calibrated_unit in enumerate(self.pipette_controller.calibrated_units):
             autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit,
@@ -82,7 +82,7 @@ class AutoPatchController(TaskController):
 
     def handle_blocking_command(self, command, argument):
         if self.amplifier is None or self.pressure is None:
-            raise AutopatchError('Need access to amplifier and pressure controller')
+            raise AutopatchError('Need access to amplifier and pressure interface')
 
         autopatcher = self.autopatcher_by_unit[self.pipette_controller.current_unit]
         if command == 'break_in':
