@@ -15,6 +15,7 @@ class ManipulatorGui(CameraGui):
 
     def __init__(self, camera, pipette_interface):
         super(ManipulatorGui, self).__init__(camera)
+        self.setWindowTitle("Pipette GUI")
         self.interface = pipette_interface
         self.control_thread = QtCore.QThread()
         self.control_thread.setObjectName('PipetteControlThread')

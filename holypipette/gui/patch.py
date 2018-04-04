@@ -15,6 +15,7 @@ class PatchGui(ManipulatorGui):
 
     def __init__(self, camera, pipette_interface, patch_interface):
         super(PatchGui, self).__init__(camera, pipette_interface)
+        self.setWindowTitle("Patch GUI")
         # Note that pipette interface already runs in a thread, we need to use
         # the same for the patch interface
         self.patch_interface = patch_interface
