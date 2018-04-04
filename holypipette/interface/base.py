@@ -275,7 +275,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         Parameters
         ----------
-        main_gui : `BaseGui`
+        main_gui : `CameraGui`
             The main GUI in control.
         """
         pass

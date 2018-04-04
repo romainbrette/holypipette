@@ -5,7 +5,7 @@ import numpy as np
 
 from holypipette.interface import Command
 from holypipette.executor import TaskExecutor
-from holypipette.gui import CameraGui, ConfigGui
+from holypipette.gui import CameraGui
 
 
 class ManipulatorGui(CameraGui):
