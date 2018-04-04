@@ -21,9 +21,9 @@ def check_for_abort(obj, func):
     return decorated
 
 
-class TaskExecutor(LoggingObject):
+class TaskController(LoggingObject):
     def __init__(self):
-        super(TaskExecutor, self).__init__()
+        super(TaskController, self).__init__()
         self.error_occurred = False
         self.abort_requested = False
         self.saved_state = None

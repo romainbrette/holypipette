@@ -2,7 +2,7 @@ import time
 
 import numpy as np
 
-from .base import TaskExecutor
+from .base import TaskController
 
 
 class AutopatchError(Exception):
@@ -12,7 +12,7 @@ class AutopatchError(Exception):
     def __str__(self):
         return self.message
 
-class AutoPatcher(TaskExecutor):
+class AutoPatcher(TaskController):
     def __init__(self, amplifier, pressure, calibrated_unit, microscope, config):
         super(AutoPatcher, self).__init__()
         self.config = config

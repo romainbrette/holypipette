@@ -1,12 +1,12 @@
 """
-Package defining the `Command` and `TaskController` classes, central to the
-interface between GUI and `TaskExecutor` objects.
+Package defining the `Command` and `TaskInterface` classes, central to the
+interface between GUI and `TaskController` objects.
 """
 from collections import OrderedDict
 
 from PyQt5 import QtCore
 
-from holypipette.executor import TaskExecutor
+from holypipette.controller import TaskController
 from holypipette.log_utils import LoggingObject
 
 
@@ -80,7 +80,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
     def __init__(self):
         super(TaskInterface, self).__init__()
-        self.executors = set()
+        self.controllers = set()
         self.commands = OrderedDict()
 
     def add_command(self, name, category, description, default_arg=None,
@@ -145,7 +145,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             The argument of the requested command (possibly ``None``).
         """
         try:
-            for e in self.executors:
+            for e in self.controllers:
                 e.error_occured = False
                 e.abort_requested = False
             if self.commands[command].is_blocking:
@@ -157,26 +157,26 @@ class TaskInterface(QtCore.QObject, LoggingObject):
                            "{}".format(command, argument))
             self.task_finished.emit(1, None)
 
-    def execute(self, executor, func_name, final_task=True, **kwds):
+    def execute(self, controller, func_name, final_task=True, **kwds):
         """
-        Execute a function in a `TaskExecutor` and signal the (successful or
+        Execute a function in a `TaskController` and signal the (successful or
         unsuccessful) completion via the `task_finished` signal.
 
         Parameters
         ----------
-        executor : `TaskExecutor`
+        controller : `TaskController`
             The object responsible for executing the task.
         func_name : str
-            The name of the function in the ``executor`` object
+            The name of the function in the ``controller`` object
         final_task : bool, optional
             Whether this call is the final (or only) task that is executed for
             the command. For commands that need to call functions in several
-            `TaskExecutor` objects, this will avoid that a successful completion
+            `TaskController` objects, this will avoid that a successful completion
             triggers the `task_finished` signal (note that error/aborts always
             trigger `task_finished`). Defaults to ``True``
         kwds : dict
             All other keyword arguments will be passed on to
-            `TaskExecutor.execute`, which will pass it on to the actual
+            `TaskController.execute`, which will pass it on to the actual
             function.
 
         Returns
@@ -187,56 +187,56 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             with ``final_task=False``) to avoid calling subsequent tasks after
             a failed/aborted task.
         """
-        executor.save_state()
-        executor.execute(func_name, **kwds)
-        # We send a reference to the "executor" with the task_finished signal,
+        controller.save_state()
+        controller.execute(func_name, **kwds)
+        # We send a reference to the "controller" with the task_finished signal,
         # this can be used to ask the user for a state reset after a failed
         # command (e.g. move back the pipette to its start position in case a
         # calibration failed or was aborted)
-        if executor.error_occurred:
-            self.task_finished.emit(1, executor)
+        if controller.error_occurred:
+            self.task_finished.emit(1, controller)
             return False
-        elif executor.abort_requested:
-            self.task_finished.emit(2, executor)
+        elif controller.abort_requested:
+            self.task_finished.emit(2, controller)
             return False
         else:
-            executor.delete_state()
+            controller.delete_state()
             if final_task:
-                self.task_finished.emit(0, executor)
+                self.task_finished.emit(0, controller)
             return True
 
-    @QtCore.pyqtSlot(TaskExecutor)
-    def reset_requested(self, executor):
+    @QtCore.pyqtSlot(TaskController)
+    def reset_requested(self, controller):
         """
         Slot that will be triggered when the user asks for resetting the state
         after an aborted or failed command.
 
         Parameters
         ----------
-        executor : `TaskExecutor`
+        controller : `TaskController`
             The object that was executing the task that failed or was aborted.
             This object is requested to reset its state.
 
         """
         try:
-            for e in self.executors:
+            for e in self.controllers:
                 e.abort_requested = False
-            executor.recover_state()
+            controller.recover_state()
         except Exception:
-            self.exception('Recovering the state for {} failed.'.format(executor))
+            self.exception('Recovering the state for {} failed.'.format(controller))
 
     def abort_task(self):
         """
         The user asked for an abort of the currently running (blocking) command.
         We transmit this information to all executing objects (for simplicity,
         only one should be running) by setting the
-        `TaskExecutor.abort_requested` attribute. The object runs in a separate
+        `TaskController.abort_requested` attribute. The object runs in a separate
         thread, but will finish its operation as soon as it checks for this
         attribute (either by explicitly checking with
-        `TaskExecutor.abort_if_requested`, or by using `TaskExecutor.sleep` or
+        `TaskController.abort_if_requested`, or by using `TaskController.sleep` or
         one of the logging methods).
         """
-        for e in self.executors:
+        for e in self.controllers:
             e.abort_requested = True
 
     # The following functions have to be implemented if the class declares any

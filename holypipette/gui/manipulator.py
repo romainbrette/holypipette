@@ -4,14 +4,14 @@ from PyQt5.QtCore import Qt
 import numpy as np
 
 from holypipette.interface import Command
-from holypipette.executor import TaskExecutor
+from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
 
 
 class ManipulatorGui(CameraGui):
 
     pipette_command_signal = QtCore.pyqtSignal('QString', object)
-    pipette_reset_signal = QtCore.pyqtSignal(TaskExecutor)
+    pipette_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, pipette_interface):
         super(ManipulatorGui, self).__init__(camera)

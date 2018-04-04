@@ -4,14 +4,14 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 
 from holypipette.interface import Command
-from holypipette.executor import TaskExecutor
+from holypipette.controller import TaskController
 from holypipette.gui.manipulator import ManipulatorGui
 
 
 class PatchGui(ManipulatorGui):
 
     patch_command_signal = QtCore.pyqtSignal('QString', object)
-    patch_reset_signal = QtCore.pyqtSignal(TaskExecutor)
+    patch_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, pipette_interface, patch_interface):
         super(PatchGui, self).__init__(camera, pipette_interface)

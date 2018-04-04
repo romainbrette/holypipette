@@ -12,7 +12,7 @@ import time
 
 from numpy import array
 
-from holypipette.executor.base import TaskExecutor
+from holypipette.controller import TaskController
 
 __all__ = ['Manipulator', 'ManipulatorError']
 
@@ -25,7 +25,7 @@ class ManipulatorError(Exception):
         return self.message
 
 
-class Manipulator(TaskExecutor):
+class Manipulator(TaskController):
     def position(self, axis):
         '''
         Current position along an axis.

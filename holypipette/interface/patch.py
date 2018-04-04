@@ -6,7 +6,7 @@ import numpy as np
 
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.interface import TaskInterface
-from holypipette.executor import AutoPatcher, AutopatchError
+from holypipette.controller import AutoPatcher, AutopatchError
 
 __all__ = ['AutoPatchInterface', 'PatchConfig']
 
@@ -69,7 +69,7 @@ class AutoPatchInterface(TaskInterface):
                                       calibrated_unit.microscope,
                                       config=self.config)
             self.autopatcher_by_unit[idx] = autopatcher
-            self.executors.add(autopatcher)
+            self.controllers.add(autopatcher)
         # Define commands
         self.add_command('break_in', 'Patch', 'Break into the cell',
                          task_description='Breaking into cell')

@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt
 import qtawesome as qta
 
 from holypipette.interface.camera import CameraInterface
-from holypipette.executor import TaskExecutor
+from holypipette.controller import TaskController
 from holypipette.interface import Command
 from holypipette.interface.patch import NumberWithUnit
 from .livefeed import LiveFeedQt
@@ -305,7 +305,7 @@ def draw_cross(pixmap):
 class CameraGui(QtWidgets.QMainWindow):
     log_signal = QtCore.pyqtSignal('QString')
     camera_signal = QtCore.pyqtSignal('QString', object)
-    camera_reset_signal = QtCore.pyqtSignal(TaskExecutor)
+    camera_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, image_edit=None, display_edit=draw_cross):
         super(CameraGui, self).__init__()
@@ -487,7 +487,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.running_task_interface.abort_task()
 
     @QtCore.pyqtSlot(int, object)
-    def task_finished(self, exit_reason, executor):
+    def task_finished(self, exit_reason, controller):
         if self.running_task is None:
             return  # Nothing to do
 
@@ -499,17 +499,17 @@ class CameraGui(QtWidgets.QMainWindow):
             text = "Task '{}' aborted.".format(self.running_task)
             self.status_bar.showMessage(text, 5000)
 
-        # If the task was aborted or failed, and the "executor" object has a
+        # If the task was aborted or failed, and the "controller" object has a
         # saved state (e.g. the position of the pipette), ask the user whether
         # they want to reset the state
-        if exit_reason != 0 and executor is not None and executor.has_saved_state():
+        if exit_reason != 0 and controller is not None and controller.has_saved_state():
             reply = QtWidgets.QMessageBox.question(self, "Reset",
-                                                   executor.saved_state_question,
+                                                   controller.saved_state_question,
                                                    QtWidgets.QMessageBox.Yes |
                                                    QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
                 _, reset_signal = self.interface_signals[self.running_task_interface]
-                reset_signal.emit(executor)
+                reset_signal.emit(controller)
 
         self.running_task = None
         self.running_task_interface = None
