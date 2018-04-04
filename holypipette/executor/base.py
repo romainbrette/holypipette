@@ -58,7 +58,7 @@ class TaskExecutor(LoggingObject):
             self.abort_requested = True
         except Exception:
             self.exception('An exception occured executing '
-                           '{} (arguments: {})'.format(func_name, argument))
+                           '{}'.format(func_name))
             self.error_occurred = True
 
     def abort_if_requested(self):
