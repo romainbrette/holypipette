@@ -27,12 +27,9 @@ def pipette_cardinal2(image1, image2):
     '''
     xmax = None
     for direction in cardinal_points.iterkeys():
-        cropped1 = crop_cardinal(image1, direction)
-        cropped2 = crop_cardinal(image2, direction)
-        # Find the darkest subimage
-        x = abs(cropped1.flatten().sum() - cropped2.flatten().sum())
-        if (xmax is None) or (x > xmax):
-            xmax = x
+        x = crop_cardinal(image1, direction).flatten().sum() - crop_cardinal(image2, direction).flatten().sum()
+        if (xmax is None) or (abs(x) > xmax):
+            xmax = abs(x)
             result = direction
     return result
 

@@ -110,6 +110,10 @@ class TestGui(QtWidgets.QMainWindow):
         self.testing_calibrate_signal.connect(self.calibrator.do_testing_calibration)
         self.testing_photo_signal.connect(self.calibrator.take_testing_photos)
         self.cardinal_positions_signal.connect(self.calibrator.test_cardinal_positions)
+        global z6,u6,us6
+        z6 = microscope.position()
+        u6 = calibrated_unit.position()
+        us6 = stage.position()
 
     def mouse_callback(self, event):
         # Click = move
@@ -158,6 +162,8 @@ class TestGui(QtWidgets.QMainWindow):
                 distance = 50
             elif event.modifiers() == Qt.AltModifier:
                 distance = 2.5
+            elif event.modifiers() == Qt.ControlModifier:
+                distance = 1000
             else:
                 distance = 10
             if event.key() == Qt.Key_Left:
@@ -351,6 +357,12 @@ class TestGui(QtWidgets.QMainWindow):
 
             elif event.key() == Qt.Key_F7:
                 self.cardinal_positions_signal.emit()
+
+            elif event.key() == Qt.Key_F8:
+                print("calibrated unit: ", calibrated_unit.position())
+                print("microscope: ", microscope.position())
+
+
 
         except Exception:
             print(traceback.format_exc())
