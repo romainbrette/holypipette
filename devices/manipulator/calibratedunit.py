@@ -242,6 +242,56 @@ class CalibratedUnit(ManipulatorUnit):
         self.photo_x0 = x0
         self.photo_y0 = y0
 
+    #####HOANG
+    def take_photos2(self, message = lambda str: None):
+        '''
+        Take photos of the pipette. It is assumed that the pipette is centered and in focus.
+        '''
+        distance = 500
+        self.relative_move(distance,0)
+        self.wait_until_still(0)
+        time.sleep(0.5)
+        img1 = crop_center(self.camera.snap())
+        self.relative_move(-distance,0)
+        self.wait_until_still(0)
+        time.sleep(0.5)
+        img2 = crop_center(self.camera.snap())
+        self.pipette_position = pipette_cardinal2(img1,img2)
+        message("Pipette cardinal position: "+str(self.pipette_position))
+
+        z0 = self.microscope.position()
+        z = z0 + arange(-stack_depth, stack_depth + 1)  # +- stack_depth um around current position
+        stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position),
+                                      save = 'series')
+        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
+
+        # Check microscope position
+        if abs(z0-self.microscope.position())>position_tolerance:
+            raise CalibrationError('Microscope has not returned to its initial position.')
+        sleep(sleep_time)
+        image = self.camera.snap()
+        x0, y0, _ = templatematching(image, stack[stack_depth])
+
+        # Calculate minimum correlation with stack images
+        image = stack[len(stack)/2] # Focused image
+        min_match = min([templatematching(image, template)[2] for template in stack])
+        # We accept matches with matching correlation up to twice worse
+        self.min_photo_match = min_match
+
+        self.photos = stack
+        self.photo_x0 = x0
+        self.photo_y0 = y0
+
+    def take_photos3(self, message = lambda str: None):
+        k=0
+        save = 'testing'
+        for direction in cardinal_points.iterkeys():
+            result = direction
+            cv2.imwrite('./screenshots/' + save + '{}.jpg'.format(k), crop_cardinal(crop_center(self.camera.snap()), result))
+            k+=1
+        crop = crop_center(self.camera.snap())
+        cv2.imwrite('./screenshots/' + 'crop.jpg', crop)
+
     def pixel_per_um(self):
         '''
         Returns the objective magnification in pixel per um, calculated for each manipulator axis.
@@ -405,6 +455,7 @@ class CalibratedUnit(ManipulatorUnit):
         if move_stage:
             self.stage.reference_relative_move(-estimate)
             self.stage.wait_until_still()
+
 
         # Autofocus
         self.wait_until_still(axis) # Wait until pipette has moved
@@ -726,6 +777,130 @@ class CalibratedUnit(ManipulatorUnit):
 
         # *** Compute the (pseudo-)inverse ***
         self.M = pinv(self.Minv)
+
+        # *** Calculate offset ***0
+        #    Offset is such that the initial position is the position on screen in the reference system
+        self.r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
+
+        self.calibrated = True
+
+    #####HOANG
+    def calibrate3(self, message = lambda str: None):
+        '''
+        Automatic calibration.
+        Starts without moving the stage, then moves the stage (unless it is fixed).
+
+        Parameters
+        ----------
+        message : a function to which messages are passed
+        '''
+        # *** Calibrate the stage ***
+        self.stage.calibrate(message=message)
+
+        # *** Take photos ***
+        # Take a stack of photos on different focal planes, spaced by 1 um
+        self.take_photos2(message)
+
+        # *** Calculate image borders ***
+
+        template_height, template_width = self.photos[stack_depth].shape
+        width, height = self.camera.width, self.camera.height
+        # We use a margin of 1/4 of the template
+        left_border = -(width/2-(template_width*3)/4)
+        right_border = (width/2-(template_width*3)/4)
+        top_border = -(height/2-(template_height*3)/4)
+        bottom_border = (height/2-(template_height*3)/4)
+
+        # *** Store initial position ***
+        z0 = self.microscope.position()
+        u0 = self.position()
+        us0 = self.stage.position()
+
+        # *** First pass: move each axis once and estimate matrix ***
+        self.M = 0*self.M # Erase current matrix
+        distance = stack_depth*.5
+        oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
+        for axis in range(len(self.axes)):
+            x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
+            z+= self.microscope.position()
+            print x,y,z
+            self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
+            oldx, oldy, oldz = x, y, z
+        message('Matrix:' + str(self.M))
+
+        # *** Calculate up directions ***
+        self.calculate_up_directions(message)
+
+        # Move back to initial position
+        oldx, oldy, oldz = self.move_back(z0, u0, None, message)  # The pipette could have moved
+        oldz+=self.microscope.position()
+
+        # Calculate floor (min Z)
+        if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
+            floor = z0-300.*self.microscope.up_direction
+        else:
+            floor = self.microscope.floor_Z
+
+        # *** Estimate the matrix using increasingly large movements ***
+        min_distance = distance
+        for axis in range(len(self.axes)):
+            message('Calibrating axis ' + str(axis))
+            distance = min_distance * 1.
+            oldrs = self.stage.reference_position()
+            move_stage = False
+            while (distance<2000): # just for testing
+                distance *= 2
+                message('Distance ' + str(distance))
+
+                # Check whether the next position might be unreachable
+                future_position = self.position(axis) - distance*self.up_direction[axis]
+                if (future_position<self.min[axis]) | (future_position>self.max[axis]):
+                    message("Next move cannot be performed (end position)")
+                    break
+
+                # Estimate final position on screen
+                dxe, dye, dze = -self.M[:, axis] * distance * self.up_direction[axis]
+                xe, ye, ze = oldx+dxe, oldy+dye, oldz+dze
+
+                # Check whether we might be out of field
+                if (xe<left_border) | (xe>right_border) | (ye<top_border) | (ye>bottom_border):
+                    message('Next move is out of field')
+                    if not self.fixed:
+                        move_stage = True # Move the stage to recenter
+                    else:
+                        break
+
+                # Check whether we might reach the floor (with 100 um margin)
+                if (ze - floor) * self.microscope.up_direction < 100.:
+                    message('We reached the coverslip.')
+                    break
+
+                # Move pipette down
+                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
+                                              move_stage=move_stage, message=message)
+                rs = self.stage.reference_position()
+
+                # Update matrix
+                z += self.microscope.position()
+                self.M[:, axis] = -(array([x - oldx, y - oldy, z - oldz])+oldrs-rs) / distance*self.up_direction[axis]
+                oldx, oldy, oldz = x, y, z
+                oldrs = rs
+
+            # Move back to initial position
+            u = self.position(axis)
+            message('Moving back over '+str(u0[axis]-u)+' um')
+            oldrs = self.stage.reference_position() # Normally not necessary
+            x, y, z = self.move_back(z0, u0, us0, message)
+            rs = self.stage.reference_position()
+            # Update matrix
+            z += self.microscope.position()
+            self.M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
+            oldx, oldy, oldz = x, y, z
+
+        message('Matrix:' + str(self.M))
+
+        # *** Compute the (pseudo-)inverse ***
+        self.Minv = pinv(self.M)
 
         # *** Calculate offset ***0
         #    Offset is such that the initial position is the position on screen in the reference system
