@@ -101,12 +101,12 @@ class TestGui(QtWidgets.QMainWindow):
         #self.movement_compensation_signal.connect(self.calibrator.do_movement_compensate)
         self.move_patch_clean_signal.connect(self.calibrator.do_move_patch_clean)
         self.nomove_patch_clean_signal.connect(self.calibrator.do_nomove_patch_clean)
-        self.tracking_thread = QtCore.QThread()
-        self.tracker = Tracker()
-        self.tracker.moveToThread(self.tracking_thread)
-        self.tracking_signal.connect(self.tracker.do_tracking)
-        self.tracking_thread.start()
-        self.multitracker = cv2.MultiTracker_create()
+        # self.tracking_thread = QtCore.QThread()
+        # self.tracker = Tracker()
+        # self.tracker.moveToThread(self.tracking_thread)
+        # self.tracking_signal.connect(self.tracker.do_tracking)
+        # self.tracking_thread.start()
+        # self.multitracker = cv2.MultiTracker_create()
         self.testing_calibrate_signal.connect(self.calibrator.do_testing_calibration)
         self.testing_photo_signal.connect(self.calibrator.take_testing_photos)
         self.cardinal_positions_signal.connect(self.calibrator.test_cardinal_positions)
@@ -339,9 +339,9 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_I:
                 self.initial_location_signal.emit()
 
-            elif event.key() == Qt.Key_U:
-                global boxes
-                self.tracking_signal.emit()
+            # elif event.key() == Qt.Key_U:
+            #     global boxes
+            #     self.tracking_signal.emit()
 
             elif event.key() == Qt.Key_F5:
                 self.testing_calibrate_signal.emit()
@@ -1036,19 +1036,17 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print("Done")
 
-
-
-class Tracker(QtCore.QObject):
-
-     @QtCore.pyqtSlot()
-     def do_tracking(self):
-         while True:
-             frame = camera.snap()
-             ok, boxes = self.multitracker.update(frame)
-             for newbox in boxes:
-                p1 = (int(newbox[0]), int(newbox[1]))
-                p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
-                cv2.rectangle(frame, p1, p2, (200, 0, 0))
+# class Tracker(QtCore.QObject):
+#
+#      @QtCore.pyqtSlot()
+#      def do_tracking(self):
+#          while True:
+#              frame = camera.snap()
+#              ok, boxes = self.multitracker.update(frame)
+#              for newbox in boxes:
+#                 p1 = (int(newbox[0]), int(newbox[1]))
+#                 p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
+#                 cv2.rectangle(frame, p1, p2, (200, 0, 0))
 
 
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker

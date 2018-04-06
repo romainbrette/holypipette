@@ -50,6 +50,7 @@ def templatematching(img, template, threshold = 0):
 if __name__ == '__main__':
     img = cv2.imread('pipette.jpg', 0)
     template = cv2.imread('template.jpg', 0)
+
     res, val, loc = templatematching(img, template)
     x, y = loc[:2]
     if res:

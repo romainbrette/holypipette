@@ -30,9 +30,9 @@ def pipette_cardinal2(image1, image2):
         cropped1 = crop_cardinal(image1, direction)
         cropped2 = crop_cardinal(image2, direction)
         # Find the darkest subimage
-        x = cropped1.flatten().sum()-cropped2.flatten().sum()
-        if (xmax is None) or (abs(x)>xmax):
-            xmax=abs(x)
+        x = abs(cropped1.flatten().sum() - cropped2.flatten().sum())
+        if (xmax is None) or (x > xmax):
+            xmax = x
             result = direction
     return result
 

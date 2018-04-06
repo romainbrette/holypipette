@@ -247,14 +247,15 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         Take photos of the pipette. It is assumed that the pipette is centered and in focus.
         '''
-        distance = 500
+        print("Start. Moving pipette out of center")
+        distance = 300
         self.relative_move(distance,0)
         self.wait_until_still(0)
-        time.sleep(0.5)
+        sleep(0.5)
         img1 = crop_center(self.camera.snap())
         self.relative_move(-distance,0)
         self.wait_until_still(0)
-        time.sleep(0.5)
+        sleep(0.5)
         img2 = crop_center(self.camera.snap())
         self.pipette_position = pipette_cardinal2(img1,img2)
         message("Pipette cardinal position: "+str(self.pipette_position))
