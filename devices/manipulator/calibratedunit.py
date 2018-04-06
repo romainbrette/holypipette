@@ -244,9 +244,6 @@ class CalibratedUnit(ManipulatorUnit):
 
     #####HOANG
     def take_photos2(self, message = lambda str: None):
-        '''
-        Take photos of the pipette. It is assumed that the pipette is centered and in focus.
-        '''
         distance = 100
         self.relative_move(distance,0)
         self.wait_until_still(0)
@@ -264,7 +261,6 @@ class CalibratedUnit(ManipulatorUnit):
         stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position),
                                       save = 'series')
         # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
-
         # Check microscope position
         if abs(z0-self.microscope.position())>position_tolerance:
             raise CalibrationError('Microscope has not returned to its initial position.')
@@ -280,16 +276,6 @@ class CalibratedUnit(ManipulatorUnit):
         self.photos = stack
         self.photo_x0 = x0
         self.photo_y0 = y0
-
-    def take_photos3(self, message = lambda str: None):
-        k=0
-        save = 'testing'
-        for direction in cardinal_points.iterkeys():
-            result = direction
-            cv2.imwrite('./screenshots/' + save + '{}.jpg'.format(k), crop_cardinal(crop_center(self.camera.snap()), result))
-            k+=1
-        crop = crop_center(self.camera.snap())
-        cv2.imwrite('./screenshots/' + 'crop.jpg', crop)
 
     def pixel_per_um(self):
         '''
@@ -414,8 +400,6 @@ class CalibratedUnit(ManipulatorUnit):
 
         valmax = -1
 
-        k = 0
-        save = 'template_checking'
         for i, template in enumerate(stack):  # we look for the best matching template
             xt, yt, val = templatematching(image, template)
             xt += dx
@@ -423,8 +407,6 @@ class CalibratedUnit(ManipulatorUnit):
             if val > valmax:
                 valmax = val
                 x, y, z = xt, yt, stack_depth - i  # note the sign for z
-            cv2.imwrite('./screenshots/' + save + '{}.jpg'.format(k), template)
-            k+=1
 
         message('Correlation=' + str(valmax))
         if valmax < threshold:
@@ -480,53 +462,6 @@ class CalibratedUnit(ManipulatorUnit):
         x, y, z = self.locate_pipette()
 
         return x,y,z
-
-    def move_and_track2(self, distance, axis, move_stage = False, message = lambda str: None):
-        '''
-        Moves along one axis and track the pipette with microscope and optionally the stage.
-
-        Arguments
-        ---------
-        distance : distance to move
-        axis : axis number
-
-        Returns
-        -------
-        x,y,z: pipette position on screen and focal plane
-        '''
-        self.relative_move(distance, axis)
-
-
-        # Estimate movement on screen
-        estimate = self.M[:,axis]*distance
-        print ("estimate: ", estimate)
-
-        # Move the stage to compensate
-        if move_stage:
-            self.stage.reference_relative_move(-estimate)
-            self.stage.wait_until_still()
-
-
-        # Autofocus
-        self.wait_until_still(axis) # Wait until pipette has moved
-        self.microscope.relative_move(estimate[2])
-        self.microscope.wait_until_still()
-
-        # Locate pipette
-        sleep(sleep_time)
-        x, y, z = self.locate_pipette()
-
-        # Focus, move stage and locate again
-        self.microscope.relative_move(z)
-        if move_stage:
-            self.stage.reference_relative_move(-array([x,y,0]))
-            self.stage.wait_until_still()
-        self.microscope.wait_until_still()
-        sleep(sleep_time)
-        x, y, z = self.locate_pipette()
-
-        return x,y,z
-
 
     def move_back(self, z0, u0, us0=None, message = lambda str: None):
         '''
@@ -873,7 +808,7 @@ class CalibratedUnit(ManipulatorUnit):
         distance = stack_depth*.5
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
-            x,y,z = self.move_and_track2(distance, axis, move_stage=False, message=message)
+            x,y,z = self.move_and_track(distance, axis, move_stage=False, message=message)
             z+= self.microscope.position()
             print x,y,z
             self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
@@ -930,7 +865,7 @@ class CalibratedUnit(ManipulatorUnit):
                     break
 
                 # Move pipette down
-                x, y, z = self.move_and_track2(-distance*self.up_direction[axis], axis,
+                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
                                               move_stage=move_stage, message=message)
                 rs = self.stage.reference_position()
 

@@ -17,6 +17,7 @@ L                       Load configuration
 S                       Save configuration
 
 C                       Calibrate (primary calibration)
+F5                      Calibrate (primary calibration) - Intensity Difference method.
 Shift-C                 Manual calibration based on landmarks
 Ctrl-C                  Calibration of the stage only
 R                       Recalibrate (secondary calibration)

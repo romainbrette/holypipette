@@ -22,9 +22,6 @@ def pipette_cardinal(image):
 
 #####HOANG
 def pipette_cardinal2(image1, image2):
-    '''
-    Determines the cardinal direction of the pipette (N, NW, S, etc) in the image.
-    '''
     xmax = None
     for direction in cardinal_points.iterkeys():
         x = crop_cardinal(image1, direction).flatten().sum() - crop_cardinal(image2, direction).flatten().sum()

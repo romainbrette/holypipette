@@ -60,8 +60,6 @@ class TestGui(QtWidgets.QMainWindow):
     nomove_patch_clean_signal = QtCore.pyqtSignal()
     tracking_signal = QtCore.pyqtSignal()
     testing_calibrate_signal = QtCore.pyqtSignal()
-    testing_photo_signal = QtCore.pyqtSignal()
-    cardinal_positions_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -108,8 +106,7 @@ class TestGui(QtWidgets.QMainWindow):
         # self.tracking_thread.start()
         # self.multitracker = cv2.MultiTracker_create()
         self.testing_calibrate_signal.connect(self.calibrator.do_testing_calibration)
-        self.testing_photo_signal.connect(self.calibrator.take_testing_photos)
-        self.cardinal_positions_signal.connect(self.calibrator.test_cardinal_positions)
+
         global z6,u6,us6
         z6 = microscope.position()
         u6 = calibrated_unit.position()
@@ -351,18 +348,6 @@ class TestGui(QtWidgets.QMainWindow):
 
             elif event.key() == Qt.Key_F5:
                 self.testing_calibrate_signal.emit()
-
-            elif event.key() == Qt.Key_F6:
-                self.testing_photo_signal.emit()
-
-            elif event.key() == Qt.Key_F7:
-                self.cardinal_positions_signal.emit()
-
-            elif event.key() == Qt.Key_F8:
-                print("calibrated unit: ", calibrated_unit.position())
-                print("microscope: ", microscope.position())
-
-
 
         except Exception:
             print(traceback.format_exc())
@@ -1027,26 +1012,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
         except Exception:
             print(traceback.format_exc())
         print('Done')
-
-    @QtCore.pyqtSlot()
-    def take_testing_photos(self):
-        global stack,x0,y0
-        print("Taking photos")
-        try:
-            calibrated_unit.take_photos2(message)
-        except Exception:
-            print(traceback.format_exc())
-        print("Done")
-
-    @QtCore.pyqtSlot()
-    def test_cardinal_positions(self):
-        global stack, x0, y0
-        print("Test cardinal positions")
-        try:
-            calibrated_unit.take_photos3(message)
-        except Exception:
-            print(traceback.format_exc())
-        print("Done")
 
 # class Tracker(QtCore.QObject):
 #
