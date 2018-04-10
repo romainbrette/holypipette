@@ -11,7 +11,7 @@ def pipette_cardinal(image):
     Determines the cardinal direction of the pipette (N, NW, S, etc) in the image.
     '''
     xmin = None
-    for direction in cardinal_points.iterkeys():
+    for direction in cardinal_points:
         cropped = crop_cardinal(image, direction)
         # Find the darkest subimage
         x = cropped.flatten().sum()

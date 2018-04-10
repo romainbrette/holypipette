@@ -5,6 +5,7 @@ TODO:
 * the path is hard-coded: should be in configuration file
 * there is one class per camera, it should just read umanager's config file
 '''
+from __future__ import print_function
 import sys
 import threading
 import warnings

@@ -2,6 +2,7 @@
 A Z Unit for a Leica microscope, using MicroManager.
 Communication through serial COM port.
 """
+from __future__ import print_function
 import warnings
 from .microscope import *
 import sys

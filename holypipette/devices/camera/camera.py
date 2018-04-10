@@ -4,6 +4,7 @@ A generic camera class
 TODO:
 * A stack() method which takes a series of photos along Z axis
 '''
+from __future__ import print_function
 import numpy as np
 import scipy.misc
 

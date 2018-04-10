@@ -1,6 +1,7 @@
 '''
 Calculation related to planes (intersections, etc)
 '''
+from __future__ import print_function
 from numpy import cross, dot
 
 __all__ = ['Plane']
@@ -53,9 +54,9 @@ if __name__ == '__main__':
     x3 = array([1,0,0])
 
     p = Plane.from_points(x1, x2, x3)
-    print p.n
-    print p.signed_distance(2*ones(3), array([0,0,1]))
-    print p.project(2*ones(3), array([0,0,1]))
-    print p.project(2*ones(3))
+    print(p.n)
+    print(p.signed_distance(2*ones(3), array([0,0,1])))
+    print(p.project(2*ones(3), array([0,0,1])))
+    print(p.project(2*ones(3)))
     p2 = p.parallel_plane(2*ones(3))
-    print p2.n, p2.a
+    print(p2.n, p2.a)

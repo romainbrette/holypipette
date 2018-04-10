@@ -1,2 +1,2 @@
-from base import *
-from patch import *
+from .base import *
+from .patch import *

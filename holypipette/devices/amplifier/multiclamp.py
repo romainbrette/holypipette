@@ -16,6 +16,7 @@ There is also a scope trigger (in the rear)
 Gains: actually these are additional gains
 
 """
+from __future__ import print_function
 import ctypes
 import functools
 import logging
@@ -294,7 +295,7 @@ class MultiClampChannel(object):
             else:
                 logging.warn(full_error)
                 for line in traceback.extract_stack():
-                    print line # so that we know what happened
+                    print(line) # so that we know what happened
             # Reset the error code
             self.last_error.value = NO_ERROR
 
@@ -346,7 +347,7 @@ class MultiClampChannel(object):
         multiclamps = []
         for multiclamp in MultiClampChannel.all_devices:
             if all(multiclamp.get(key, None) == value
-                   for key, value in self.identification.iteritems()):
+                   for key, value in self.identification.items()):
                 multiclamps.append(multiclamp)
         if len(multiclamps) == 0:
             raise RuntimeError('No device identified via {} found. Multiclamp commander not running?'.format(self.identification))

@@ -2,7 +2,9 @@
 A fake device useful for development.
 It has 9 axes, numbered 1 to 9.
 """
-from manipulator import Manipulator
+from __future__ import print_function
+from __future__ import absolute_import
+from .manipulator import Manipulator
 from numpy import zeros
 
 __all__ = ['FakeManipulator']
@@ -36,4 +38,4 @@ class FakeManipulator(Manipulator):
         x : target position in um.
         '''
         self.x[axis-1] = x
-        print 'Moved, new position: ', self.x
+        print('Moved, new position: ', self.x)

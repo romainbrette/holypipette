@@ -1,3 +1,4 @@
+from __future__ import print_function
 from PyQt5 import QtCore, QtWidgets
 
 from holypipette.interface import TaskInterface

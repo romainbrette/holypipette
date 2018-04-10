@@ -5,8 +5,10 @@ Adapted from Michael Graupner's LandNSM5 class.
 
 Not all commands are implemented.
 """
+from __future__ import print_function
+from __future__ import absolute_import
 from ..serialdevice import SerialDevice
-from manipulator import Manipulator
+from .manipulator import Manipulator
 import serial
 import binascii
 import time
@@ -91,11 +93,11 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
 
     def establish_connection(self):
         if verbose:
-            print "establishing connection"
+            print("establishing connection")
         self.established_time = time.time()
         self.send_command('0400', [], 0, ack_ID='040b')
         if verbose:
-            print "connection established"
+            print("connection established")
 
     def position(self, axis):
         '''
@@ -189,7 +191,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         # self.send_command(ID, address, -1)
         ID = '0132'
         for axis in axes:
-            self.send_command(ID, [axis, 02], 0)
+            self.send_command(ID, [axis, 2], 0)
 
     def go_to_zero(self, axes):
         """
@@ -291,10 +293,10 @@ if __name__ == '__main__':
     """
 
     for i in range(5):
-        print sm5.position(1)
+        print(sm5.position(1))
         sm5.absolute_move(1000,1)
         time.sleep(1)
-        print sm5.position(1)
+        print(sm5.position(1))
         sm5.absolute_move(1128,1)
-        print sm5.position(1)
+        print(sm5.position(1))
         time.sleep(1)

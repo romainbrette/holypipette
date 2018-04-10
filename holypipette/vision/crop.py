@@ -24,8 +24,8 @@ def crop_center(image, ratio=32):
     ratio : size ratio of cropped image to original image
     '''
     shape = image.shape
-    return image[shape[0] / 2 - 3 * shape[0] / ratio:shape[0] / 2 + 3 * shape[0] / ratio,
-           shape[1] / 2 - 3 * shape[1] / ratio:shape[1] / 2 + 3 * shape[1] / ratio]
+    return image[int(shape[0] / 2 - 3 * shape[0] / ratio):int(shape[0] / 2 + 3 * shape[0] / ratio),
+                 int(shape[1] / 2 - 3 * shape[1] / ratio):int(shape[1] / 2 + 3 * shape[1] / ratio)]
 
 def crop_cardinal(image, direction):
     '''

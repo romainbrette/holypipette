@@ -7,8 +7,10 @@ Not all commands are implemented.
 
 TODO: group commands
 """
+from __future__ import print_function
+from __future__ import absolute_import
 from ..serialdevice import SerialDevice
-from manipulator import Manipulator
+from .manipulator import Manipulator
 import serial
 import binascii
 import time
@@ -390,7 +392,7 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         # self.send_command(ID, address, -1)
         ID = '0132'
         for axis in axes:
-            self.send_command(ID, [axis, 02], 0)
+            self.send_command(ID, [axis, 0o2], 0)
 
     def go_to_zero(self, axes):
         """
@@ -446,10 +448,10 @@ if __name__ == '__main__':
     # sm10.single_step(7, 1)
     # print sm10.position(7)
     # time.sleep(1)
-    print sm10.position(8)
+    print(sm10.position(8))
     sm10.single_step(8, 1)
     time.sleep(1)
-    print sm10.position(8)
+    print(sm10.position(8))
     sm10.single_step(8, -2)
     time.sleep(1)
-    print sm10.position(8)
+    print(sm10.position(8))

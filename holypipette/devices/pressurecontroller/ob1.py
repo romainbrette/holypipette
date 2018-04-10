@@ -3,11 +3,13 @@ Elveflow OB1 microfluidic flow control system
 
 Running this program calibrates the pressure controller.
 '''
+from __future__ import print_function
+from __future__ import absolute_import
 import os
 import sys
 from ctypes import *
 import warnings
-from pressurecontroller import *
+from .pressurecontroller import *
 
 # We add both versions to the path, adding a non-existing directory does not do any harm...
 sys.path.append(os.path.expanduser(r'~\Elveflow SDK V3_01_11\python_64').encode('utf-8'))

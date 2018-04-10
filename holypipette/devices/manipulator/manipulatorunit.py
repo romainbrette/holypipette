@@ -2,8 +2,11 @@
 A class for access to a particular unit managed by a device.
 It is essentially a subset of a Manipulator
 """
-from manipulator import Manipulator
-from numpy import ndarray, sign, ones, arange
+from __future__ import absolute_import
+
+from numpy import ones, arange
+
+from .manipulator import Manipulator
 
 __all__ = ['ManipulatorUnit']
 
@@ -131,15 +134,15 @@ class ManipulatorUnit(Manipulator):
         Waits for the motors to stop.
         """
         if axes is None: # all axes
-            axes = range(len(self.axes))
-        if isinstance(axes, list): # is that useful?
+            axes = arange(len(self.axes))
+        if hasattr(axes, '__len__'):  # is that useful?
             for i in axes:
                 self.wait_until_still(i)
         else:
             self.dev.wait_until_still([self.axes[axes]])
         self.sleep(.05)
 
-    def wait_until_reached(self, position, axes = None, precision = 0.5, timeout = 10):
+    def wait_until_reached(self, position, axes=None, precision=0.5, timeout=10):
         """
         Waits until position is reached within precision, and raises an error if the
         target is not reached after the time out, unless the manipulator is still moving.

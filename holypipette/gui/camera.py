@@ -224,7 +224,7 @@ class KeyboardHelpWindow(QtWidgets.QMainWindow):
     def update_text(self):
         lines = []
         # Keys
-        for category, key_info in self.key_catalog.iteritems():
+        for category, key_info in self.key_catalog.items():
             # FIXME: The logic below assumes that there is no category that does
             # not have any standard key actions. Instead, we should build a
             # list of all categories first and then go through all catalogs.

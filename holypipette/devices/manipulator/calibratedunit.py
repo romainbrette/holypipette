@@ -9,7 +9,9 @@ Also ranges should be taken into account
 
 Should this be in devices/*? Maybe in a separate calibration folder
 """
-from manipulatorunit import *
+from __future__ import print_function
+from __future__ import absolute_import
+from .manipulatorunit import *
 from numpy import array, zeros, dot, arange, vstack, sign, pi, arcsin, mean, std
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *

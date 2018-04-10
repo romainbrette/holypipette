@@ -1,5 +1,5 @@
 # coding=utf-8
-import cPickle as pickle
+import pickle
 import os
 
 import numpy as np
