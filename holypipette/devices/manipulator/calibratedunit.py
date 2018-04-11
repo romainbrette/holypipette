@@ -263,7 +263,7 @@ class CalibratedUnit(ManipulatorUnit):
         x0, y0, _ = templatematching(image, stack[self.config.stack_depth])
 
         # Calculate minimum correlation with stack images
-        image = stack[len(stack)/2] # Focused image
+        image = stack[len(stack)//2] # Focused image
         min_match = min([templatematching(image, template)[2] for template in stack])
         # We accept matches with matching correlation up to twice worse
         self.min_photo_match = min_match
@@ -387,8 +387,8 @@ class CalibratedUnit(ManipulatorUnit):
 
         image = self.camera.snap()
         # Crop image around estimated position
-        image = image[yt - ymargin:yt + template_height + ymargin,
-                xt - xmargin:xt + template_width + xmargin]
+        image = image[int(yt - ymargin):int(yt + template_height + ymargin),
+                      int(xt - xmargin):int(xt + template_width + xmargin)]
         dx = xt - xmargin
         dy = yt - ymargin
 
@@ -408,9 +408,9 @@ class CalibratedUnit(ManipulatorUnit):
         self.info('Pipette identified at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
 
         if return_correlation:
-            return x-x0,y-y0,z,valmax
+            return x-x0, y-y0, z, valmax
         else:
-            return x-x0,y-y0,z
+            return x-x0, y-y0, z
 
     def move_and_track(self, distance, axis, move_stage = False):
         '''

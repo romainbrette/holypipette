@@ -1,7 +1,7 @@
 '''
 Methods to find the pipette in an image
 '''
-from holypipette.vision import *
+from .crop import cardinal_points, crop_cardinal
 from numpy import dot, array, sign
 
 __all__ = ['pipette_cardinal', 'up_direction']

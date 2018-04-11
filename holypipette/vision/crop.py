@@ -41,5 +41,6 @@ def crop_cardinal(image, direction):
     height = height/2
     width = width/2
     # Coordinates of the quadrant
-    i,j = cardinal_points[direction]
-    return image[i*height/2: (i+2)*height/2, j*width/2:(j+2)*width/2]
+    i, j = cardinal_points[direction]
+    return image[int(i*height/2):int((i+2)*height/2),
+           int(j*width/2):int((j+2)*width/2)]
