@@ -4,8 +4,12 @@
 from holypipette.devices.camera.camera import FakeCamera
 from holypipette.devices.manipulator import *
 
-camera = FakeCamera()
-controller = FakeManipulator()
+controller = FakeManipulator(min=[-511, -383, -500, -511, -383, -500, -511, -383, -500],
+                             max=[511, 383, 500, 511, 383, 500, 511, 383, 500])
+controller.x[:3] = [-150, -50, 200]
+controller.x[3:6] = [250, -100, 200]
+controller.x[8] = 250
+camera = FakeCamera(manipulator=controller)
 stage = ManipulatorUnit(controller, [7, 8])
 microscope = Microscope(controller, 9)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)

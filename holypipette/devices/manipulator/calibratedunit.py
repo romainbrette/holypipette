@@ -554,6 +554,7 @@ class CalibratedUnit(ManipulatorUnit):
         # *** First pass: move each axis once and estimate matrix ***
         M = zeros((3, len(self.axes)))
         distance = self.config.stack_depth*.5
+        self.debug('Distance: {}'.format(distance))
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             self.debug('Moving axis {}'.format(axis))
