@@ -56,9 +56,6 @@ class TestGui(QtWidgets.QMainWindow):
     pipette_cleaning_signal = QtCore.pyqtSignal()
     initial_location_signal = QtCore.pyqtSignal()
     #movement_compensation_signal = QtCore.pyqtSignal()
-    move_patch_clean_signal = QtCore.pyqtSignal()
-    nomove_patch_clean_signal = QtCore.pyqtSignal()
-    tracking_signal = QtCore.pyqtSignal()
     testing_calibrate_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
@@ -97,25 +94,17 @@ class TestGui(QtWidgets.QMainWindow):
         self.pipette_cleaning_signal.connect(self.calibrator.do_cleaning_pipette)
         self.initial_location_signal.connect(self.calibrator.do_initial_location)
         #self.movement_compensation_signal.connect(self.calibrator.do_movement_compensate)
-        self.move_patch_clean_signal.connect(self.calibrator.do_move_patch_clean)
-        self.nomove_patch_clean_signal.connect(self.calibrator.do_nomove_patch_clean)
-        # self.tracking_thread = QtCore.QThread()
-        # self.tracker = Tracker()
-        # self.tracker.moveToThread(self.tracking_thread)
-        # self.tracking_signal.connect(self.tracker.do_tracking)
-        # self.tracking_thread.start()
-        # self.multitracker = cv2.MultiTracker_create()
         self.testing_calibrate_signal.connect(self.calibrator.do_testing_calibration)
 
-        global z6,u6,us6
+        global z6, u6, us6
         z6 = microscope.position()
         u6 = calibrated_unit.position()
         us6 = stage.position()
 
+
     def mouse_callback(self, event):
         # Click = move
         # Shift-click = move and patch
-        global moveList
         if event.button() == Qt.LeftButton:
             try:
                 x, y = event.x(), event.y()
@@ -136,8 +125,7 @@ class TestGui(QtWidgets.QMainWindow):
                     self.move_signal.emit()
             except Exception:
                 print(traceback.format_exc())
-        ##### HOANG
-        # Integrated patching and cleaning (1 neuron)
+
         if event.button() == Qt.RightButton:
             try:
                 x, y = event.x(), event.y()
@@ -146,7 +134,9 @@ class TestGui(QtWidgets.QMainWindow):
                 scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
                 ys *= scale
-                moveList.append(array([xs, ys, microscope.position()]))
+                #moveList.append(array([xs, ys, microscope.position()]))
+                print((x,y),(xs,ys))
+                print(scale)
             except Exception:
                 print(traceback.format_exc())
 
@@ -315,23 +305,29 @@ class TestGui(QtWidgets.QMainWindow):
                     u5 = calibrated_unit.position()
                     print("Bath location process: Done. Ready for pipette cleaning!")
 
-            # elif event.key() == Qt.Key_F2:
-            #     global z3, u3
-            #     z3 = microscope.position()
-            #     u3 = calibrated_unit.position()
-            #     self.pipette_cleaning_signal.emit()
-
-            elif event.key() == Qt.Key_H:
-                global z3,u3,moveList
-                z3 = microscope.position()
-                u3 = calibrated_unit.position()
-                self.move_patch_clean_signal.emit()
-
-            elif event.key() == Qt.Key_Y:
+            elif event.key() == Qt.Key_F2:
                 global z3, u3
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
-                self.nomove_patch_clean_signal.emit()
+                self.pipette_cleaning_signal.emit()
+
+            elif event.key() == Qt.Key_H:
+                global z3,u3,moveList, trackList
+                z3 = microscope.position()
+                u3 = calibrated_unit.position()
+                for point in trackList:
+                    x = point[0]
+                    y = point[1]
+                    xs = x - camera.width / 2
+                    ys = y - camera.height / 2
+                    moveList.append(array([xs, ys, microscope.position()]))
+                for i in moveList:
+                    self.move_position = i
+                    calibrated_unit.safe_move(self.move_position, recalibrate=True)
+
+                moveList = []
+                trackList = []
+                print("Done")
 
             elif event.key() == Qt.Key_N:
                 global z6,u6,us6
@@ -342,12 +338,27 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_I:
                 self.initial_location_signal.emit()
 
-            # elif event.key() == Qt.Key_U:
-            #     global boxes
-            #     self.tracking_signal.emit()
-
             elif event.key() == Qt.Key_F5:
                 self.testing_calibrate_signal.emit()
+
+            elif event.key() == Qt.Key_F6:
+                image_editor.show_tracking = not image_editor.show_tracking
+                if image_editor.show_tracking:
+                    print('Targetted cell tracking is on')
+
+            elif event.key() == Qt.Key_F7:
+                frame = camera.snap()
+                cv2.namedWindow('target cell selection', cv2.WINDOW_AUTOSIZE)
+                while True:
+                    cv2.imshow('target cell selection', frame)
+                    bbox1 = cv2.selectROI('target cell selection', frame)
+                    multitracker.add(cv2.TrackerKCF_create(), frame, bbox1)
+                    cv2.destroyWindow('target cell selection')
+                    break
+
+            elif event.key() == Qt.Key_F8:
+                print(self.video.size())
+                print(self.video.size().width(), self.video.size().height())
 
         except Exception:
             print(traceback.format_exc())
@@ -719,286 +730,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     #     print("Done")
 
     @QtCore.pyqtSlot()
-    def do_move_patch_clean(self):
-        global moveList
-        if (amplifier is None) | (pressure is None):
-            print("Amplifier or pressure controller not available. Aborting.")
-            return
-        try:
-            print(moveList)
-            for i in moveList:
-                self.move_position = i
-                calibrated_unit.safe_move(self.move_position, recalibrate=True)
-                print("Done. Starting patch-clamp")
-                amplifier.start_patch()
-                # Pressure level 1
-                pressure.set_pressure(param_pressure_near)
-
-                # Check initial resistance
-                amplifier.auto_pipette_offset()
-                time.sleep(4.)
-                R = amplifier.resistance()
-                message("Resistance:" + str(R / 1e6))
-                if R < param_Rmin:
-                    raise AutopatchError("Resistance is too low (broken tip?)")
-                elif R > param_Rmax:
-                    raise AutopatchError("Resistance is too high (obstructed?)")
-
-                # Pipette offset
-                amplifier.auto_pipette_offset()
-                time.sleep(2)  # why?
-
-                # Approach and make the seal
-                print("Approaching the cell")
-                success = False
-                oldR = R
-                for _ in range(param_max_distance):  # move 15 um down
-                    # move by 1 um down
-                    # Cleaner: use reference relative move
-                    calibrated_unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
-                    calibrated_unit.wait_until_still(2)
-                    self.move_position = i
-                    calibrated_unit.safe_move(self.move_position, recalibrate=True)
-                    time.sleep(1)
-                    R = amplifier.resistance()
-                    message("R = " + str(amplifier.resistance() / 1e6))
-                    if R > oldR * (1 + param_cell_R_increase):  # R increases: near cell?
-                        # Release pressure
-                        message("Releasing pressure")
-                        pressure.set_pressure(0)
-                        time.sleep(10)
-                        if R > oldR * (1 + param_cell_R_increase):
-                            # Still higher, we are near the cell
-                            message("Sealing, R = " + str(amplifier.resistance() / 1e6))
-                            pressure.set_pressure(param_pressure_sealing)
-                            t0 = time.time()
-                            t = t0
-                            R = amplifier.resistance()
-                            while (R < param_gigaseal_R) | (t - t0 < param_seal_min_time):
-                                # Wait at least 15s and until we get a Gigaseal
-                                t = time.time()
-                                if t - t0 < param_Vramp_duration:
-                                    # Ramp to -70 mV in 10 s (default)
-                                    self.amplifier.set_holding(param_Vramp_amplitude * (t - t0) / param_Vramp_duration)
-                                if t - t0 >= param_seal_deadline:
-                                    # No seal in 90 s
-                                    amplifier.stop_patch()
-                                    raise AutopatchError("Seal unsuccessful")
-                                R = amplifier.resistance()
-                            success = True
-                            break
-                pressure.set_pressure(0)
-                if not success:
-                    raise AutopatchError("Seal unsuccessful")
-                print("Seal successful, R = " + str(self.amplifier.resistance() / 1e6))
-
-                R = amplifier.resistance()
-                if R < param_gigaseal_R:
-                    raise AutopatchError("Seal lost")
-                pressure = 0
-                trials = 0
-                while amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
-                    trials += 1
-                    message('Essai ' + str(trials))
-                    pressure += param_pressure_ramp_increment
-                    if abs(pressure) > abs(param_pressure_ramp_max):
-                        raise AutopatchError("Break-in unsuccessful")
-                    if param_zap:
-                        amplifier.zap()
-                    pressure.ramp(amplitude=pressure, duration=param_pressure_ramp_duration)
-                    time.sleep(1.3)
-                message("Successful break-in, R = " + str(amplifier.resistance() / 1e6))
-                amplifier.stop_patch()
-                pressure.set_pressure(param_pressure_near)
-
-                # Move the pipette to the washing bath.
-                calibrated_unit.absolute_move(u4[0], 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u4[2] - 5000, 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u4[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u4[2], 2)
-                calibrated_unit.wait_until_still(2)
-                # Fill up with the Alconox
-                pressure.set_pressure(-600)
-                time.sleep(1)
-                # 5 cycles of tip cleaning
-                for i in range(1, 5):
-                    pressure.set_pressure(-600)
-                    time.sleep(0.625)
-                    pressure.set_pressure(1000)
-                    time.sleep(0.375)
-
-                # Step 2: Rinsing.
-                # Move the pipette to the rinsing bath.
-                calibrated_unit.absolute_move(u5[2] - 5000, 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u5[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u5[0], 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u5[2], 2)
-                calibrated_unit.wait_until_still(2)
-                # Expel the remaining Alconox
-                pressure.set_pressure(1000)
-                time.sleep(6)
-
-                #Step 3: Move back.
-                calibrated_unit.absolute_move(0, 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u3[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u3[2], 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u3[0], 0)
-                calibrated_unit.wait_until_still(0)
-                # Move microscope back to original position
-
-            print("Done")
-            moveList = []
-        except Exception:
-            print(traceback.format_exc())
-
-    @QtCore.pyqtSlot()
-    def do_nomove_patch_clean(self):
-        global moveList
-        if (amplifier is None) | (pressure is None):
-            print("Amplifier or pressure controller not available. Aborting.")
-            return
-        try:
-            print(moveList)
-            for i in moveList:
-                print("Done. Starting patch-clamp")
-                amplifier.start_patch()
-                # Pressure level 1
-                pressure.set_pressure(param_pressure_near)
-
-                # Check initial resistance
-                amplifier.auto_pipette_offset()
-                time.sleep(4.)
-                R = amplifier.resistance()
-                message("Resistance:" + str(R / 1e6))
-                if R < param_Rmin:
-                    raise AutopatchError("Resistance is too low (broken tip?)")
-                elif R > param_Rmax:
-                    raise AutopatchError("Resistance is too high (obstructed?)")
-
-                # Pipette offset
-                amplifier.auto_pipette_offset()
-                time.sleep(2)  # why?
-
-                # Approach and make the seal
-                print("Approaching the cell")
-                success = False
-                oldR = R
-                for _ in range(param_max_distance):  # move 15 um down
-                    # move by 1 um down
-                    # Cleaner: use reference relative move
-                    calibrated_unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
-                    calibrated_unit.wait_until_still(2)
-                    time.sleep(1)
-                    R = amplifier.resistance()
-                    message("R = " + str(amplifier.resistance() / 1e6))
-                    if R > oldR * (1 + param_cell_R_increase):  # R increases: near cell?
-                        # Release pressure
-                        message("Releasing pressure")
-                        pressure.set_pressure(0)
-                        time.sleep(10)
-                        if R > oldR * (1 + param_cell_R_increase):
-                            # Still higher, we are near the cell
-                            message("Sealing, R = " + str(amplifier.resistance() / 1e6))
-                            pressure.set_pressure(param_pressure_sealing)
-                            t0 = time.time()
-                            t = t0
-                            R = amplifier.resistance()
-                            while (R < param_gigaseal_R) | (t - t0 < param_seal_min_time):
-                                # Wait at least 15s and until we get a Gigaseal
-                                t = time.time()
-                                if t - t0 < param_Vramp_duration:
-                                    # Ramp to -70 mV in 10 s (default)
-                                    self.amplifier.set_holding(param_Vramp_amplitude * (t - t0) / param_Vramp_duration)
-                                if t - t0 >= param_seal_deadline:
-                                    # No seal in 90 s
-                                    amplifier.stop_patch()
-                                    raise AutopatchError("Seal unsuccessful")
-                                R = amplifier.resistance()
-                            success = True
-                            break
-                pressure.set_pressure(0)
-                if not success:
-                    raise AutopatchError("Seal unsuccessful")
-                print("Seal successful, R = " + str(self.amplifier.resistance() / 1e6))
-
-                R = amplifier.resistance()
-                if R < param_gigaseal_R:
-                    raise AutopatchError("Seal lost")
-                pressure = 0
-                trials = 0
-                while amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
-                    trials += 1
-                    message('Essai ' + str(trials))
-                    pressure += param_pressure_ramp_increment
-                    if abs(pressure) > abs(param_pressure_ramp_max):
-                        raise AutopatchError("Break-in unsuccessful")
-                    if param_zap:
-                        amplifier.zap()
-                    pressure.ramp(amplitude=pressure, duration=param_pressure_ramp_duration)
-                    time.sleep(1.3)
-                message("Successful break-in, R = " + str(amplifier.resistance() / 1e6))
-                amplifier.stop_patch()
-                pressure.set_pressure(param_pressure_near)
-
-                # Move the pipette to the washing bath.
-                calibrated_unit.absolute_move(u4[0], 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u4[2] - 5000, 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u4[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u4[2], 2)
-                calibrated_unit.wait_until_still(2)
-                # Fill up with the Alconox
-                pressure.set_pressure(-600)
-                time.sleep(1)
-                # 5 cycles of tip cleaning
-                for i in range(1, 5):
-                    pressure.set_pressure(-600)
-                    time.sleep(0.625)
-                    pressure.set_pressure(1000)
-                    time.sleep(0.375)
-
-                # Step 2: Rinsing.
-                # Move the pipette to the rinsing bath.
-                calibrated_unit.absolute_move(u5[2] - 5000, 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u5[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u5[0], 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u5[2], 2)
-                calibrated_unit.wait_until_still(2)
-                # Expel the remaining Alconox
-                pressure.set_pressure(1000)
-                time.sleep(6)
-
-                #Step 3: Move back.
-                calibrated_unit.absolute_move(0, 0)
-                calibrated_unit.wait_until_still(0)
-                calibrated_unit.absolute_move(u3[1], 1)
-                calibrated_unit.wait_until_still(1)
-                calibrated_unit.absolute_move(u3[2], 2)
-                calibrated_unit.wait_until_still(2)
-                calibrated_unit.absolute_move(u3[0], 0)
-                calibrated_unit.wait_until_still(0)
-                # Move microscope back to original position
-
-            print("Done")
-            moveList = []
-        except Exception:
-            print(traceback.format_exc())
-
-    @QtCore.pyqtSlot()
     def do_testing_calibration(self):
         print('Starting calibration....')
         try:
@@ -1013,28 +744,18 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print('Done')
 
-# class Tracker(QtCore.QObject):
-#
-#      @QtCore.pyqtSlot()
-#      def do_tracking(self):
-#          while True:
-#              frame = camera.snap()
-#              ok, boxes = self.multitracker.update(frame)
-#              for newbox in boxes:
-#                 p1 = (int(newbox[0]), int(newbox[1]))
-#                 p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
-#                 cv2.rectangle(frame, p1, p2, (200, 0, 0))
-
 
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
         self.show_paramecium = False
+        ##### HOANG
+        self.show_tracking = False
+
 
     def point_paramecium(self, img):
         global paramecium_x, paramecium_y
 
-        x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True,
-                                        previous_x=None, previous_y=None)
+        x,y,theta = where_is_paramecium(img, calibrated_stage.pixel_per_um()[0], return_angle=True,previous_x=None, previous_y=None)
 
         if x is not None:
             x, y = int(x), int(y)
@@ -1047,6 +768,25 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
             gain = 0.5
             #calibrated_stage.reference_relative_move(-gain*array([xs,ys,0]))
             paramecium_x, paramecium_y = x,y
+
+        return img
+
+    #####HOANG
+    def draw_trackingBox(self, img):
+        global trackList
+        trackList = []
+        ok, boxes = multitracker.update(img)
+        for newbox in boxes:
+
+            p1 = (int(newbox[0]), int(newbox[1]))
+            p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
+            cv2.rectangle(img, p1, p2, (200, 0, 0))
+            x = int(newbox[0] + 0.5*newbox[2])
+            y = int(newbox[1] + 0.5*newbox[3])
+
+            #print("x,y: ",(x,y))
+            cv2.circle(img, (x,y), 1, (244, 4, 4), 2)
+            trackList.append((x, y))
 
         return img
 
@@ -1067,7 +807,10 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
         # Tracks paramecium
         if self.show_paramecium:
             img = self.point_paramecium(img)
-        
+
+        #####HOANG
+        if self.show_tracking:
+            img = self.draw_trackingBox(img)
         return img
 
 image_editor = ImageEditor()
@@ -1086,11 +829,11 @@ def display_edit(img):
 # If not available, run anyway without them
 
 ##### HOANG
-z3,u3,u4,u5 = None, None, None, None
-u6 = None
-us6 = None
-z6 = None
+multitracker = cv2.MultiTracker_create()
+z3, u3, u4, u5, u6, us6, z6, x_scale, y_scale = None, None, None, None, None, None, None, None, None
 moveList = []
+trackList = []
+
 amplifier, pressure = None, None
 try:
     amplifier = MultiClampChannel()
@@ -1109,7 +852,6 @@ calibrated_unit = calibrated_units[0]
 autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit)
 stack = None
 x0, y0 = None, None
-boxes = None
 landmark_u = [] # Landmark points
 landmark_r = []
 landmark_rs = []
