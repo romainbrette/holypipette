@@ -50,18 +50,14 @@ class FakeCamera(Camera):
         super(FakeCamera, self).__init__()
         self.width = 1024
         self.height = 768
-        self.frame = scipy.misc.imresize(scipy.misc.face(gray=True), size=2.0,
-                                         interp='bicubic')  #.astype(np.int32)/2 + 125
         self.exposure_time = 30
         self.manipulator = manipulator
         self.image_z = image_z
-        self.scale_factor = 2  # micrometers in pixels
+        self.scale_factor = 2.  # micrometers in pixels
         self.depth_of_field = 2.
-        self.image_cache = {}  # Store images to save time recreating them
-
-    def fast_gaussian_filter(self, image, dist):
-        return np.fft.ifft2(fourier_gaussian(np.fft.fft2(image),
-                                             abs(dist) / self.depth_of_field)).real
+        self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2,
+                                                                      self.height * 2), 10)*50 + 128,
+                                      0, 255), dtype=np.uint8)
 
     def set_exposure(self, value):
         if 0 < value <= 200:
@@ -71,15 +67,11 @@ class FakeCamera(Camera):
         return self.exposure_time
 
     def get_microscope_image(self, x, y, z):
-        if not (x, y, z) in self.image_cache:
-            full_height, full_width = self.frame.shape[:2]
-            frame = np.array(self.frame[int(full_height/2-y-self.height/2):int(full_height/2-y+self.height/2),
-                             int(full_width/2-x-self.width/2):int(full_width/2-x+self.width/2)],
-                             copy=True, dtype=np.int16)
-            if z != 0:
-                frame = self.fast_gaussian_filter(frame, z)
-            self.image_cache[(x, y, z)] = frame
-        return self.image_cache[(x, y, z)]
+        frame = np.roll(self.frame, int(y), axis=0)
+        frame = np.roll(frame, int(x), axis=1)
+        frame = frame[self.height//2:self.height//2+self.height,
+                      self.width//2:self.width//2+self.width]
+        return np.array(frame, copy=True)
 
     def snap(self):
         '''
@@ -116,7 +108,10 @@ class FakeCamera(Camera):
                                    np.arange(self.height) - self.height/2 + y)
                 angle = np.arctan2(X, Y)
                 dist = np.sqrt(X**2 + Y**2)
-                manipulators[(np.abs(angle-direction) < (0.075 + 0.0025*abs(z)/self.depth_of_field)) & (dist > 50)] = 5
+                border = (0.075 + 0.0025 * abs(z) / self.depth_of_field)
+                manipulators[(np.abs(angle - direction) < border) & (dist > 50)] = 5
+                edge_width = 0.02 if z > 0 else 0.04  # Make a distinction between below and above
+                manipulators[(np.abs(angle - direction) < border) & (np.abs(angle - direction) > border-edge_width) & (dist > 50)] = 75
                 frame[manipulators>0] = manipulators[manipulators>0]
         else:
             frame = scipy.misc.imresize(self.frame, size=0.5)
