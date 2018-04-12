@@ -12,7 +12,8 @@ Should this be in devices/*? Maybe in a separate calibration folder
 from __future__ import print_function
 from __future__ import absolute_import
 from .manipulatorunit import *
-from numpy import array, zeros, dot, arange, vstack, sign, pi, arcsin, mean, std
+from numpy import (array, zeros, dot, arange, vstack, sign, pi, arcsin,
+                   mean, std, isnan)
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
 
@@ -106,16 +107,22 @@ class CalibratedUnit(ManipulatorUnit):
     def save_state(self):
         if self.stage is not None:
             self.stage.save_state()
+        if self.microscope is not None:
+            self.microscope.save_state()
         self.saved_state = self.position()
 
     def delete_state(self):
         if self.stage is not None:
             self.stage.delete_state()
+        if self.microscope is not None:
+            self.microscope.delete_state()
         self.saved_state = None
 
     def recover_state(self):
         if self.stage is not None:
             self.stage.recover_state()
+        if self.microscope is not None:
+            self.microscope.recover_state()
         self.absolute_move(self.saved_state)
 
     def reference_position(self):
@@ -412,7 +419,7 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             return x-x0, y-y0, z
 
-    def move_and_track(self, distance, axis, move_stage = False):
+    def move_and_track(self, distance, axis, M, move_stage=False):
         '''
         Moves along one axis and track the pipette with microscope and optionally the stage.
 
@@ -428,7 +435,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.relative_move(distance, axis)
         self.abort_if_requested()
         # Estimate movement on screen
-        estimate = self.M[:,axis]*distance
+        estimate = M[:, axis]*distance
 
         # Move the stage to compensate
         if move_stage:
@@ -451,7 +458,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.microscope.relative_move(z)
         if move_stage:
             self.abort_if_requested()
-            self.stage.reference_relative_move(-array([x,y,0]))
+            self.stage.reference_relative_move(-array([x, y, 0]))
             self.stage.wait_until_still()
         self.abort_if_requested()
         self.microscope.wait_until_still()
@@ -501,23 +508,25 @@ class CalibratedUnit(ManipulatorUnit):
 
         return x,y,z
 
-    def calculate_up_directions(self):
+    def calculate_up_directions(self, M):
         '''
         Calculates up directions for all axes and microscope from the matrix.
         '''
         # Determine up direction for the first axis (assumed to be the main axis)
-        positive_move = self.M[:, 0] # move of 1 um along first axis
-        self.up_direction[0] = up_direction(self.pipette_position ,positive_move)
+        positive_move = 1*M[:, 0] # move of 1 um along first axis
+        self.debug('Positive move: {}'.format(positive_move))
+        self.up_direction[0] = up_direction(self.pipette_position, positive_move)
         self.info('Axis 0 up direction: ' + str(self.up_direction[0]))
 
         # Determine microscope up direction
-        self.microscope.up_direction = sign(self.M[2, 0] * self.up_direction[0])
+        if self.microscope.up_direction is None:
+            self.microscope.up_direction = sign(M[2, 0])
         self.info('Microscope up direction: ' + str(self.microscope.up_direction))
 
         # Determine up direction of other axes
         for axis in range(1,len(self.axes)):
             # We use microscope up direction
-            s = sign(self.M[2, axis] * self.microscope.up_direction)
+            s = sign(M[2, axis] * self.microscope.up_direction)
             if s != 0:
                 self.up_direction[axis] = s
             self.info('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
@@ -558,7 +567,7 @@ class CalibratedUnit(ManipulatorUnit):
         oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
         for axis in range(len(self.axes)):
             self.debug('Moving axis {}'.format(axis))
-            x, y, z = self.move_and_track(distance, axis, move_stage=False)
+            x, y, z = self.move_and_track(distance, axis, M, move_stage=False)
             z += self.microscope.position()
             self.debug('x={}, y={}, z={}'.format(x, y, z))
             M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
@@ -566,7 +575,7 @@ class CalibratedUnit(ManipulatorUnit):
         self.debug('Matrix:' + str(M))
 
         # *** Calculate up directions ***
-        self.calculate_up_directions()
+        self.calculate_up_directions(M)
 
         self.info('Moving back to initial position')
         # Move back to initial position
@@ -576,6 +585,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Calculate floor (min Z)
         if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
             floor = z0-300.*self.microscope.up_direction
+            self.debug('Setting floor to {} (300 um below current position)'.format(floor))
         else:
             floor = self.microscope.floor_Z
 
@@ -613,12 +623,12 @@ class CalibratedUnit(ManipulatorUnit):
 
                 # Check whether we might reach the floor (with 100 um margin)
                 if (ze - floor) * self.microscope.up_direction < 100.:
-                    self.info('We reached the coverslip.')
+                    self.info('We reached the coverslip (z={z}, floor={floor}, microscope up={up}).'.format(z=ze, floor=floor, up=self.microscope.up_direction))
                     break
 
                 self.abort_if_requested()
                 # Move pipette down
-                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis,
+                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis, M,
                                               move_stage=move_stage)
                 rs = self.stage.reference_position()
 
@@ -641,18 +651,21 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.debug('Final Matrix:' + str(M))
 
-        # *** Compute the (pseudo-)inverse ***
-        Minv = pinv(M)
+        if not isnan(M).any():
+            # *** Compute the (pseudo-)inverse ***
+            Minv = pinv(M)
 
-        # *** Calculate offset ***0
-        #    Offset is such that the initial position is the position on screen in the reference system
-        r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
+            # *** Calculate offset ***0
+            #    Offset is such that the initial position is the position on screen in the reference system
+            r0 = array([x, y, z]) - dot(M, u0) - self.stage.reference_position()
 
-        # Store the new values
-        self.M = M
-        self.Minv = Minv
-        self.r0 = r0
-        self.calibrated = True
+            # Store the new values
+            self.M = M
+            self.Minv = Minv
+            self.r0 = r0
+            self.calibrated = True
+        else:
+            raise CalibrationError('Matrix contains NaN values')
 
     # TODO: Is this function still used?
     def calibrate2(self):
@@ -1075,6 +1088,7 @@ class FixedStage(CalibratedUnit):
     '''
     def __init__(self):
         self.stage = None
+        self.microscope = None
         self.r = array([0.,0.,0.]) # position in reference system
         self.u = array([0.,0.]) # position in stage system
         self.calibrated = True
