@@ -32,4 +32,9 @@ class PatchGui(ManipulatorGui):
                                    self.patch_interface.commands['patch_without_move'])
         self.register_key_action(Qt.Key_B, None,
                                  self.patch_interface.commands['break_in'])
-
+        self.register_key_action(Qt.Key_F3, None,
+                                 self.patch_interface.commands['store_cleaning_position'])
+        self.register_key_action(Qt.Key_F4, None,
+                                 self.patch_interface.commands['store_rinsing_position'])
+        self.register_key_action(Qt.Key_F5, None,
+                                 self.patch_interface.commands['clean_pipette'])

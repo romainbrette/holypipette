@@ -79,6 +79,24 @@ class AutoPatchInterface(TaskInterface):
         self.add_command('patch_without_move', 'Patch',
                          'Patch cell at current position',
                          task_description='Patching cell')
+        self.add_command('store_cleaning_position', 'Patch',
+                         'Store the position of the washing bath')
+        self.add_command('store_rinsing_position', 'Patch',
+                         'Store the position of the rinsing bath')
+        self.add_command('clean_pipette', 'Patch',
+                         'Clean the pipette (wash and rinse)',
+                         task_description='Cleaning the pipette')
+
+    def handle_command(self, command, argument):
+        autopatcher = self.autopatcher_by_unit[self.pipette_controller.current_unit]
+        if command == 'store_cleaning_position':
+            autopatcher.cleaning_bath_position = self.pipette_controller.calibrated_unit.position()
+            self.info('Cleaning bath position stored')
+        elif command == 'store_rinsing_position':
+            autopatcher.rinsing_bath_position = self.pipette_controller.calibrated_unit.position()
+            self.info('Rinsing bath position stored')
+        else:
+            raise ValueError('Unknown command: %s' % command)
 
     def handle_blocking_command(self, command, argument):
         if self.amplifier is None or self.pressure is None:
@@ -91,6 +109,10 @@ class AutoPatchInterface(TaskInterface):
             self.execute(autopatcher, 'patch', np.array(argument))
         elif command == 'patch_without_move':
             self.execute(autopatcher, 'patch')
+        elif command == 'clean_pipette':
+            self.execute(autopatcher, 'clean_pipette')
         else:
             raise ValueError('Unknown command: %s' % command)
 
+    def clean_pipette(self):
+        self.execute(self.calibrated_unit, 'clean_pipette')

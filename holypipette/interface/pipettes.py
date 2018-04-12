@@ -42,7 +42,8 @@ class PipetteInterface(TaskInterface):
         self.config_filename = config_filename
         self.current_unit = 0
         self.calibrated_unit = None
-
+        self.cleaning_bath_position = None
+        self.rinsing_bath_position = None
         # Define commands
         # Stage
         self.add_command('move_stage_vertical', 'Stage',
