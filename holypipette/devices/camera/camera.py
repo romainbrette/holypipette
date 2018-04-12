@@ -55,7 +55,7 @@ class FakeCamera(Camera):
         self.exposure_time = 30
         self.manipulator = manipulator
         self.image_z = image_z
-        self.scale_factor = 3
+        self.scale_factor = 2  # micrometers in pixels
 
     def set_exposure(self, value):
         if 0 < value <= 200:
@@ -89,14 +89,14 @@ class FakeCamera(Camera):
                 # cut off a tip
                 x += np.cos(direction)*15
                 y += np.sin(direction)*15
-                # Position relative to stage
-                x -= stage_x
-                y -= stage_y
-                z -= stage_z
                 # scale
                 x *= self.scale_factor
                 y *= self.scale_factor
                 z *= self.scale_factor
+                # Position relative to stage
+                x -= stage_x
+                y -= stage_y
+                z -= stage_z
                 X, Y = np.meshgrid(np.arange(self.width) - self.width/2 + x,
                                    np.arange(self.height) - self.height/2 + y)
                 angle = np.arctan2(X, Y)
