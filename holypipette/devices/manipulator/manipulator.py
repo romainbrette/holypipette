@@ -26,7 +26,7 @@ class ManipulatorError(Exception):
 
 
 class Manipulator(TaskController):
-    def position(self, axis):
+    def position(self, axis=None):
         '''
         Current position along an axis.
 
@@ -40,7 +40,16 @@ class Manipulator(TaskController):
         '''
         return 0. # fake
 
-    def absolute_move(self, x, axis):
+    def save_state(self):
+        self.saved_state = self.position()
+
+    def delete_state(self):
+        self.saved_state = None
+
+    def recover_state(self):
+        self.absolute_move(self.saved_state)
+
+    def absolute_move(self, x, axis=None):
         '''
         Moves the device axis to position x.
 
@@ -115,7 +124,7 @@ class Manipulator(TaskController):
         """
         previous_position = self.position_group(axes)
         new_position = None
-        while array(previous_position != new_position).any():
+        while new_position is None or array(previous_position != new_position).any():
             previous_position = new_position
             new_position = self.position_group(axes)
             self.sleep(0.1)  # 100 ms

@@ -128,7 +128,7 @@ class ManipulatorGui(CameraGui):
                                      self.interface.commands['switch_manipulator'],
                                      argument=unit_number + 1)
 
-        self.register_key_action(Qt.Key_S, None,
+        self.register_key_action(Qt.Key_S, Qt.ControlModifier,
                                  self.interface.commands['save_configuration'])
 
         # Move pipette by clicking

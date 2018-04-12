@@ -68,7 +68,8 @@ class PipetteInterface(TaskInterface):
                          'Save the calibration information for the current '
                          'manipulator')
         self.add_command('move_pipette', 'Manipulators',
-                         'Move pipette to position')
+                         'Move pipette to position',
+                         task_description='Moving to position with safe approach')
         self.add_command('move_pipette_x', 'Manipulators',
                          'Move pipette in x direction by {:.0f}μm',
                          default_arg=10)
@@ -105,8 +106,6 @@ class PipetteInterface(TaskInterface):
             self.load_configuration()
         elif command == 'save_configuration':
             self.save_configuration()
-        elif command == 'move_pipette':
-            self.move_pipette(argument[0], argument[1])
         elif command == 'move_pipette_x':
             self.calibrated_unit.relative_move(argument, axis=0)
         elif command == 'move_pipette_y':
@@ -130,6 +129,8 @@ class PipetteInterface(TaskInterface):
         elif command == 'go_to_floor':
             self.execute(self.microscope, 'absolute_move',
                          x=self.microscope.floor_Z)
+        elif command == 'move_pipette':
+            self.move_pipette(argument[0], argument[1])
         else:
             raise ValueError('Unknown blocking command: %s' % command)
 
@@ -172,4 +173,5 @@ class PipetteInterface(TaskInterface):
 
     def move_pipette(self, x, y):
         position = np.array([x, y, self.microscope.position()])
-        self.calibrated_unit.execute('safe_move', position)
+        self.debug('asking for safe move to {}'.format(position))
+        self.execute(self.calibrated_unit, 'safe_move', argument=position)
