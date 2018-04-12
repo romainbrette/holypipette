@@ -167,7 +167,7 @@ class LogViewerWindow(QtWidgets.QMainWindow):
         super(LogViewerWindow, self).closeEvent(event)
 
     def set_level(self, level_idx):
-        levelno = self.levels.values()[level_idx]
+        levelno = list(self.levels.values())[level_idx]
         if self.current_levelno == levelno:
             return
         for row in range(self.logger.rowCount()):
