@@ -54,4 +54,4 @@ class FakeManipulator(Manipulator):
             self.x[axis-1] = x
         else:
             self.x[axis-1] = clip(x, self.min[axis-1], self.max[axis-1])
-        print('Moved: {}'.format(self.x))
+        self.debug('FakeManipulator moved to: {}'.format(self.x))
