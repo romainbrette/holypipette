@@ -55,8 +55,8 @@ class TestGui(QtWidgets.QMainWindow):
     ##### HOANG
     pipette_cleaning_signal = QtCore.pyqtSignal()
     initial_location_signal = QtCore.pyqtSignal()
-    #movement_compensation_signal = QtCore.pyqtSignal()
     testing_calibrate_signal = QtCore.pyqtSignal()
+    sequential_patching_signal = QtCore.pyqtSignal()
 
     def __init__(self, camera):
         super(TestGui, self).__init__()
@@ -93,14 +93,13 @@ class TestGui(QtWidgets.QMainWindow):
         ##### HOANG
         self.pipette_cleaning_signal.connect(self.calibrator.do_cleaning_pipette)
         self.initial_location_signal.connect(self.calibrator.do_initial_location)
-        #self.movement_compensation_signal.connect(self.calibrator.do_movement_compensate)
         self.testing_calibrate_signal.connect(self.calibrator.do_testing_calibration)
+        self.sequential_patching_signal.connect(self.calibrator.do_sequential_patching)
 
         global z6, u6, us6
         z6 = microscope.position()
         u6 = calibrated_unit.position()
         us6 = stage.position()
-
 
     def mouse_callback(self, event):
         # Click = move
@@ -126,6 +125,8 @@ class TestGui(QtWidgets.QMainWindow):
             except Exception:
                 print(traceback.format_exc())
 
+
+        #####HOANG - Testing
         if event.button() == Qt.RightButton:
             try:
                 x, y = event.x(), event.y()
@@ -134,9 +135,8 @@ class TestGui(QtWidgets.QMainWindow):
                 scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
                 xs *= scale
                 ys *= scale
-                #moveList.append(array([xs, ys, microscope.position()]))
-                print((x,y),(xs,ys))
-                print(scale)
+                moveList = array([xs, ys, microscope.position()])
+                print(moveList)
             except Exception:
                 print(traceback.format_exc())
 
@@ -312,22 +312,10 @@ class TestGui(QtWidgets.QMainWindow):
                 self.pipette_cleaning_signal.emit()
 
             elif event.key() == Qt.Key_H:
-                global z3,u3,moveList, trackList
+                global z3,u3, moveList
                 z3 = microscope.position()
                 u3 = calibrated_unit.position()
-                for point in trackList:
-                    x = point[0]
-                    y = point[1]
-                    xs = x - camera.width / 2
-                    ys = y - camera.height / 2
-                    moveList.append(array([xs, ys, microscope.position()]))
-                for i in moveList:
-                    self.move_position = i
-                    calibrated_unit.safe_move(self.move_position, recalibrate=True)
-
-                moveList = []
-                trackList = []
-                print("Done")
+                self.sequential_patching_signal.emit()
 
             elif event.key() == Qt.Key_N:
                 global z6,u6,us6
@@ -357,8 +345,7 @@ class TestGui(QtWidgets.QMainWindow):
                     break
 
             elif event.key() == Qt.Key_F8:
-                print(self.video.size())
-                print(self.video.size().width(), self.video.size().height())
+                print(calibrated_unit.u0)
 
         except Exception:
             print(traceback.format_exc())
@@ -598,7 +585,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             calibrated_unit.analyze_calibration()
         except Exception:
             print(traceback.format_exc())
-
         print('Done')
 
 
@@ -639,7 +625,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def take_photos(self):
         global stack,x0,y0
-
         print("Taking photos")
         try:
             calibrated_unit.take_photos(message)
@@ -654,8 +639,8 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print("Amplifier or pressure controller not available. Aborting.")
             return
         #Step 1: Washing.
-        print('Cleaning the pipette: Started')
         try:
+            print('Cleaning the pipette: Started')
             #Move the pipette to the washing bath.
             calibrated_unit.absolute_move(u4[0],0)
             calibrated_unit.wait_until_still(0)
@@ -720,15 +705,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print("Done")
 
-    # @QtCore.pyqtSlot()
-    # def do_movement_compensate(self):
-    #     print("Initial Location")
-    #     try:
-    #         #calibrated_stage.reference_move
-    #     except Exception:
-    #         print(traceback.format_exc())
-    #     print("Done")
-
     @QtCore.pyqtSlot()
     def do_testing_calibration(self):
         print('Starting calibration....')
@@ -744,6 +720,101 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
             print(traceback.format_exc())
         print('Done')
 
+    @QtCore.pyqtSlot()
+    def do_sequential_patching(self):
+        global iteration, moveList, trackList, finishPatching
+
+        if (amplifier is None) | (pressure is None):
+            print("Amplifier or pressure controller not available. Aborting.")
+            return
+        try:
+            length = len(moveList)
+            for iteration in range (length):
+                self.move_position = moveList[iteration]
+                currentPosition = self.move_position
+                calibrated_unit.safe_move(self.move_position, recalibrate=True)
+                calibrated_unit.wait_until_still()
+                finishPatching = False
+                t1 = time.time()
+                print("Testing started")
+                #autopatcher.run(move_position=None, message=message)
+                while finishPatching is False:
+                    #####HOANG - Change to move when distance > a value
+                    #if (abs(currentPosition[0] - moveList[iteration][0]) > 3) | (abs(currentPosition[1] - moveList[iteration][1]) > 3):
+                    try:
+                        self.move_position = moveList[iteration]
+                    except:
+                        self.move_position = currentPosition
+                    if (len(self.move_position)>0) & (abs(currentPosition.flatten().sum() - self.move_position.flatten().sum()) > 5):
+                          currentPosition = self.move_position
+                          calibrated_unit.safe_move(self.move_position, recalibrate=True)
+                          #calibrated_unit.wait_until_still()
+
+                    t2 = time.time()
+                    if t2-t1 >= 2:
+                        finishPatching = True
+                print("End testing")
+
+                # calibrated_unit.absolute_move(u4[0], 0)
+                # calibrated_unit.wait_until_still(0)
+                # calibrated_unit.absolute_move(u4[2] - 5000, 2)
+                # calibrated_unit.wait_until_still(2)
+                # calibrated_unit.absolute_move(u4[1], 1)
+                # calibrated_unit.wait_until_still(1)
+                # calibrated_unit.absolute_move(u4[2], 2)
+                # calibrated_unit.wait_until_still(2)
+                # # Fill up with the Alconox
+                # pressure.set_pressure(-600)
+                # time.sleep(1)
+                # # 5 cycles of tip cleaning
+                # for i in range(1, 5):
+                #     pressure.set_pressure(-600)
+                #     time.sleep(0.625)
+                #     pressure.set_pressure(1000)
+                #     time.sleep(0.375)
+                #
+                # # Step 2: Rinsing.
+                # # Move the pipette to the rinsing bath.
+                # calibrated_unit.absolute_move(u5[2] - 5000, 2)
+                # calibrated_unit.wait_until_still(2)
+                # calibrated_unit.absolute_move(u5[1], 1)
+                # calibrated_unit.wait_until_still(1)
+                # calibrated_unit.absolute_move(u5[0], 0)
+                # calibrated_unit.wait_until_still(0)
+                # calibrated_unit.absolute_move(u5[2], 2)
+                # calibrated_unit.wait_until_still(2)
+                # # Expel the remaining Alconox
+                # pressure.set_pressure(1000)
+                # time.sleep(6)
+                #
+                # # Step 3: Move back.
+                # calibrated_unit.absolute_move(0, 0)
+                # calibrated_unit.wait_until_still(0)
+                # calibrated_unit.absolute_move(u3[1], 1)
+                # calibrated_unit.wait_until_still(1)
+                # calibrated_unit.absolute_move(u3[2], 2)
+                # calibrated_unit.wait_until_still(2)
+                # calibrated_unit.absolute_move(u3[0], 0)
+                # calibrated_unit.wait_until_still(0)
+                # Move microscope back to original position
+                iteration += 1
+
+            iteration = None
+            moveList = []
+            trackList = []
+            print('Finish')
+        except Exception:
+            print(traceback.format_exc())
+
+    @QtCore.pyqtSlot()
+    def do_movement_compensation(self):
+        try:
+            while True:
+                if finishPatching is False:
+                    calibrated_unit.relative_move(100,axis = 0)
+                    calibrated_unit.relative_move(-100,axis = 0)
+        except Exception:
+            print(traceback.format_exc())
 
 class ImageEditor(object): # adds stuff on the image, including paramecium tracker
     def __init__(self):
@@ -773,8 +844,9 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
 
     #####HOANG
     def draw_trackingBox(self, img):
-        global trackList
+        global trackList, moveList
         trackList = []
+        moveList = []
         ok, boxes = multitracker.update(img)
         for newbox in boxes:
 
@@ -787,6 +859,13 @@ class ImageEditor(object): # adds stuff on the image, including paramecium track
             #print("x,y: ",(x,y))
             cv2.circle(img, (x,y), 1, (244, 4, 4), 2)
             trackList.append((x, y))
+
+        for point in trackList:
+            x = point[0]
+            y = point[1]
+            xs = x - camera.width / 2
+            ys = y - camera.height / 2
+            moveList.append(array([xs, ys, microscope.position()]))
 
         return img
 
@@ -830,9 +909,11 @@ def display_edit(img):
 
 ##### HOANG
 multitracker = cv2.MultiTracker_create()
-z3, u3, u4, u5, u6, us6, z6, x_scale, y_scale = None, None, None, None, None, None, None, None, None
+z3, u3, u4, u5, u6, us6, z6 = None, None, None, None, None, None, None
 moveList = []
 trackList = []
+finishPatching = True
+finishWashing = True
 
 amplifier, pressure = None, None
 try:
