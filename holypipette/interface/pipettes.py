@@ -69,6 +69,15 @@ class PipetteInterface(TaskInterface):
                          'manipulator')
         self.add_command('move_pipette', 'Manipulators',
                          'Move pipette to position')
+        self.add_command('move_pipette_x', 'Manipulators',
+                         'Move pipette in x direction by {:.0f}μm',
+                         default_arg=10)
+        self.add_command('move_pipette_y', 'Manipulators',
+                         'Move pipette in y direction by {:.0f}μm',
+                         default_arg=10)
+        self.add_command('move_pipette_z', 'Manipulators',
+                         'Move pipette in z direction by {:.0f}μm',
+                         default_arg=10)
         # Microscope
         self.add_command('move_microscope', 'Microscope',
                          'Move microscope by {:.0f}μm',
@@ -98,6 +107,12 @@ class PipetteInterface(TaskInterface):
             self.save_configuration()
         elif command == 'move_pipette':
             self.move_pipette(argument[0], argument[1])
+        elif command == 'move_pipette_x':
+            self.calibrated_unit.relative_move(argument, axis=0)
+        elif command == 'move_pipette_y':
+            self.calibrated_unit.relative_move(argument, axis=1)
+        elif command == 'move_pipette_z':
+            self.calibrated_unit.relative_move(argument, axis=2)
         elif command == 'move_microscope':
             self.microscope.relative_move(argument)
         elif command == 'set_floor':

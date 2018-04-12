@@ -5,13 +5,13 @@ It has 9 axes, numbered 1 to 9.
 from __future__ import print_function
 from __future__ import absolute_import
 from .manipulator import Manipulator
-from numpy import zeros, clip
+from numpy import zeros, clip, pi
 
 __all__ = ['FakeManipulator']
 
 # TODO: Move in 3D
 class FakeManipulator(Manipulator):
-    def __init__(self, min=None, max=None):
+    def __init__(self, min=None, max=None, angle=25.):
         Manipulator.__init__(self)
         self.x = zeros(9) # Position of all axes
         # Minimum and maximum positions for all axes
@@ -25,6 +25,7 @@ class FakeManipulator(Manipulator):
             if len(min) != 9 or len(max) != 9:
                 raise ValueError('min/max argument needs to be a vector of '
                                  'length 9.')
+        self.angle = angle*pi/180
 
     def position(self, axis):
         '''
@@ -53,3 +54,4 @@ class FakeManipulator(Manipulator):
             self.x[axis-1] = x
         else:
             self.x[axis-1] = clip(x, self.min[axis-1], self.max[axis-1])
+        print('Moved: {}'.format(self.x))

@@ -84,6 +84,24 @@ class ManipulatorGui(CameraGui):
             self.register_key_action(Qt.Key_Right, modifier,
                                      self.interface.commands['move_stage_horizontal'],
                                      argument=distance, default_doc=False)
+            self.register_key_action(Qt.Key_W, modifier,
+                                     self.interface.commands['move_pipette_y'],
+                                     argument=distance, default_doc=False)
+            self.register_key_action(Qt.Key_S, modifier,
+                                     self.interface.commands['move_pipette_y'],
+                                     argument=-distance, default_doc=False)
+            self.register_key_action(Qt.Key_A, modifier,
+                                     self.interface.commands['move_pipette_x'],
+                                     argument=distance, default_doc=False)
+            self.register_key_action(Qt.Key_D, modifier,
+                                     self.interface.commands['move_pipette_x'],
+                                     argument=-distance, default_doc=False)
+            self.register_key_action(Qt.Key_Q, modifier,
+                                     self.interface.commands['move_pipette_z'],
+                                     argument=distance, default_doc=False)
+            self.register_key_action(Qt.Key_E, modifier,
+                                     self.interface.commands['move_pipette_z'],
+                                     argument=-distance, default_doc=False)
 
             # Manually document all arrows at once
             if modifier == Qt.NoModifier:
@@ -92,6 +110,10 @@ class ManipulatorGui(CameraGui):
                 modifier_text = QtGui.QKeySequence(modifier).toString()
             self.help_window.register_custom_action('Stage', modifier_text+'Arrows',
                                                     'Move stage by %gum' % distance)
+            self.help_window.register_custom_action('Manipulators', modifier_text+'A/S/W/D',
+                                                    'Move pipette by %gum in x/y direction' % distance)
+            self.help_window.register_custom_action('Manipulators', modifier_text+'Q/E',
+                                                    'Move pipette by %gum in z direction' % distance)
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,

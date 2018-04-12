@@ -8,6 +8,7 @@ from __future__ import print_function
 import numpy as np
 import scipy.misc
 from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import fourier_gaussian
 
 __all__ = ['Camera', 'FakeCamera']
 
@@ -44,7 +45,6 @@ class Camera(object):
     def reset(self):
         pass
 
-
 class FakeCamera(Camera):
     def __init__(self, manipulator=None, image_z=0):
         super(FakeCamera, self).__init__()
@@ -56,6 +56,11 @@ class FakeCamera(Camera):
         self.manipulator = manipulator
         self.image_z = image_z
         self.scale_factor = 2  # micrometers in pixels
+        self.depth_of_field = 2.
+
+    def fast_gaussian_filter(self, image, dist):
+        return np.fft.ifft2(fourier_gaussian(np.fft.fft2(image),
+                                             abs(dist) / self.depth_of_field)).real
 
     def set_exposure(self, value):
         if 0 < value <= 200:
@@ -81,18 +86,19 @@ class FakeCamera(Camera):
                              int(full_width/2-stage_x-self.width/2):int(full_width/2-stage_x+self.width/2)],
                              copy=True, dtype=np.int16)
             if stage_z != 0:
-                frame = gaussian_filter(frame, abs(stage_z)/10.)
+                frame = self.fast_gaussian_filter(frame, stage_z)
             for direction, axes in [(np.pi/2, [1, 2, 3]),
                                     (-np.pi/2, [4, 5, 6])]:
                 manipulators = np.zeros((self.height, self.width), dtype=np.int16)
                 x, y, z = self.manipulator.position_group(axes)
-                # cut off a tip
-                x += np.cos(direction)*15
-                y += np.sin(direction)*15
+                # Quick&dirty 3D transformation
+                x = np.cos(self.manipulator.angle)*(x + 50/self.scale_factor)
+                z = np.sin(self.manipulator.angle)*(x + 50/self.scale_factor) + z
                 # scale
                 x *= self.scale_factor
                 y *= self.scale_factor
                 z *= self.scale_factor
+                # cut off a tip
                 # Position relative to stage
                 x -= stage_x
                 y -= stage_y
@@ -101,9 +107,7 @@ class FakeCamera(Camera):
                                    np.arange(self.height) - self.height/2 + y)
                 angle = np.arctan2(X, Y)
                 dist = np.sqrt(X**2 + Y**2)
-                manipulators[(np.abs(angle-direction) < 0.075) & (dist > 50)] = 5
-                if z != 0:
-                    manipulators = gaussian_filter(manipulators, abs(z)/10.)
+                manipulators[(np.abs(angle-direction) < (0.075 + 0.0025*abs(z)/self.depth_of_field)) & (dist > 50)] = 5
                 frame[manipulators>0] = manipulators[manipulators>0]
         else:
             frame = scipy.misc.imresize(self.frame, size=0.5)
