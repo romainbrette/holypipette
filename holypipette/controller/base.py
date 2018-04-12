@@ -53,12 +53,11 @@ class TaskController(LoggingObject):
             # We don't want the debug command to raise the exception again,
             # so temporarily disable the `abort_requested` attribute
             self.abort_requested = False
-            self.debug('command "{}" has been aborted.'.format(func_name))
+            self.debug('"{}" has been aborted.'.format(func_name))
             # Set the attribute again so that later code knows about the abort
             self.abort_requested = True
         except Exception:
-            self.exception('An exception occured executing '
-                           '{}'.format(func_name))
+            self.exception('"{}" failed. '.format(func_name))
             self.error_occurred = True
 
     def abort_if_requested(self):

@@ -153,8 +153,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             else:
                 self.handle_command(command, argument)
         except Exception:
-            self.exception("An error occured dealing with command "
-                           "{}".format(command, argument))
+            self.exception('"{}" failed.'.format(command))
             self.task_finished.emit(1, None)
 
     def execute(self, controller, func_name, final_task=True, **kwds):
