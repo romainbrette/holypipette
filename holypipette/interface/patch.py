@@ -113,6 +113,3 @@ class AutoPatchInterface(TaskInterface):
             self.execute(autopatcher, 'clean_pipette')
         else:
             raise ValueError('Unknown command: %s' % command)
-
-    def clean_pipette(self):
-        self.execute(self.calibrated_unit, 'clean_pipette')
