@@ -57,6 +57,7 @@ class FakeCamera(Camera):
         self.image_z = image_z
         self.scale_factor = 2  # micrometers in pixels
         self.depth_of_field = 2.
+        self.image_cache = {}  # Store images to save time recreating them
 
     def fast_gaussian_filter(self, image, dist):
         return np.fft.ifft2(fourier_gaussian(np.fft.fft2(image),
@@ -69,6 +70,17 @@ class FakeCamera(Camera):
     def get_exposure(self):
         return self.exposure_time
 
+    def get_microscope_image(self, x, y, z):
+        if not (x, y, z) in self.image_cache:
+            full_height, full_width = self.frame.shape[:2]
+            frame = np.array(self.frame[int(full_height/2-y-self.height/2):int(full_height/2-y+self.height/2),
+                             int(full_width/2-x-self.width/2):int(full_width/2-x+self.width/2)],
+                             copy=True, dtype=np.int16)
+            if z != 0:
+                frame = self.fast_gaussian_filter(frame, z)
+            self.image_cache[(x, y, z)] = frame
+        return self.image_cache[(x, y, z)]
+
     def snap(self):
         '''
         Returns the current image.
@@ -76,17 +88,14 @@ class FakeCamera(Camera):
         '''
         if self.manipulator is not None:
             # Use the part of the image under the microscope
-            full_height, full_width = self.frame.shape[:2]
+
             stage_x, stage_y, stage_z = self.manipulator.position_group([7, 8, 9])
             stage_z -= self.image_z
             stage_x *= self.scale_factor
             stage_y *= self.scale_factor
             stage_z *= self.scale_factor
-            frame = np.array(self.frame[int(full_height/2-stage_y-self.height/2):int(full_height/2-stage_y+self.height/2),
-                             int(full_width/2-stage_x-self.width/2):int(full_width/2-stage_x+self.width/2)],
-                             copy=True, dtype=np.int16)
-            if stage_z != 0:
-                frame = self.fast_gaussian_filter(frame, stage_z)
+            frame = self.get_microscope_image(stage_x, stage_y, stage_z)
+
             for direction, axes in [(np.pi/2, [1, 2, 3]),
                                     (-np.pi/2, [4, 5, 6])]:
                 manipulators = np.zeros((self.height, self.width), dtype=np.int16)
@@ -112,6 +121,6 @@ class FakeCamera(Camera):
         else:
             frame = scipy.misc.imresize(self.frame, size=0.5)
         exposure_factor = self.exposure_time/30.
-        noisy_frame = frame + np.random.randn(self.height, self.width)*10
-        return np.array(np.clip(noisy_frame*exposure_factor, 0, 255),
+        frame = frame + np.random.randn(self.height, self.width)*10
+        return np.array(np.clip(frame*exposure_factor, 0, 255),
                         dtype=np.uint8)
