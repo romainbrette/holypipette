@@ -5,7 +5,7 @@ import os
 import numpy as np
 from PyQt5 import QtCore
 
-from holypipette.interface import TaskInterface
+from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage, CalibrationConfig
 
 
@@ -44,97 +44,57 @@ class PipetteInterface(TaskInterface):
         self.calibrated_unit = None
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
-        # Define commands
-        # Stage
-        self.add_command('move_stage_vertical', 'Stage',
-                         'Move stage vertically by {:.0f}μm',
-                         default_arg=10)
-        self.add_command('move_stage_horizontal', 'Stage',
-                         'Move stage horizontally by {:.0f}μm',
-                         default_arg=10)
-        self.add_command('calibrate_stage', 'Stage',
-                         'Calibrate stage only',
-                         task_description='Calibrating stage')
-        # Manipulators
-        self.add_command('calibrate_manipulator', 'Manipulators',
-                         'Calibrate stage and manipulator',
-                         task_description='Calibrating stage and manipulator')
-        self.add_command('switch_manipulator', 'Manipulators',
-                         'Switch to manipulator {}',
-                         default_arg=1)
-        self.add_command('load_configuration', 'Manipulators',
-                         'Load the calibration information for the current '
-                         'manipulator')
-        self.add_command('save_configuration', 'Manipulators',
-                         'Save the calibration information for the current '
-                         'manipulator')
-        self.add_command('move_pipette', 'Manipulators',
-                         'Move pipette to position',
-                         task_description='Moving to position with safe approach')
-        self.add_command('move_pipette_x', 'Manipulators',
-                         'Move pipette in x direction by {:.0f}μm',
-                         default_arg=10)
-        self.add_command('move_pipette_y', 'Manipulators',
-                         'Move pipette in y direction by {:.0f}μm',
-                         default_arg=10)
-        self.add_command('move_pipette_z', 'Manipulators',
-                         'Move pipette in z direction by {:.0f}μm',
-                         default_arg=10)
-        # Microscope
-        self.add_command('move_microscope', 'Microscope',
-                         'Move microscope by {:.0f}μm',
-                         default_arg=10)
-        self.add_command('set_floor', 'Microscope',
-                         'Set the position of the floor (cover slip)')
-        self.add_command('go_to_floor', 'Microscope',
-                         'Go to the floor (cover slip)',
-                         task_description='Go to the floor (cover slip)')
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
         self.switch_manipulator(1)
         # We call this via command_received to catch errors automatically
-        self.command_received('load_configuration', None)
+        self.command_received(self.load_configuration, None)
 
-    def handle_command(self, command, argument):
-        if command == 'move_stage_horizontal':
-            self.calibrated_stage.relative_move(argument, axis=0)
-        elif command == 'move_stage_vertical':
-            self.calibrated_stage.relative_move(argument, axis=1)
-        elif command == 'switch_manipulator':
-            self.switch_manipulator(argument)
-        elif command == 'load_configuration':
-            self.load_configuration()
-        elif command == 'save_configuration':
-            self.save_configuration()
-        elif command == 'move_pipette_x':
-            self.calibrated_unit.relative_move(argument, axis=0)
-        elif command == 'move_pipette_y':
-            self.calibrated_unit.relative_move(argument, axis=1)
-        elif command == 'move_pipette_z':
-            self.calibrated_unit.relative_move(argument, axis=2)
-        elif command == 'move_microscope':
-            self.microscope.relative_move(argument)
-        elif command == 'set_floor':
-            self.microscope.floor_Z = self.microscope.position()
-        else:
-            raise ValueError('Unknown command: %s' % command)
+    @command(category='Manipulators',
+             description='Move pipette in x direction by {:.0f}μm',
+             default_arg=10)
+    def move_pipette_x(self, distance):
+        self.calibrated_unit.relative_move(distance, axis=0)
 
-    def handle_blocking_command(self, command, argument):
-        if command == 'calibrate_stage':
-            if self.execute(self.calibrated_stage, 'calibrate', final_task=False):
-                self.execute(self.calibrated_unit, 'analyze_calibration')
-        elif command == 'calibrate_manipulator':
-            if self.execute(self.calibrated_unit, 'calibrate', final_task=False):
-                self.execute(self.calibrated_unit, 'analyze_calibration')
-        elif command == 'go_to_floor':
-            self.execute(self.microscope, 'absolute_move',
-                         x=self.microscope.floor_Z)
-        elif command == 'move_pipette':
-            self.move_pipette(argument[0], argument[1])
-        else:
-            raise ValueError('Unknown blocking command: %s' % command)
+    @command(category='Manipulators',
+             description='Move pipette in y direction by {:.0f}μm',
+             default_arg=10)
+    def move_pipette_y(self, distance):
+        self.calibrated_unit.relative_move(distance, axis=1)
 
+    @command(category='Manipulators',
+             description='Move pipette in z direction by {:.0f}μm',
+             default_arg=10)
+    def move_pipette_z(self, distance):
+        self.calibrated_unit.relative_move(distance, axis=2)
+
+    @command(category='Microscope',
+             description='Move microscope by {:.0f}μm',
+             default_arg=10)
+    def move_microscope(self, distance):
+        self.microscope.relative_move(distance)
+
+    @command(category='Microscope',
+             description='Set the position of the floor (cover slip)')
+    def set_floor(self):
+        self.microscope.floor_Z = self.microscope.position()
+
+    @command(category='Stage',
+             description='Move stage vertically by {:.0f}μm',
+             default_arg=10)
+    def move_stage_vertical(self, distance):
+        self.calibrated_stage.relative_move(distance, axis=1)
+
+    @command(category='Stage',
+             description='Move stage horizontally by {:.0f}μm',
+             default_arg=10)
+    def move_stage_horizontal(self, distance):
+        self.calibrated_stage.relative_move(distance, axis=0)
+
+    @command(category='Manipulators',
+             description='Switch to manipulator {}',
+             default_arg=1)
     def switch_manipulator(self, unit_number):
         '''
         Switch the currently active manipulator
@@ -150,7 +110,39 @@ class PipetteInterface(TaskInterface):
         self.manipulator_switched.emit('Manipulators',
                                        'Manipulator: %d' % unit_number)
 
+    @blocking_command(category='Stage',
+                      description='Calibrate stage only',
+                      task_description='Calibrating stage')
+    def calibrate_stage(self):
+        if self.execute(self.calibrated_stage, 'calibrate', final_task=False):
+            self.execute(self.calibrated_unit, 'analyze_calibration')
+
+    @blocking_command(category='Manipulators',
+                      description='Calibrate stage and manipulator',
+                      task_description='Calibrating stage and manipulator')
+    def calibrate_manipulator(self):
+        if self.execute(self.calibrated_unit, 'calibrate', final_task=False):
+            self.execute(self.calibrated_unit, 'analyze_calibration')
+
+    @blocking_command(category='Manipulators',
+                     description='Move pipette to position',
+                     task_description='Moving to position with safe approach')
+    def move_pipette(self, xy_position):
+        x, y = xy_position
+        position = np.array([x, y, self.microscope.position()])
+        self.debug('asking for safe move to {}'.format(position))
+        self.execute(self.calibrated_unit, 'safe_move', argument=position)
+
+    @blocking_command(category='Microscope',
+                      description='Go to the floor (cover slip)',
+                      task_description='Go to the floor (cover slip)')
+    def go_to_floor(self):
+        self.execute(self.microscope, 'absolute_move',
+                     x=self.microscope.floor_Z)
+
     # TODO: Make the configuration system more general/clean
+    @command(category='Manipulators',
+             description='Save the calibration information for the current manipulator')
     def save_configuration(self):
         # Saves configuration
         self.info("Saving configuration")
@@ -160,6 +152,8 @@ class PipetteInterface(TaskInterface):
         with open(self.config_filename, "wb") as f:
             pickle.dump(cfg, f)
 
+    @command(category='Manipulators',
+             description='Load the calibration information for the current manipulator')
     def load_configuration(self):
         # Loads configuration
         self.info("Loading configuration")
@@ -171,8 +165,3 @@ class PipetteInterface(TaskInterface):
             for i, cfg_unit in enumerate(cfg_units):
                 self.calibrated_units[i].load_configuration(cfg_unit)
             self.calibrated_unit.analyze_calibration()
-
-    def move_pipette(self, x, y):
-        position = np.array([x, y, self.microscope.position()])
-        self.debug('asking for safe move to {}'.format(position))
-        self.execute(self.calibrated_unit, 'safe_move', argument=position)

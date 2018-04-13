@@ -5,8 +5,8 @@ Control of automatic patch clamp algorithm
 import numpy as np
 
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
-from holypipette.interface import TaskInterface
-from holypipette.controller import AutoPatcher, AutopatchError
+from holypipette.interface import TaskInterface, command, blocking_command
+from holypipette.controller import AutoPatcher
 
 __all__ = ['AutoPatchInterface', 'PatchConfig']
 
@@ -70,46 +70,41 @@ class AutoPatchInterface(TaskInterface):
                                       config=self.config)
             self.autopatcher_by_unit[idx] = autopatcher
             self.controllers.add(autopatcher)
-        # Define commands
-        self.add_command('break_in', 'Patch', 'Break into the cell',
-                         task_description='Breaking into cell')
-        self.add_command('patch_with_move', 'Patch',
-                         'Move to cell and patch it',
-                         task_description='Moving to cell and patching it')
-        self.add_command('patch_without_move', 'Patch',
-                         'Patch cell at current position',
-                         task_description='Patching cell')
-        self.add_command('store_cleaning_position', 'Patch',
-                         'Store the position of the washing bath')
-        self.add_command('store_rinsing_position', 'Patch',
-                         'Store the position of the rinsing bath')
-        self.add_command('clean_pipette', 'Patch',
-                         'Clean the pipette (wash and rinse)',
-                         task_description='Cleaning the pipette')
 
-    def handle_command(self, command, argument):
-        autopatcher = self.autopatcher_by_unit[self.pipette_controller.current_unit]
-        if command == 'store_cleaning_position':
-            autopatcher.cleaning_bath_position = self.pipette_controller.calibrated_unit.position()
-            self.info('Cleaning bath position stored')
-        elif command == 'store_rinsing_position':
-            autopatcher.rinsing_bath_position = self.pipette_controller.calibrated_unit.position()
-            self.info('Rinsing bath position stored')
-        else:
-            raise ValueError('Unknown command: %s' % command)
+    @property
+    def current_autopatcher(self):
+        return self.autopatcher_by_unit[self.pipette_controller.current_unit]
 
-    def handle_blocking_command(self, command, argument):
-        if self.amplifier is None or self.pressure is None:
-            raise AutopatchError('Need access to amplifier and pressure interface')
+    @blocking_command(category='Patch', description='Break into the cell',
+                      task_description='Breaking into the cell')
+    def break_in(self):
+        self.execute(self.current_autopatcher, 'break_in')
 
-        autopatcher = self.autopatcher_by_unit[self.pipette_controller.current_unit]
-        if command == 'break_in':
-            self.execute(autopatcher, 'break_in')
-        elif command == 'patch_with_move':
-            self.execute(autopatcher, 'patch', np.array(argument))
-        elif command == 'patch_without_move':
-            self.execute(autopatcher, 'patch')
-        elif command == 'clean_pipette':
-            self.execute(autopatcher, 'clean_pipette')
-        else:
-            raise ValueError('Unknown command: %s' % command)
+    @blocking_command(category='Patch', description='Move to cell and patch it',
+                      task_description='Moving to cell and patching it')
+    def patch_with_move(self, position):
+        self.execute(self.current_autopatcher, 'patch', np.array(position))
+
+    @blocking_command(category='Patch',
+                      description='Patch cell at current position',
+                      task_description='Patching cell')
+    def patch_without_move(self):
+        self.execute(self.current_autopatcher, 'patch')
+
+    @command(category='Patch',
+             description='Store the position of the washing bath')
+    def store_cleaning_position(self):
+        self.current_autopatcher.cleaning_bath_position = self.pipette_controller.calibrated_unit.position()
+        self.info('Cleaning bath position stored')
+
+    @command(category='Patch',
+             description='Store the position of the rinsing bath')
+    def store_rinsing_position(self):
+        self.current_autopatcher.rinsing_bath_position = self.pipette_controller.calibrated_unit.position()
+        self.info('Rinsing bath position stored')
+
+    @blocking_command(category='Patch',
+                      description='Clean the pipette (wash and rinse)',
+                      task_description='Cleaning the pipette')
+    def clean_pipette(self):
+        self.execute(self.current_autopatcher, 'clean_pipette')

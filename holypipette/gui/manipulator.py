@@ -1,4 +1,6 @@
 # coding=utf-8
+from types import MethodType
+
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
@@ -10,7 +12,7 @@ from holypipette.gui import CameraGui
 
 class ManipulatorGui(CameraGui):
 
-    pipette_command_signal = QtCore.pyqtSignal('QString', object)
+    pipette_command_signal = QtCore.pyqtSignal(MethodType, object)
     pipette_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, pipette_interface):
@@ -73,34 +75,34 @@ class ManipulatorGui(CameraGui):
                                    (Qt.AltModifier, 2.5),
                                    (Qt.ShiftModifier, 50)]:
             self.register_key_action(Qt.Key_Up, modifier,
-                                     self.interface.commands['move_stage_vertical'],
+                                     self.interface.move_stage_vertical,
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_Down, modifier,
-                                     self.interface.commands['move_stage_vertical'],
+                                     self.interface.move_stage_vertical,
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_Left, modifier,
-                                     self.interface.commands['move_stage_horizontal'],
+                                     self.interface.move_stage_horizontal,
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_Right, modifier,
-                                     self.interface.commands['move_stage_horizontal'],
+                                     self.interface.move_stage_horizontal,
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_W, modifier,
-                                     self.interface.commands['move_pipette_y'],
+                                     self.interface.move_pipette_y,
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_S, modifier,
-                                     self.interface.commands['move_pipette_y'],
+                                     self.interface.move_pipette_y,
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_A, modifier,
-                                     self.interface.commands['move_pipette_x'],
+                                     self.interface.move_pipette_x,
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_D, modifier,
-                                     self.interface.commands['move_pipette_x'],
+                                     self.interface.move_pipette_x,
                                      argument=-distance, default_doc=False)
             self.register_key_action(Qt.Key_Q, modifier,
-                                     self.interface.commands['move_pipette_z'],
+                                     self.interface.move_pipette_z,
                                      argument=distance, default_doc=False)
             self.register_key_action(Qt.Key_E, modifier,
-                                     self.interface.commands['move_pipette_z'],
+                                     self.interface.move_pipette_z,
                                      argument=-distance, default_doc=False)
 
             # Manually document all arrows at once
@@ -117,35 +119,35 @@ class ManipulatorGui(CameraGui):
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
-                                 self.interface.commands['calibrate_stage'])
+                                 self.interface.calibrate_stage)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.interface.commands['calibrate_manipulator'])
+                                 self.interface.calibrate_manipulator)
         # Pipette selection
         number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):
             key = QtGui.QKeySequence("%d" % (unit_number + 1))[0]
             self.register_key_action(key, None,
-                                     self.interface.commands['switch_manipulator'],
+                                     self.interface.switch_manipulator,
                                      argument=unit_number + 1)
 
         self.register_key_action(Qt.Key_S, Qt.ControlModifier,
-                                 self.interface.commands['save_configuration'])
+                                 self.interface.save_configuration)
 
         # Move pipette by clicking
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
-                                   self.interface.commands['move_pipette'])
+                                   self.interface.move_pipette)
 
         # Microscope control
         self.register_key_action(Qt.Key_PageUp, None,
-                                 self.interface.commands['move_microscope'],
+                                 self.interface.move_microscope,
                                  argument=10)
         self.register_key_action(Qt.Key_PageDown, None,
-                                 self.interface.commands['move_microscope'],
+                                 self.interface.move_microscope,
                                  argument=-10)
         self.register_key_action(Qt.Key_F, None,
-                                 self.interface.commands['set_floor'])
+                                 self.interface.set_floor)
         self.register_key_action(Qt.Key_G, None,
-                                 self.interface.commands['go_to_floor'])
+                                 self.interface.go_to_floor)
 
         # Show configuration pane
         config_command = Command('config_pane', 'General',

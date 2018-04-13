@@ -2,7 +2,8 @@
 Package defining the `Command` and `TaskInterface` classes, central to the
 interface between GUI and `TaskController` objects.
 """
-from collections import OrderedDict
+import functools
+from types import MethodType
 
 from PyQt5 import QtCore
 
@@ -10,56 +11,84 @@ from holypipette.controller import TaskController
 from holypipette.log_utils import LoggingObject
 
 
-class Command(object):
-    """
-    Simple container to store a "command" supported by a `TaskInterface`.
+def command(category, description, default_arg=None):
+    '''
+    Decorator that annotates a function with information about the implemented
+    command.
 
     Parameters
     ----------
-    name : str
-        The name of the command (the internally used name that will be used in
-        the interface, e.g. "increase_exposure", not a name that is displayed
-        to the user)
     category : str
-        The category of the command (e.g. "Camera", "Microscope"). Mostly used
-        to group commands in the automatically generated GUI documentation.
+        The command category (used for structuring the help window).
     description : str
-        A description of the command, displayed to the user as part of the
-        automatically generated documentation. If the command takes an argument,
-        then this description will be formatted with the argument, i.e. it can
-        contain format specifications such as `{:.0f}` which will be replaced
-        with the argument.
-    interface : `TaskInterface`, optional
-        The interface responsible for this command. Should always be defined
-        except for commands that do not need to be propagated to a interface,
-        e.g. GUI commands that trigger changes to the display (e.g. show the
-        help window).
+        A descriptive text for the command (used in the help window).
     default_arg : object, optional
-        The default argument for parametrized commands (e.g. there is only one
-        command to move a micro-manipulator horizontally that can be used to
-        move it left or right for various distances depending on the argument)
-    task_description : str, optional
-        A description that will be displayed to the user for a long-running task
-        that blocks all other commands (e.g. calibration). Setting it also marks
-        this command as a blocking command.
-    """
-    def __init__(self, name, category, description, interface=None, default_arg=None,
-                 task_description=None):
-        self.default_arg = default_arg
-        self.description = description
-        self.category = category
-        self.interface = interface
-        self.name = name
-        self.task_description = task_description
+        A default argument provided to the method or ``None`` (the default).
+    '''
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(self, argument=None):
+            if argument is None and default_arg is not None:
+                argument = default_arg
+            if argument is None:
+                return func(self)
+            else:
+                return func(self, argument)
+        wrapped.category = category
+        wrapped.description = description
+        wrapped.default_arg = default_arg
+        wrapped.is_blocking = False
 
-    @property
-    def is_blocking(self):
-        return self.task_description is not None
+        def auto_description(argument=None):
+            if argument is None:
+                argument = default_arg
+            return description.format(argument)
+        wrapped.auto_description = auto_description
 
-    def auto_description(self, argument=None):
-        if argument is None:
-            argument = self.default_arg
-        return self.description.format(argument)
+        return wrapped
+    return decorator
+
+
+def blocking_command(category, description, task_description,
+                     default_arg=None):
+    '''
+    Decorator that annotates a function with information about the implemented
+    (blocking) command.
+
+    Parameters
+    ----------
+    category : str
+        The command category (used for structuring the help window).
+    description : str
+        A descriptive text for the command (used in the help window).
+    task_description : str
+        Text that will be displayed to the user while the task is running
+    default_arg : object, optional
+        A default argument provided to the method or ``None`` (the default).
+    '''
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapped(self, argument=None):
+            if argument is None and default_arg is not None:
+                argument = default_arg
+            if argument is None:
+                return func(self)
+            else:
+                return func(self, argument)
+        wrapped.category = category
+        wrapped.description = description
+        wrapped.task_description = task_description
+        wrapped.is_blocking = True
+        wrapped.default_arg = default_arg
+
+        def auto_description(argument=None):
+            if argument is None:
+                argument = default_arg
+            return description.format(argument)
+        wrapped.auto_description = auto_description
+
+        return wrapped
+    return decorator
 
 
 class TaskInterface(QtCore.QObject, LoggingObject):
@@ -81,53 +110,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
     def __init__(self):
         super(TaskInterface, self).__init__()
         self.controllers = set()
-        self.commands = OrderedDict()
 
-    def add_command(self, name, category, description, default_arg=None,
-                    task_description=None):
-        """
-        Declare a command that is supported by this `TaskInterface`.
-
-        Parameters
-        ----------
-        name : str
-            The name of the command (the internally used name that will be used in
-            the interface, e.g. "increase_exposure", not a name that is displayed
-            to the user)
-        category : str
-            The category of the command (e.g. "Camera", "Microscope"). Mostly used
-            to group commands in the automatically generated GUI documentation.
-        description : str
-            A description of the command, displayed to the user as part of the
-            automatically generated documentation. If the command takes an argument,
-            then this description will be formatted with the argument, i.e. it can
-            contain format specifications such as `{:.0f}` which will be replaced
-            with the argument.
-        interface : `TaskInterface`, optional
-            The interface responsible for this command. Should always be defined
-            except for commands that do not need to be propagated to a interface,
-            e.g. GUI commands that trigger changes to the display (e.g. show the
-            help window).
-        default_arg : object, optional
-            The default argument for parametrized commands (e.g. there is only one
-            command to move a micro-manipulator horizontally that can be used to
-            move it left or right for various distances depending on the argument)
-        task_description : str, optional
-            A description that will be displayed to the user for a long-running task
-            that blocks all other commands (e.g. calibration). Setting it also marks
-            this command as a blocking command.
-
-        """
-        if name in self.commands:
-            raise KeyError("A command with the name '{}' has already been "
-                           "added ('{}')".format(name,
-                                                 self.commands[name].description))
-        command = Command(name, category, description,
-                          interface=self, default_arg=default_arg,
-                          task_description=task_description)
-        self.commands[name] = command
-
-    @QtCore.pyqtSlot('QString', object)
+    @QtCore.pyqtSlot(MethodType, object)
     def command_received(self, command, argument):
         """
         Slot that is triggered when the GUI triggers a command handled by this
@@ -139,8 +123,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         Parameters
         ----------
-        command : str
-            The name of the requested command.
+        command : method
+            A reference to the requested command.
         argument : object
             The argument of the requested command (possibly ``None``).
         """
@@ -148,12 +132,12 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             for e in self.controllers:
                 e.error_occured = False
                 e.abort_requested = False
-            if self.commands[command].is_blocking:
-                self.handle_blocking_command(command, argument)
+            if argument is None:
+                command()
             else:
-                self.handle_command(command, argument)
+                command(argument)
         except Exception:
-            self.exception('"{}" failed.'.format(command))
+            self.exception('"{}" failed.'.format(command.__name__))
             self.task_finished.emit(1, None)
 
     def execute(self, controller, func_name, final_task=True, **kwds):
@@ -237,32 +221,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         """
         for e in self.controllers:
             e.abort_requested = True
-
-    # The following functions have to be implemented if the class declares any
-    # blocking/non-blocking commands
-    def handle_blocking_command(self, command, argument):
-        """
-        Handle a blocking command. Should execute all function calls via
-        `execute`.
-
-        Parameters
-        ----------
-        command : str
-            The name of the command.
-        argument : object
-            The argument provided with the command (may be ``None``).
-        """
-        raise NotImplementedError()
-
-    def handle_command(self, command, argument):
-        """Handle a non-blocking command.
-
-        Parameters
-        ----------
-        command : str
-            The name of the command.
-        argument : object
-            The argument provided with the command (may be ``None``)."""
 
     # This function will be automatically called by the main GUI and can be
     # overwritten to connect signals in this class to the main GUI (e.g. to

@@ -6,6 +6,7 @@ import functools
 import logging
 import datetime
 import traceback
+from types import MethodType
 
 import param
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -304,7 +305,7 @@ def draw_cross(pixmap):
 
 class CameraGui(QtWidgets.QMainWindow):
     log_signal = QtCore.pyqtSignal('QString')
-    camera_signal = QtCore.pyqtSignal('QString', object)
+    camera_signal = QtCore.pyqtSignal(MethodType, object)
     camera_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, image_edit=None, display_edit=draw_cross):
@@ -394,13 +395,11 @@ class CameraGui(QtWidgets.QMainWindow):
         self.register_key_action(Qt.Key_Escape, None, exit,
                                  func=lambda arg: self.close())
         self.register_key_action(Qt.Key_Plus, None,
-                                 self.camera_interface.commands[
-                                     'increase_exposure'])
+                                 self.camera_interface.increase_exposure)
         self.register_key_action(Qt.Key_Minus, None,
-                                 self.camera_interface.commands[
-                                     'decrease_exposure'])
+                                 self.camera_interface.decrease_exposure)
         self.register_key_action(Qt.Key_I, None,
-                                 self.camera_interface.commands['save_image'])
+                                 self.camera_interface.save_image)
 
     def close(self):
         del self.camera
@@ -436,11 +435,11 @@ class CameraGui(QtWidgets.QMainWindow):
             # displayed image is not necessarily the same size as the original camera image
             scale = 1.0 * self.camera.width / self.video.pixmap().size().width()
             position = (xs * scale, ys * scale)
-            if command.task_description is not None:
-                self.start_task(command.task_description, command.interface)
-            if command.interface in self.interface_signals:
-                command_signal, _ = self.interface_signals[command.interface]
-                command_signal.emit(command.name, position)
+            if command.is_blocking:
+                self.start_task(command.task_description, command.__self__)
+            if command.__self__ in self.interface_signals:
+                command_signal, _ = self.interface_signals[command.__self__]
+                command_signal.emit(command, position)
             elif func is not None:
                 func(position)
             else:
@@ -529,11 +528,11 @@ class CameraGui(QtWidgets.QMainWindow):
                 # (we allow the "General" category to still allow to see the
                 # help, etc.)
                 return
-            if command.task_description is not None:
-                self.start_task(command.task_description, command.interface)
-            if command.interface in self.interface_signals:
-                command_signal, _ = self.interface_signals[command.interface]
-                command_signal.emit(command.name, argument)
+            if command.is_blocking:
+                self.start_task(command.task_description, command.__self__)
+            if command.__self__ in self.interface_signals:
+                command_signal, _ = self.interface_signals[command.__self__]
+                command_signal.emit(command, argument)
             elif func is not None:
                 func(argument)
             else:

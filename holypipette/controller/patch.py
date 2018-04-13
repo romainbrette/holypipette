@@ -158,7 +158,7 @@ class AutoPatcher(TaskController):
             self.pressure.set_pressure(-600)
             self.sleep(1)
             # 5 cycles of tip cleaning
-            for i in range(5):
+            for i in range(1, 5):
                 self.pressure.set_pressure(-600)
                 self.sleep(0.625)
                 self.pressure.set_pressure(1000)
