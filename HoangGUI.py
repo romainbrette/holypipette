@@ -723,10 +723,6 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
     @QtCore.pyqtSlot()
     def do_sequential_patching(self):
         global iteration, moveList, trackList, finishPatching
-
-        if (amplifier is None) | (pressure is None):
-            print("Amplifier or pressure controller not available. Aborting.")
-            return
         try:
             length = len(moveList)
             for iteration in range (length):
@@ -735,12 +731,33 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
                 calibrated_unit.safe_move(self.move_position, recalibrate=True)
                 calibrated_unit.wait_until_still()
                 finishPatching = False
-                t1 = time.time()
-                print("Testing started")
-                #autopatcher.run(move_position=None, message=message)
-                while finishPatching is False:
-                    #####HOANG - Change to move when distance > a value
-                    #if (abs(currentPosition[0] - moveList[iteration][0]) > 3) | (abs(currentPosition[1] - moveList[iteration][1]) > 3):
+
+                print("Done. Starting patch-clamp")
+                amplifier.start_patch()
+                # Pressure level 1
+                pressure.set_pressure(param_pressure_near)
+                # Check initial resistance
+                amplifier.auto_pipette_offset()
+                time.sleep(4.)
+                R = amplifier.resistance()
+                message("Resistance:" + str(R / 1e6))
+                if R < param_Rmin:
+                    raise AutopatchError("Resistance is too low (broken tip?)")
+                elif R > param_Rmax:
+                    raise AutopatchError("Resistance is too high (obstructed?)")
+                # Pipette offset
+                amplifier.auto_pipette_offset()
+                time.sleep(2)  # why?
+                # Approach and make the seal
+                print("Approaching the cell")
+                success = False
+                oldR = R
+                for _ in range(param_max_distance):  # move 15 um down
+                    # move by 1 um down
+                    # Cleaner: use reference relative move
+                    calibrated_unit.relative_move(1, axis=2)  # *calibrated_unit.up_position[2]
+                    calibrated_unit.wait_until_still(2)
+                    # cell movement compensation
                     try:
                         self.move_position = moveList[iteration]
                     except:
@@ -748,55 +765,98 @@ class PipetteHandler(QtCore.QObject): # This could be more general, for each pip
                     if (len(self.move_position)>0) & (abs(currentPosition.flatten().sum() - self.move_position.flatten().sum()) > 5):
                           currentPosition = self.move_position
                           calibrated_unit.safe_move(self.move_position, recalibrate=True)
-                          #calibrated_unit.wait_until_still()
+                          calibrated_unit.wait_until_still()
+                    time.sleep(1)
+                    R = amplifier.resistance()
+                    message("R = " + str(amplifier.resistance() / 1e6))
+                    if R > oldR * (1 + param_cell_R_increase):  # R increases: near cell?
+                        # Release pressure
+                        message("Releasing pressure")
+                        pressure.set_pressure(0)
+                        time.sleep(10)
+                        if R > oldR * (1 + param_cell_R_increase):
+                            # Still higher, we are near the cell
+                            message("Sealing, R = " + str(amplifier.resistance() / 1e6))
+                            pressure.set_pressure(param_pressure_sealing)
+                            t0 = time.time()
+                            t = t0
+                            R = amplifier.resistance()
+                            while (R < param_gigaseal_R) | (t - t0 < param_seal_min_time):
+                                # Wait at least 15s and until we get a Gigaseal
+                                t = time.time()
+                                if t - t0 < param_Vramp_duration:
+                                    # Ramp to -70 mV in 10 s (default)
+                                    self.amplifier.set_holding(param_Vramp_amplitude * (t - t0) / param_Vramp_duration)
+                                if t - t0 >= param_seal_deadline:
+                                    # No seal in 90 s
+                                    amplifier.stop_patch()
+                                    raise AutopatchError("Seal unsuccessful")
+                                R = amplifier.resistance()
+                            success = True
+                            break
+                pressure.set_pressure(0)
+                if not success:
+                    raise AutopatchError("Seal unsuccessful")
+                print("Seal successful, R = " + str(self.amplifier.resistance() / 1e6))
+                R = amplifier.resistance()
+                if R < param_gigaseal_R:
+                    raise AutopatchError("Seal lost")
+                pressure = 0
+                trials = 0
+                while amplifier.resistance() > param_max_cell_R:  # Success when resistance goes below 300 MOhm
+                    trials += 1
+                    message('Essai ' + str(trials))
+                    pressure += param_pressure_ramp_increment
+                    if abs(pressure) > abs(param_pressure_ramp_max):
+                        raise AutopatchError("Break-in unsuccessful")
+                    if param_zap:
+                        amplifier.zap()
+                    pressure.ramp(amplitude=pressure, duration=param_pressure_ramp_duration)
+                    time.sleep(1.3)
+                message("Successful break-in, R = " + str(amplifier.resistance() / 1e6))
+                amplifier.stop_patch()
+                pressure.set_pressure(param_pressure_near)
+                calibrated_unit.absolute_move(u4[0], 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u4[2] - 5000, 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u4[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u4[2], 2)
+                calibrated_unit.wait_until_still(2)
+                # Fill up with the Alconox
+                pressure.set_pressure(-600)
+                time.sleep(1)
+                # 5 cycles of tip cleaning
+                for i in range(1, 5):
+                    pressure.set_pressure(-600)
+                    time.sleep(0.625)
+                    pressure.set_pressure(1000)
+                    time.sleep(0.375)
 
-                    t2 = time.time()
-                    if t2-t1 >= 2:
-                        finishPatching = True
-                print("End testing")
+                # Step 2: Rinsing.
+                # Move the pipette to the rinsing bath.
+                calibrated_unit.absolute_move(u5[2] - 5000, 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u5[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u5[0], 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u5[2], 2)
+                calibrated_unit.wait_until_still(2)
+                # Expel the remaining Alconox
+                pressure.set_pressure(1000)
+                time.sleep(6)
 
-                # calibrated_unit.absolute_move(u4[0], 0)
-                # calibrated_unit.wait_until_still(0)
-                # calibrated_unit.absolute_move(u4[2] - 5000, 2)
-                # calibrated_unit.wait_until_still(2)
-                # calibrated_unit.absolute_move(u4[1], 1)
-                # calibrated_unit.wait_until_still(1)
-                # calibrated_unit.absolute_move(u4[2], 2)
-                # calibrated_unit.wait_until_still(2)
-                # # Fill up with the Alconox
-                # pressure.set_pressure(-600)
-                # time.sleep(1)
-                # # 5 cycles of tip cleaning
-                # for i in range(1, 5):
-                #     pressure.set_pressure(-600)
-                #     time.sleep(0.625)
-                #     pressure.set_pressure(1000)
-                #     time.sleep(0.375)
-                #
-                # # Step 2: Rinsing.
-                # # Move the pipette to the rinsing bath.
-                # calibrated_unit.absolute_move(u5[2] - 5000, 2)
-                # calibrated_unit.wait_until_still(2)
-                # calibrated_unit.absolute_move(u5[1], 1)
-                # calibrated_unit.wait_until_still(1)
-                # calibrated_unit.absolute_move(u5[0], 0)
-                # calibrated_unit.wait_until_still(0)
-                # calibrated_unit.absolute_move(u5[2], 2)
-                # calibrated_unit.wait_until_still(2)
-                # # Expel the remaining Alconox
-                # pressure.set_pressure(1000)
-                # time.sleep(6)
-                #
-                # # Step 3: Move back.
-                # calibrated_unit.absolute_move(0, 0)
-                # calibrated_unit.wait_until_still(0)
-                # calibrated_unit.absolute_move(u3[1], 1)
-                # calibrated_unit.wait_until_still(1)
-                # calibrated_unit.absolute_move(u3[2], 2)
-                # calibrated_unit.wait_until_still(2)
-                # calibrated_unit.absolute_move(u3[0], 0)
-                # calibrated_unit.wait_until_still(0)
-                # Move microscope back to original position
+                # Step 3: Move back.
+                calibrated_unit.absolute_move(0, 0)
+                calibrated_unit.wait_until_still(0)
+                calibrated_unit.absolute_move(u3[1], 1)
+                calibrated_unit.wait_until_still(1)
+                calibrated_unit.absolute_move(u3[2], 2)
+                calibrated_unit.wait_until_still(2)
+                calibrated_unit.absolute_move(u3[0], 0)
+                calibrated_unit.wait_until_still(0)
                 iteration += 1
 
             iteration = None
