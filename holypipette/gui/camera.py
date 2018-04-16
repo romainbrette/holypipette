@@ -714,4 +714,3 @@ class ConfigGui(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.warning(self, 'Loading failed',
                                               error_msg + '\n' + str(ex),
                                               QtWidgets.QMessageBox.Ok)
-

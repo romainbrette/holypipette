@@ -7,7 +7,7 @@ from types import MethodType
 
 from PyQt5 import QtCore
 
-from holypipette.controller import TaskController
+from holypipette.controller import TaskController, RequestedAbortException
 from holypipette.log_utils import LoggingObject
 
 
@@ -115,11 +115,11 @@ class TaskInterface(QtCore.QObject, LoggingObject):
     def command_received(self, command, argument):
         """
         Slot that is triggered when the GUI triggers a command handled by this
-        `TaskInterface`. Depending on whether the command is blocking or
-        non-blocking, it will call `handle_blocking_command` or
-        `handle_command`. If an error occurs in the handling of the command
-        (e.g., the command cannot be executed because some hardware is missing),
-        an error is logged and the `task_finished` signal is emitted.
+        `TaskInterface`. If an error occurs in the handling of the command
+        (e.g., the command does not exist or received the wrong number of
+        arguments), an error is logged and the `task_finished` signal is
+        emitted. Note that the handling of errors *within* the command, as well
+        as the handling of abort requests is performed in the `execute` method.
 
         Parameters
         ----------
@@ -130,7 +130,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         """
         try:
             for e in self.controllers:
-                e.error_occured = False
                 e.abort_requested = False
             if argument is None:
                 command()
@@ -140,7 +139,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             self.exception('"{}" failed.'.format(command.__name__))
             self.task_finished.emit(1, None)
 
-    def execute(self, controller, func_name, final_task=True, **kwds):
+    def execute(self, controller, func_name, argument=None, final_task=True):
         """
         Execute a function in a `TaskController` and signal the (successful or
         unsuccessful) completion via the `task_finished` signal.
@@ -151,16 +150,15 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             The object responsible for executing the task.
         func_name : str
             The name of the function in the ``controller`` object
+        argument : object, optional
+            An argument that will be provided to ``func_name`` or ``None`` (the
+            default).
         final_task : bool, optional
             Whether this call is the final (or only) task that is executed for
             the command. For commands that need to call functions in several
             `TaskController` objects, this will avoid that a successful completion
             triggers the `task_finished` signal (note that error/aborts always
             trigger `task_finished`). Defaults to ``True``
-        kwds : dict
-            All other keyword arguments will be passed on to
-            `TaskController.execute`, which will pass it on to the actual
-            function.
 
         Returns
         -------
@@ -171,22 +169,35 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             a failed/aborted task.
         """
         controller.save_state()
-        controller.execute(func_name, **kwds)
+        func = getattr(controller, func_name, None)
+        if func is None:
+            raise AttributeError('Object of type {} does not have a '
+                                 'function {}.'.format(self.__class__.__name__,
+                                                       func_name))
+
         # We send a reference to the "controller" with the task_finished signal,
         # this can be used to ask the user for a state reset after a failed
         # command (e.g. move back the pipette to its start position in case a
         # calibration failed or was aborted)
-        if controller.error_occurred:
+        try:
+            if argument is not None:
+                func(argument)
+            else:
+                func()
+        except RequestedAbortException:
+            self.task_finished.emit(2, controller)
+            self.error('Task "{}" aborted'.format(func_name))
+            return False
+        except Exception:
+            self.exception('Task "{}" failed'.format(func_name))
             self.task_finished.emit(1, controller)
             return False
-        elif controller.abort_requested:
-            self.task_finished.emit(2, controller)
-            return False
-        else:
-            controller.delete_state()
-            if final_task:
-                self.task_finished.emit(0, controller)
-            return True
+
+        # Task finished successfully
+        controller.delete_state()
+        if final_task:
+            self.task_finished.emit(0, controller)
+        return True
 
     @QtCore.pyqtSlot(TaskController)
     def reset_requested(self, controller):
@@ -216,8 +227,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         `TaskController.abort_requested` attribute. The object runs in a separate
         thread, but will finish its operation as soon as it checks for this
         attribute (either by explicitly checking with
-        `TaskController.abort_if_requested`, or by using `TaskController.sleep` or
-        one of the logging methods).
+        `TaskController.abort_if_requested`, or by using `TaskController.sleep`
+        or one of the logging methods).
         """
         for e in self.controllers:
             e.abort_requested = True

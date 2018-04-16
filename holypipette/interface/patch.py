@@ -88,7 +88,9 @@ class AutoPatchInterface(TaskInterface):
     @blocking_command(category='Patch',
                       description='Patch cell at current position',
                       task_description='Patching cell')
-    def patch_without_move(self):
+    def patch_without_move(self, position=None):
+        # If this command is linked to a mouse click, it will receive the
+        # position as an argument -- we simply ignore it
         self.execute(self.current_autopatcher, 'patch')
 
     @command(category='Patch',
