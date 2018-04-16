@@ -15,8 +15,8 @@ import qtawesome as qta
 
 from holypipette.interface.camera import CameraInterface
 from holypipette.controller import TaskController
-from holypipette.interface import Command
 from holypipette.interface.patch import NumberWithUnit
+from holypipette.interface.base import command
 from .livefeed import LiveFeedQt
 
 
@@ -379,21 +379,19 @@ class CameraGui(QtWidgets.QMainWindow):
         logging.getLogger('holypipette').addHandler(handler)
         self.log_signal.connect(self.error_status)
 
-
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
             func(pixmap)
 
+    @command(category='General',
+             description='Exit the application')
+    def exit(self):
+        self.close()
+
     def register_commands(self):
-        help = Command('help', 'General', 'Toggle display of keyboard/mouse commands')
-        self.register_key_action(Qt.Key_Question, None, help,
-                                 func=lambda arg: self.help_button.click())
-        logger = Command('log', 'General', 'Toggle display of log output')
-        self.register_key_action(Qt.Key_L, None, logger,
-                                 func=lambda arg: self.log_button.click())
-        exit = Command('exit', 'General', 'Exit the application')
-        self.register_key_action(Qt.Key_Escape, None, exit,
-                                 func=lambda arg: self.close())
+        self.register_key_action(Qt.Key_Question, None, self.help_keypress)
+        self.register_key_action(Qt.Key_L, None, self.log_keypress)
+        self.register_key_action(Qt.Key_Escape, None, self.exit)
         self.register_key_action(Qt.Key_Plus, None,
                                  self.camera_interface.increase_exposure)
         self.register_key_action(Qt.Key_Minus, None,
@@ -405,9 +403,9 @@ class CameraGui(QtWidgets.QMainWindow):
         del self.camera
         super(CameraGui, self).close()
 
-    def register_mouse_action(self, click_type, modifier, command, func=None,
+    def register_mouse_action(self, click_type, modifier, command,
                               default_doc=True):
-        self.mouse_actions[(click_type, modifier)] = (command, func)
+        self.mouse_actions[(click_type, modifier)] = command
         if default_doc:
             self.help_window.register_mouse_action(click_type, modifier,
                                                    command.category,
@@ -416,13 +414,12 @@ class CameraGui(QtWidgets.QMainWindow):
     def video_mouse_press(self, event):
         # Look for an exact match first (key + modifier)
         event_tuple = (event.button(), int(event.modifiers()))
-        description = self.mouse_actions.get(event_tuple, None)
+        command = self.mouse_actions.get(event_tuple, None)
         # If not found, check for keys that ignore the modifier
-        if description is None:
-            description = self.mouse_actions.get((event.button(), None), None)
+        if command is None:
+            command = self.mouse_actions.get((event.button(), None), None)
 
-        if description is not None:
-            command, func = description
+        if command is not None:
             if self.running_task:
                 # Another task is running, ignore the mouse click
                 return
@@ -440,10 +437,8 @@ class CameraGui(QtWidgets.QMainWindow):
             if command.__self__ in self.interface_signals:
                 command_signal, _ = self.interface_signals[command.__self__]
                 command_signal.emit(command, position)
-            elif func is not None:
-                func(position)
             else:
-                raise AssertionError('Need a interface or a function')
+                command(position)
 
     @QtCore.pyqtSlot('QString')
     def error_status(self, message):
@@ -465,8 +460,8 @@ class CameraGui(QtWidgets.QMainWindow):
             self.status_bar.addPermanentWidget(self.config_button)
 
     def register_key_action(self, key, modifier, command, argument=None,
-                            func=None, default_doc=True):
-        self.key_actions[(key, modifier)] = (command, argument, func)
+                            default_doc=True):
+        self.key_actions[(key, modifier)] = (command, argument)
         if default_doc:
             self.help_window.register_key_action(key, modifier,
                                                  command.category,
@@ -522,7 +517,7 @@ class CameraGui(QtWidgets.QMainWindow):
             description = self.key_actions.get((event.key(), None), None)
 
         if description is not None:
-            command, argument, func = description
+            command, argument = description
             if self.running_task and not command.category == 'General':
                 # Another task is running, ignore the key press
                 # (we allow the "General" category to still allow to see the
@@ -533,10 +528,13 @@ class CameraGui(QtWidgets.QMainWindow):
             if command.__self__ in self.interface_signals:
                 command_signal, _ = self.interface_signals[command.__self__]
                 command_signal.emit(command, argument)
-            elif func is not None:
-                func(argument)
             else:
-                raise AssertionError('Need a interface or a function')
+                command(argument)
+
+    @command(category='General',
+             description='Toggle display of keyboard/mouse commands')
+    def help_keypress(self):
+        self.help_button.click()
 
     def toggle_help(self):
         if self.help_button.isChecked():
@@ -545,6 +543,11 @@ class CameraGui(QtWidgets.QMainWindow):
             self.setFocus()
         else:
             self.help_window.setVisible(False)
+
+    @command(category='General',
+             description='Toggle display of log output')
+    def log_keypress(self):
+        self.log_button.click()
 
     def toggle_log(self):
         if self.log_button.isChecked():
@@ -577,8 +580,12 @@ class CameraGui(QtWidgets.QMainWindow):
         config_gui = ConfigGui(config)
         self.config_tab.addTab(config_gui, config.name)
 
-    def toggle_configuration_display(self, arg):
-        # We get arg=None as the argument, just ignore it
+    @command(category='General',
+             description='Show/hide the configuration pane')
+    def configuration_keypress(self):
+        self.config_button.click()
+
+    def toggle_configuration_display(self):
         current_sizes = self.splitter.sizes()
         if current_sizes[1] == 0:
             min_size = self.config_tab.sizeHint().width()

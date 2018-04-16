@@ -5,7 +5,6 @@ from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
 
-from holypipette.interface import Command
 from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
 
@@ -150,7 +149,5 @@ class ManipulatorGui(CameraGui):
                                  self.interface.go_to_floor)
 
         # Show configuration pane
-        config_command = Command('config_pane', 'General',
-                                 'Show/hide the configuration pane')
-        self.register_key_action(Qt.Key_P, None, config_command,
-                                 func=self.toggle_configuration_display)
+        self.register_key_action(Qt.Key_P, None,
+                                 self.configuration_keypress)
