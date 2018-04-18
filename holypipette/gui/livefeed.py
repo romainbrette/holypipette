@@ -6,8 +6,9 @@ import traceback
 import numpy as np
 
 import cv2
-import movingList
+
 from numpy import array
+
 multitracker = cv2.MultiTracker_create()
 
 from holypipette.devices.camera.umanagercamera import Lumenera
@@ -16,6 +17,7 @@ __all__ = ['LiveFeedQt']
 
 
 def image_editor(self,img):
+    import holypipette.gui.movingList as movingList
     trackList = []
     pointList = []
     movingList.moveList = []
