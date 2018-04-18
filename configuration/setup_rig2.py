@@ -1,8 +1,8 @@
 '''
 Setup script for the first rig with the LN SM-5
 '''
-from devices.camera.umanagercamera import Hamamatsu
-from devices.manipulator import *
+from holypipette.devices.camera.umanagercamera import Hamamatsu
+from holypipette.devices.manipulator import *
 
 camera = Hamamatsu()
 controller = LuigsNeumann_SM5(name='COM3', stepmoves=True)

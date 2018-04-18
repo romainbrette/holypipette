@@ -6,9 +6,8 @@ TODO:
 - check using a binary mask how intensity changes on a ring around the droplet edge
 - track with pipette?
 '''
-from vision.paramecium_tracking import *
+from holypipette.vision import *
 import cv2
-from matplotlib import pyplot as plt
 from numpy import *
 import imageio
 import collections

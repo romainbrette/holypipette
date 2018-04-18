@@ -1,9 +1,9 @@
 '''
 A program to debug the L&N SM10.
 '''
-from devices import *
-from vision import *
-from gui import *
+from holypipette.devices import *
+from holypipette.vision import *
+from holypipette.gui import *
 import sys
 import cv2
 import time
@@ -12,7 +12,6 @@ from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtCore import Qt
 import traceback
 import pickle
-from numpy.linalg import pinv
 import inspect
 import signal
 
