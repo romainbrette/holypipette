@@ -3,7 +3,6 @@ from PyQt5 import QtCore, QtWidgets
 
 from holypipette.interface import TaskInterface, command
 
-
 class CameraInterface(TaskInterface):
     updated_exposure = QtCore.pyqtSignal('QString', 'QString')
 
@@ -48,3 +47,4 @@ class CameraInterface(TaskInterface):
                                                          filter='Images (*.png, *.tiff)')
         if len(fname):
             imageio.imwrite(fname, frame)
+

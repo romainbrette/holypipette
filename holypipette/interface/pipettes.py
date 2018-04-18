@@ -165,3 +165,4 @@ class PipetteInterface(TaskInterface):
             for i, cfg_unit in enumerate(cfg_units):
                 self.calibrated_units[i].load_configuration(cfg_unit)
             self.calibrated_unit.analyze_calibration()
+

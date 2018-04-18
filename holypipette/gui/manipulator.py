@@ -151,3 +151,4 @@ class ManipulatorGui(CameraGui):
         # Show configuration pane
         self.register_key_action(Qt.Key_P, None,
                                  self.configuration_keypress)
+
