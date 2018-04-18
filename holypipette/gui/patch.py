@@ -33,6 +33,8 @@ class PatchGui(ManipulatorGui):
                                    self.patch_interface.patch_without_move)
         self.register_key_action(Qt.Key_B, None,
                                  self.patch_interface.break_in)
+        self.register_key_action(Qt.Key_F2, None,
+                                 self.patch_interface.sequential_patching)
         self.register_key_action(Qt.Key_F3, None,
                                  self.patch_interface.store_cleaning_position)
         self.register_key_action(Qt.Key_F4, None,

@@ -110,3 +110,9 @@ class AutoPatchInterface(TaskInterface):
                       task_description='Cleaning the pipette')
     def clean_pipette(self):
         self.execute(self.current_autopatcher, 'clean_pipette')
+
+    @blocking_command(category='Patch',
+                      description='Sequential patching and cleaning for multiple cells',
+                      task_description='Sequential patch clamping')
+    def sequential_patching(self):
+        self.execute(self.current_autopatcher, 'sequential_patching')

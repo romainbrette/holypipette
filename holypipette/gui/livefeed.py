@@ -6,6 +6,8 @@ import traceback
 import numpy as np
 
 import cv2
+import movingList
+from numpy import array
 multitracker = cv2.MultiTracker_create()
 
 from holypipette.devices.camera.umanagercamera import Lumenera
@@ -13,12 +15,28 @@ from holypipette.devices.camera.umanagercamera import Lumenera
 __all__ = ['LiveFeedQt']
 
 
-def image_editor(img):
+def image_editor(self,img):
+    trackList = []
+    pointList = []
+    movingList.moveList = []
     ok, boxes = multitracker.update(img)
     for newbox in boxes:
         p1 = (int(newbox[0]), int(newbox[1]))
         p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
-        cv2.rectangle(img, p1, p2, (200, 0, 0))
+        cv2.rectangle(img, p1, p2, (255, 255, 255),2)
+        x = int(newbox[0] + 0.5 * newbox[2])
+        y = int(newbox[1] + 0.5 * newbox[3])
+        # cv2.circle(img, (x, y), 5, (255, 255, 255), 2)
+        trackList.append((x, y))
+
+    for point in trackList:
+        x = point[0]
+        y = point[1]
+        xs = x - self.camera.width / 2
+        ys = y - self.camera.height / 2
+        pointList.append(array([xs, ys]))
+
+    movingList.moveList = pointList
 
     return img
 
@@ -32,7 +50,7 @@ class LiveFeedQt(QtWidgets.QLabel):
         # "display space" (by default, a red cross in the middle of the
         # screen).
         if image_edit is None:
-            image_edit = lambda frame: image_editor(frame)
+            image_edit = lambda frame: image_editor(self,frame)
         self.image_edit = image_edit
 
         if display_edit is None:
