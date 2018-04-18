@@ -5,6 +5,7 @@ import cv2
 
 from holypipette.interface import TaskInterface, command
 
+
 class CameraInterface(TaskInterface):
     updated_exposure = QtCore.pyqtSignal('QString', 'QString')
 
@@ -14,8 +15,10 @@ class CameraInterface(TaskInterface):
         self.with_tracking = with_tracking
         if with_tracking:
             self.multitracker = cv2.MultiTracker_create()
+            self.movingList = []
         else:
             self.multitracker = None
+            self.movingList = []
 
     def connect(self, main_gui):
         self.updated_exposure.connect(main_gui.set_status_message)
@@ -58,10 +61,8 @@ class CameraInterface(TaskInterface):
             imageio.imwrite(fname, frame)
 
     def show_tracked_objects(self, img):
-        import holypipette.gui.movingList as movingList
-        trackList = []
-        pointList = []
-        movingList.moveList = []
+        from holypipette.gui.movingList import moveList
+        moveList.clear()
         ok, boxes = self.multitracker.update(img)
         for newbox in boxes:
             p1 = (int(newbox[0]), int(newbox[1]))
@@ -69,17 +70,9 @@ class CameraInterface(TaskInterface):
             cv2.rectangle(img, p1, p2, (255, 255, 255), 2)
             x = int(newbox[0] + 0.5 * newbox[2])
             y = int(newbox[1] + 0.5 * newbox[3])
-            # cv2.circle(img, (x, y), 5, (255, 255, 255), 2)
-            trackList.append((x, y))
-
-        for point in trackList:
-            x = point[0]
-            y = point[1]
             xs = x - self.camera.width / 2
             ys = y - self.camera.height / 2
-            pointList.append(np.array([xs, ys]))
-
-        movingList.moveList = pointList
+            moveList.append(np.array([xs, ys]))
 
         return img
 

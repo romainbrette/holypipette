@@ -303,6 +303,7 @@ def draw_cross(pixmap):
     painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
     painter.end()
 
+
 class CameraGui(QtWidgets.QMainWindow):
     log_signal = QtCore.pyqtSignal('QString')
     camera_signal = QtCore.pyqtSignal(MethodType, object)
