@@ -5,42 +5,9 @@ from PyQt5.QtCore import Qt
 import traceback
 import numpy as np
 
-import cv2
-
-from numpy import array
-
-multitracker = cv2.MultiTracker_create()
-
-from holypipette.devices.camera.umanagercamera import Lumenera
 
 __all__ = ['LiveFeedQt']
 
-
-def image_editor(self,img):
-    import holypipette.gui.movingList as movingList
-    trackList = []
-    pointList = []
-    movingList.moveList = []
-    ok, boxes = multitracker.update(img)
-    for newbox in boxes:
-        p1 = (int(newbox[0]), int(newbox[1]))
-        p2 = (int(newbox[0] + newbox[2]), int(newbox[1] + newbox[3]))
-        cv2.rectangle(img, p1, p2, (255, 255, 255),2)
-        x = int(newbox[0] + 0.5 * newbox[2])
-        y = int(newbox[1] + 0.5 * newbox[3])
-        # cv2.circle(img, (x, y), 5, (255, 255, 255), 2)
-        trackList.append((x, y))
-
-    for point in trackList:
-        x = point[0]
-        y = point[1]
-        xs = x - self.camera.width / 2
-        ys = y - self.camera.height / 2
-        pointList.append(array([xs, ys]))
-
-    movingList.moveList = pointList
-
-    return img
 
 class LiveFeedQt(QtWidgets.QLabel):
     def __init__(self, camera, image_edit=None, display_edit=None,
@@ -52,7 +19,7 @@ class LiveFeedQt(QtWidgets.QLabel):
         # "display space" (by default, a red cross in the middle of the
         # screen).
         if image_edit is None:
-            image_edit = lambda frame: image_editor(self,frame)
+            image_edit = lambda frame: frame
         self.image_edit = image_edit
 
         if display_edit is None:
@@ -67,7 +34,6 @@ class LiveFeedQt(QtWidgets.QLabel):
 
         self.setMinimumSize(640, 480)
         self.setAlignment(Qt.AlignCenter)
-        #self.setSizePolicy(QtWidgets.QSizePolicy.Minimum)
 
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
@@ -84,16 +50,6 @@ class LiveFeedQt(QtWidgets.QLabel):
 
         if self.mouse_handler is not None:
             self.mouse_handler(event)
-
-        if event.button() == Qt.RightButton:
-            img = self.camera.snap()
-            cv2.namedWindow('target cell selection', cv2.WINDOW_AUTOSIZE)
-            while True:
-                cv2.imshow('target cell selection', img)
-                bbox1 = cv2.selectROI('target cell selection', img)
-                multitracker.add(cv2.TrackerKCF_create(), img, bbox1)
-                cv2.destroyWindow('target cell selection')
-                break
 
     @QtCore.pyqtSlot()
     def update_image(self):

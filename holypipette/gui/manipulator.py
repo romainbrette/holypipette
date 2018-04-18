@@ -14,8 +14,8 @@ class ManipulatorGui(CameraGui):
     pipette_command_signal = QtCore.pyqtSignal(MethodType, object)
     pipette_reset_signal = QtCore.pyqtSignal(TaskController)
 
-    def __init__(self, camera, pipette_interface):
-        super(ManipulatorGui, self).__init__(camera)
+    def __init__(self, camera, pipette_interface, with_tracking=False):
+        super(ManipulatorGui, self).__init__(camera, with_tracking=with_tracking)
         self.setWindowTitle("Pipette GUI")
         self.interface = pipette_interface
         self.control_thread = QtCore.QThread()

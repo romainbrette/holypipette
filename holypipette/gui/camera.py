@@ -308,8 +308,10 @@ class CameraGui(QtWidgets.QMainWindow):
     camera_signal = QtCore.pyqtSignal(MethodType, object)
     camera_reset_signal = QtCore.pyqtSignal(TaskController)
 
-    def __init__(self, camera, image_edit=None, display_edit=draw_cross):
+    def __init__(self, camera, image_edit=None, display_edit=draw_cross,
+                 with_tracking=False):
         super(CameraGui, self).__init__()
+        self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
         self.task_abort_button = QtWidgets.QToolButton(clicked=self.abort_task)
         self.task_abort_button.setIcon(qta.icon('fa.ban'))
@@ -355,10 +357,16 @@ class CameraGui(QtWidgets.QMainWindow):
         self.config_button = None  # see initialize
         self.setWindowTitle("Camera GUI")
         self.camera = camera
-        self.camera_interface = CameraInterface(camera)
-        self.display_edit_funcs = [draw_cross]
+        self.camera_interface = CameraInterface(camera,
+                                                with_tracking=with_tracking)
+        self.display_edit_funcs = []
+        if display_edit is not None:
+            self.display_edit_funcs.append(display_edit)
+        self.image_edit_funcs = []
+        if image_edit is not None:
+            self.image_edit_funcs.append(image_edit)
         self.video = LiveFeedQt(self.camera,
-                                image_edit=image_edit,
+                                image_edit=self.image_edit,
                                 display_edit=self.display_edit,
                                 mouse_handler=self.video_mouse_press)
         self.setFocus()  # Need this to handle arrow keys, etc.
@@ -382,6 +390,11 @@ class CameraGui(QtWidgets.QMainWindow):
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
             func(pixmap)
+
+    def image_edit(self, image):
+        for func in self.image_edit_funcs:
+            image = func(image)
+        return image
 
     @command(category='General',
              description='Exit the application')

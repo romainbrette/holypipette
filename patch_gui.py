@@ -15,7 +15,7 @@ app = QtWidgets.QApplication(sys.argv)
 
 pipette_controller = PipetteInterface(stage, microscope, camera, units)
 patch_controller = AutoPatchInterface(amplifier, pressure, pipette_controller)
-gui = PatchGui(camera, pipette_controller, patch_controller)
+gui = PatchGui(camera, pipette_controller, patch_controller, with_tracking=True)
 gui.initialize()
 gui.show()
 ret = app.exec_()
