@@ -62,7 +62,7 @@ class CameraInterface(TaskInterface):
 
     def show_tracked_objects(self, img):
         from holypipette.gui.movingList import moveList
-        moveList.clear()
+        del moveList[:]
         ok, boxes = self.multitracker.update(img)
         for newbox in boxes:
             p1 = (int(newbox[0]), int(newbox[1]))

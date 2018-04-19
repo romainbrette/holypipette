@@ -61,8 +61,7 @@ class AutoPatcher(TaskController):
 
             if move_position is not None:
                 # Move pipette to target
-                self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance,
-                                               recalibrate=True)
+                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=True)
                 self.calibrated_unit.wait_until_still()
 
                 # Wait for a few seconds
@@ -205,7 +204,7 @@ class AutoPatcher(TaskController):
                 # Move pipette to target
                 move_position = movingList.moveList[iteration]
                 currentPosition = move_position
-                self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance,recalibrate=True)
+                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=True)
                 self.calibrated_unit.wait_until_still()
                 self.amplifier.auto_pipette_offset()
                 self.sleep(4.)
@@ -243,9 +242,9 @@ class AutoPatcher(TaskController):
 
                     # sum of variation in both x and y > 5 pixel --> compensation
                     if (len(move_position)>0) & (abs(currentPosition.flatten().sum() - move_position.flatten().sum()) > 5):
-                          currentPosition = move_position
-                          self.calibrated_unit.safe_move(move_position + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=True)
-                          self.calibrated_unit.wait_until_still()
+                        currentPosition = move_position
+                        self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=True)
+                        self.calibrated_unit.wait_until_still()
 
                     self.sleep(1)
                     R = self.amplifier.resistance()
