@@ -248,12 +248,25 @@ class CalibratedUnit(ManipulatorUnit):
         # Final move
         self.reference_move(r + withdraw * p * self.up_direction[0], safe = True) # Or relative move in manipulator coordinates, first axis (faster)
 
-    def take_photos(self):
+    def take_photos(self, rig = 1):
         '''
         Take photos of the pipette. It is assumed that the pipette is centered and in focus.
         '''
         self.info('Taking photos of pipette')
-        self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
+        if rig == 1:
+            self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
+        else:
+            distance = 100
+            self.relative_move(distance, 0)
+            self.wait_until_still(0)
+            self.sleep(0.1)
+            img1 = crop_center(self.camera.snap())
+            self.relative_move(-distance, 0)
+            self.wait_until_still(0)
+            self.sleep(0.1)
+            img2 = crop_center(self.camera.snap())
+            self.pipette_position = pipette_cardinal2(img1, img2)
+
         self.info("Pipette cardinal position: "+str(self.pipette_position))
 
         z0 = self.microscope.position()
@@ -531,7 +544,7 @@ class CalibratedUnit(ManipulatorUnit):
                 self.up_direction[axis] = s
             self.info('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
 
-    def calibrate(self):
+    def calibrate(self, rig =1):
         '''
         Automatic calibration.
         Starts without moving the stage, then moves the stage (unless it is fixed).
@@ -542,7 +555,10 @@ class CalibratedUnit(ManipulatorUnit):
         self.abort_if_requested()
         # *** Take photos ***
         # Take a stack of photos on different focal planes, spaced by 1 um
-        self.take_photos()
+        if rig ==1:
+            self.take_photos()
+        else:
+            self.take_photos(rig = 2)
 
         # *** Calculate image borders ***
 

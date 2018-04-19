@@ -125,6 +125,13 @@ class PipetteInterface(TaskInterface):
             self.execute(self.calibrated_unit, 'analyze_calibration')
 
     @blocking_command(category='Manipulators',
+                      description='Calibrate stage and manipulator (2nd Method)',
+                      task_description='Calibrating stage and manipulator (2nd Method)')
+    def calibrate_manipulator2(self):
+        if self.execute(self.calibrated_unit, 'calibrate', argument = 2, final_task=False):
+            self.execute(self.calibrated_unit, 'analyze_calibration')
+
+    @blocking_command(category='Manipulators',
                      description='Move pipette to position',
                      task_description='Moving to position with safe approach')
     def move_pipette(self, xy_position):

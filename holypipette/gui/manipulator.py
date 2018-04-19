@@ -121,6 +121,8 @@ class ManipulatorGui(CameraGui):
                                  self.interface.calibrate_stage)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
                                  self.interface.calibrate_manipulator)
+        self.register_key_action(Qt.Key_C, Qt.AltModifier,
+                                 self.interface.calibrate_manipulator2)
         # Pipette selection
         number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):
