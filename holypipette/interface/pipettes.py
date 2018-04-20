@@ -145,7 +145,7 @@ class PipetteInterface(TaskInterface):
                       task_description='Go to the floor (cover slip)')
     def go_to_floor(self):
         self.execute(self.microscope, 'absolute_move',
-                     x=self.microscope.floor_Z)
+                     argument=self.microscope.floor_Z)
 
     # TODO: Make the configuration system more general/clean
     @command(category='Manipulators',
