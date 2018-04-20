@@ -71,9 +71,9 @@ class AutoPatcher(TaskController):
             self.sleep(4.)
             R = self.amplifier.resistance()
             self.debug("Resistance:" + str(R/1e6))
-            if R < self.config.Rmin:
+            if R < self.config.min_R:
                 raise AutopatchError("Resistance is too low (broken tip?)")
-            elif R > self.config.Rmax:
+            elif R > self.config.max_R:
                 raise AutopatchError("Resistance is too high (obstructed?)")
 
             # Check resistance again
@@ -210,9 +210,9 @@ class AutoPatcher(TaskController):
                 self.sleep(4.)
                 R = self.amplifier.resistance()
                 self.debug("Resistance:" + str(R / 1e6))
-                if R < self.config.Rmin:
+                if R < self.config.min_R:
                     raise AutopatchError("Resistance is too low (broken tip?)")
-                elif R > self.config.Rmax:
+                elif R > self.config.max_R:
                     raise AutopatchError("Resistance is too high (obstructed?)")
 
                 # Check resistance again
