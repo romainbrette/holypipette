@@ -312,6 +312,7 @@ class AutoPatcher(TaskController):
                 for j in range(MatrixCalculation(self.config.droplet_quantity)):
                     self.pressure.set_pressure(self.config.droplet_pressure)
                     self.sleep(self.config.droplet_time)
+                    self.pressure.set_pressure(0)
                     i=i+1
                     if i >= self.config.droplet_quantity:
                         break

@@ -55,9 +55,7 @@ class FakeCamera(Camera):
         self.image_z = image_z
         self.scale_factor = 2.  # micrometers in pixels
         self.depth_of_field = 2.
-        self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2,
-                                                                      self.height * 2), 10)*50 + 128,
-                                      0, 255), dtype=np.uint8)
+        self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2), 10)*50 + 128, 0, 255), dtype=np.uint8)
 
     def set_exposure(self, value):
         if 0 < value <= 200:
