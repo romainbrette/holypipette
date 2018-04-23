@@ -307,7 +307,7 @@ class AutoPatcher(TaskController):
             self.calibrated_unit.wait_until_still()
             self.calibrated_unit.relative_move(-1000,axis=1)
             self.calibrated_unit.wait_until_still()
-            distance = 2000/self.config.droplet_quantity
+            distance = 2000/MatrixCalculation(self.config.droplet_quantity)
             for i in range(MatrixCalculation(self.config.droplet_quantity)):
                 for j in range(MatrixCalculation(self.config.droplet_quantity)):
                     self.pressure.set_pressure(self.config.droplet_pressure)
@@ -321,6 +321,7 @@ class AutoPatcher(TaskController):
                 if i >= self.config.droplet_quantity:
                     break
                 self.calibrated_unit.relative_move(distance,axis=0)
+                self.calibrated_unit.relative_move(-2000, axis =1)
 
             self.calibrated_unit.absolute_move(start_position[1], 1)
             self.calibrated_unit.wait_until_still(1)

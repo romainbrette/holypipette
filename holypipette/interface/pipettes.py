@@ -111,6 +111,7 @@ class PipetteInterface(TaskInterface):
         self.manipulator_switched.emit('Manipulators',
                                        'Manipulator: %d' % unit_number)
 
+
     @blocking_command(category='Stage',
                       description='Calibrate stage only',
                       task_description='Calibrating stage')
