@@ -44,6 +44,7 @@ class PipetteInterface(TaskInterface):
         self.calibrated_unit = None
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
+        self.paramecium_tank_position = None
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)

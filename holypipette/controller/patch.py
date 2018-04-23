@@ -5,6 +5,13 @@ import numpy as np
 from .base import TaskController
 
 
+def MatrixCalculation(n):
+    i =1;
+    while (i**2 < n):
+        i=i+1
+    return i
+
+
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
         self.message = message
@@ -22,6 +29,7 @@ class AutoPatcher(TaskController):
         self.microscope = microscope
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
+        self.paramecium_tank_position =  None
 
     def break_in(self):
         '''
@@ -287,4 +295,46 @@ class AutoPatcher(TaskController):
         finally:
             self.pressure.set_pressure(self.config.pressure_near)
 
+    def microdroplet_making(self):
+        if self.paramecium_tank_position is None:
+            raise ValueError('Paramecium tank has not been set')
+        try:
+            i = 0
+            start_position = self.calibrated_unit.position()
 
+            #Droplet making
+            self.calibrated_unit.relative_move(-1000,axis=0)
+            self.calibrated_unit.wait_until_still()
+            self.calibrated_unit.relative_move(-1000,axis=1)
+            self.calibrated_unit.wait_until_still()
+            distance = 2000/self.config.droplet_quantity
+            for i in range(MatrixCalculation(self.config.droplet_quantity)):
+                for j in range(MatrixCalculation(self.config.droplet_quantity)):
+                    self.pressure.set_pressure(self.config.droplet_pressure)
+                    self.sleep(self.config.droplet_time)
+                    i=i+1
+                    if i >= self.config.droplet_quantity:
+                        break
+                    self.calibrated_unit.relative_move(distance,axis=1)
+                    self.calibrated_unit.wait_until_still()
+                if i >= self.config.droplet_quantity:
+                    break
+                self.calibrated_unit.relative_move(distance,axis=0)
+
+            self.calibrated_unit.absolute_move(start_position[1], 1)
+            self.calibrated_unit.wait_until_still(1)
+            self.calibrated_unit.absolute_move(start_position[2], 2)
+            self.calibrated_unit.wait_until_still(2)
+            self.calibrated_unit.absolute_move(start_position[0], 0)
+            self.calibrated_unit.wait_until_still(0)
+
+            #Paramecium hunting
+
+
+
+
+
+
+
+        finally:
+            self.pressure.set_pressure(self.config.pressure_near)
