@@ -1,9 +1,58 @@
 import time
 
 import numpy as np
+from numpy import array
+from math import atan2
+import cv2
 
 from .base import TaskController
+from setup_script import *
 
+def MatrixCalculation(n):
+    i =1;
+    while (i**2 < n):
+        i=i+1
+    return i
+
+def moveto(x, y):
+    xs = x-camera.width/2
+    ys = y-camera.height/2
+    #print xs, ys
+    calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
+
+def where_is_paramecium(frame): # Locate paramecium
+    height, width = frame.shape[:2]
+    ratio = width/256
+    resized = cv2.resize(frame, (width/ratio, height/ratio))
+    gauss = cv2.GaussianBlur(resized, (9, 9), 0)
+    canny = cv2.Canny(gauss, gauss.shape[0]/8, gauss.shape[0]/8)
+    ret, thresh = cv2.threshold(canny, 127, 255, 0)
+    ret = cv2.findContours(thresh, 1, 2)
+    contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
+    distmin = 1e6
+    for cnt in contours:
+        try:
+            M = cv2.moments(cnt)
+            if (cv2.arcLength(cnt, True) > 90) & bool(M['m00']):
+                (x, y), radius = cv2.minEnclosingCircle(cnt)
+                cx = int(M['m10'] / M['m00'])
+                cy = int(M['m01'] / M['m00'])
+                u20 = int(M['m20']/M['m00'] - cx**2)
+                u02 = int(M['m02'] / M['m00'] - cy ** 2)
+                u11 = int(M['m11'] / M['m00'] - cx * cy)
+                theta = atan2((u20-u02), 2*u11)/2
+                radius = int(radius)
+                dist = ((x - width/2) ** 2 + (y - height/2) ** 2) ** 0.5
+                if (radius < 55) & (radius > 25) & (dist<distmin):
+                    distmin=dist
+                    xmin, ymin =x, y
+                    angle = theta # not used here
+        except cv2.error:
+            pass
+    if distmin<1e5:
+        return xmin*ratio,ymin*ratio
+    else:
+        return None,None
 
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
@@ -22,6 +71,7 @@ class AutoPatcher(TaskController):
         self.microscope = microscope
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
+        self.paramecium_tank_position =  None
 
     def break_in(self):
         '''
@@ -287,4 +337,79 @@ class AutoPatcher(TaskController):
         finally:
             self.pressure.set_pressure(self.config.pressure_near)
 
+    def microdroplet_making(self):
+        if self.paramecium_tank_position is None:
+            raise ValueError('Paramecium tank has not been set')
+        try:
+            i = 0
+            start_position = self.calibrated_unit.position()
+            z0 = self.microscope.position()
 
+            # Move the pipette to the paramecium tank.
+            self.microscope.absolute_move(0)
+            self.microscope.wait_until_still()
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[0], 0)
+            self.calibrated_unit.wait_until_still(0)
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2] - 5000, 2)
+            self.calibrated_unit.wait_until_still(2)
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[1], 1)
+            self.calibrated_unit.wait_until_still(1)
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2], 2)
+            self.calibrated_unit.wait_until_still(2)
+
+            #Take the liquid. Calculated later
+            self.pressure.set_pressure(-500)
+            self.sleep(20)
+
+            # Move back.
+            self.calibrated_unit.absolute_move(0, 0)
+            self.calibrated_unit.wait_until_still(0)
+            self.calibrated_unit.absolute_move(start_position[1], 1)
+            self.calibrated_unit.wait_until_still(1)
+            self.calibrated_unit.absolute_move(start_position[2], 2)
+            self.calibrated_unit.wait_until_still(2)
+            self.calibrated_unit.absolute_move(start_position[0], 0)
+            self.calibrated_unit.wait_until_still(0)
+
+            #Droplet making
+            self.calibrated_unit.relative_move(-1000,axis=0)
+            self.calibrated_unit.wait_until_still()
+            self.calibrated_unit.relative_move(-1000,axis=1)
+            self.calibrated_unit.wait_until_still()
+            distance = 2000/MatrixCalculation(self.config.droplet_quantity)
+            for i in range(MatrixCalculation(self.config.droplet_quantity)):
+                for j in range(MatrixCalculation(self.config.droplet_quantity)):
+                    self.pressure.set_pressure(self.config.droplet_pressure)
+                    self.sleep(self.config.droplet_time)
+                    self.pressure.set_pressure(0)
+                    i=i+1
+                    if i >= self.config.droplet_quantity:
+                        break
+                    self.calibrated_unit.relative_move(distance,axis=1)
+                    self.calibrated_unit.wait_until_still()
+                if i >= self.config.droplet_quantity:
+                    break
+                self.calibrated_unit.relative_move(distance,axis=0)
+                self.calibrated_unit.relative_move(-2000, axis =1)
+
+            self.calibrated_unit.absolute_move(start_position[1], 1)
+            self.calibrated_unit.wait_until_still(1)
+            self.calibrated_unit.absolute_move(start_position[2], 2)
+            self.calibrated_unit.wait_until_still(2)
+            self.calibrated_unit.absolute_move(start_position[0], 0)
+            self.calibrated_unit.wait_until_still(0)
+            self.microscope.absolute_move(z0)
+            calibrated_stage.relative_move(1000, axis=0)
+            calibrated_stage.wait_until_still()
+            calibrated_stage.relative_move(1000, axis=1)
+            calibrated_stage.wait_until_still()
+
+            #Paramecium hunting
+
+
+
+
+
+
+        finally:
+            self.pressure.set_pressure(self.config.pressure_near)

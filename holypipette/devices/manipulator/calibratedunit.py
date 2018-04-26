@@ -17,6 +17,7 @@ from numpy import (array, zeros, dot, arange, vstack, sign, pi, arcsin,
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
 
+
 __all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage']
 
 verbose = True
@@ -256,7 +257,7 @@ class CalibratedUnit(ManipulatorUnit):
         if rig == 1:
             self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
         else:
-            distance = 100
+            distance = -100
             self.relative_move(distance, 0)
             self.wait_until_still(0)
             self.sleep(0.1)

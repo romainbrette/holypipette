@@ -13,16 +13,21 @@ import imageio
 import collections
 
 path='/Users/Romain/Desktop/'
-cap = imageio.get_reader(path+'droplet-nice.mp4')
+#cap = imageio.get_reader(path+'droplet-nice.mp4')
 #cap = imageio.get_reader(path+'electrode-in-water.mp4')
 #cap = imageio.get_reader(path+'paramecium-capture.mp4')
+cap = imageio.get_reader(path+'droplet2.mp4')
+
+pixel_per_um = .4
 
 cv2.namedWindow('camera')
 
 frame = cap.get_data(0)
 height, width = frame.shape[:2]
-xd, yd, rd = where_is_droplet(frame, pixel_per_um=0.5, xc=width * 3 / 4, yc=height / 2)
+xd, yd, rd = where_is_droplet(frame, pixel_per_um=pixel_per_um, xc=width * 3 / 4, yc=height / 2)
 i=1
+if rd is None:
+    rd = 1000
 
 position_history = collections.deque(maxlen = 50)
 
@@ -39,7 +44,7 @@ while 1:
 
     #cv2.circle(frame, (width*3/4, height/2), 30, (0, 0, 255), 2)
 
-    x,y,img = where_is_paramecium(frame, pixel_per_um = 0.5, background = None, debug = True,
+    x,y,img = where_is_paramecium(frame, pixel_per_um = pixel_per_um, background = None, debug = True,
                                   previous_x = xd, previous_y = yd, max_dist = rd-50/0.5)
 
     if xd is not None:

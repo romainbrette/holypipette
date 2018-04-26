@@ -110,7 +110,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     normalized_img = uint8(normalized_img)
 
     # Extract edges
-    canny = cv2.Canny(normalized_img, int(50/pixel_per_um), int(50/pixel_per_um)) # should depend on pixel_per_um
+    canny = cv2.Canny(normalized_img, int(800*pixel_per_um), int(800*pixel_per_um)) # should depend on pixel_per_um
     #canny = cv2.Canny(normalized_img, 40, 40)  # should depend on pixel_per_um
 
     # Find contours

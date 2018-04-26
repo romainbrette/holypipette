@@ -44,6 +44,7 @@ class PipetteInterface(TaskInterface):
         self.calibrated_unit = None
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
+        self.paramecium_tank_position = None
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
@@ -110,6 +111,7 @@ class PipetteInterface(TaskInterface):
         self.manipulator_switched.emit('Manipulators',
                                        'Manipulator: %d' % unit_number)
 
+
     @blocking_command(category='Stage',
                       description='Calibrate stage only',
                       task_description='Calibrating stage')
@@ -151,7 +153,7 @@ class PipetteInterface(TaskInterface):
                       task_description='Go to the floor (cover slip)')
     def go_to_floor(self):
         self.execute(self.microscope, 'absolute_move',
-                     x=self.microscope.floor_Z)
+                     argument=self.microscope.floor_Z)
 
     # TODO: Make the configuration system more general/clean
     @command(category='Manipulators',
