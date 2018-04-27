@@ -33,7 +33,7 @@ class CalibrationConfig(Config):
                                 bounds=(0, 2))
     stack_depth = NumberWithUnit(8, unit='μm', doc='Depth of the vertical stack of photos (+- stack_depth)',
                                  bounds=(0, 20))
-    calibration_moves = Number(13, doc='Number of calibration moves: total distance is 2^calibration_moves',
+    calibration_moves = Number(9, doc='Number of calibration moves: total distance is 2^calibration_moves',
                                bounds=(1, 20))
 
     categories = [('Calibration', ['sleep_time', 'position_tolerance',
@@ -257,7 +257,7 @@ class CalibratedUnit(ManipulatorUnit):
         if rig == 1:
             self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
         else:
-            distance = -100
+            distance = 100
             self.relative_move(distance, 0)
             self.wait_until_still(0)
             self.sleep(0.1)
