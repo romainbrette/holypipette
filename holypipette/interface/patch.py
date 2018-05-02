@@ -8,6 +8,7 @@ from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.controller import AutoPatcher
 
+
 __all__ = ['AutoPatchInterface', 'PatchConfig']
 
 

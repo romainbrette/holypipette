@@ -378,5 +378,5 @@ class AutoPatcher(TaskController):
             movingList.paramecium_stop = False
             del movingList.position_history[:]
             movingList.contact = False
-            movingList.black_area = None
+            movingList.black_area = []
 
