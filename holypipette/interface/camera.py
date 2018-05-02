@@ -5,7 +5,7 @@ import cv2
 from numpy import *
 from holypipette.interface import TaskInterface, command
 from holypipette.vision import *
-from setup_script import *
+
 
 
 class CameraInterface(TaskInterface):
@@ -81,7 +81,7 @@ class CameraInterface(TaskInterface):
         return img
 
     def show_tracked_paramecium(self, img):
-        pixel_per_um = calibrated_stage.pixel_per_um()
+        pixel_per_um = 5.0
         from holypipette.gui import movingList
         x,y,norm = where_is_paramecium(img, pixel_per_um = pixel_per_um, background = None, debug = True,
                                   previous_x = None, previous_y = None, max_dist = 1e6)
@@ -102,14 +102,14 @@ class CameraInterface(TaskInterface):
     def pipette_contact_detection(self, img):
         from holypipette.gui import movingList
         height, width = img.shape[:2]
-        pixel_per_um = calibrated_stage.pixel_per_um()
+        pixel_per_um = 5.0
         x = width / 2
         y = height / 2 + 20
         size = int(30 / pixel_per_um)  # 30 um around tip
-        framelet = img[y:y + size, x:x + size, :]
+        framelet = img[y:y + size, x:x + size]
         ret, thresh = cv2.threshold(framelet, 127, 255, cv2.THRESH_BINARY)
         black_area = sum(thresh == 0)
-        movingList.black_area.append(black_area)
+        movingList.black_area.append((black_area))
         if movingList.contact == False:
             increase = black_area - movingList.black_area[0]
             if increase > 25 / pixel_per_um ** 2:  # 5 x 5 um
