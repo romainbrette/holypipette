@@ -106,11 +106,8 @@ class PipetteInterface(TaskInterface):
             The number of the manipulator (using 1-based indexing, whereas the
             code internally uses 0-based indexing).
         '''
-        print(self.calibrated_units)
         self.current_unit = unit_number - 1
-        print("Testing: ",unit_number - 1)
         self.calibrated_unit = self.calibrated_units[self.current_unit]
-        print(self.calibrated_unit)
         self.manipulator_switched.emit('Manipulators',
                                        'Manipulator: %d' % unit_number)
 
