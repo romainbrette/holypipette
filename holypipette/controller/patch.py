@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 from numpy import array
-from math import atan2
 import cv2
 
 from .base import TaskController
@@ -46,7 +45,6 @@ class AutoPatcher(TaskController):
         Breaks in. The pipette must be in cell-attached mode
         '''
         self.info("Breaking in")
-
         R = self.amplifier.resistance()
         if R < self.config.gigaseal_R:
             raise AutopatchError("Seal lost")
@@ -309,75 +307,54 @@ class AutoPatcher(TaskController):
         if self.paramecium_tank_position is None:
             raise ValueError('Paramecium tank has not been set')
         try:
+            self.pressure.set_pressure(0)
             i = 0
+            self.calibrated_unit = calibrated_units[1]
             start_position = self.calibrated_unit.position()
             z0 = self.microscope.position()
 
+            self.calibrated_unit = calibrated_units[1]
             # Move the pipette to the paramecium tank.
+
             self.microscope.absolute_move(0)
             self.microscope.wait_until_still()
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[0], 0)
+            self.calibrated_unit.absolute_move(start_position[0]+15000, 0)
             self.calibrated_unit.wait_until_still(0)
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2] - 5000, 2)
+            self.calibrated_unit.absolute_move(start_position[2] - 5000, 2)
             self.calibrated_unit.wait_until_still(2)
             self.calibrated_unit.absolute_move(self.paramecium_tank_position[1], 1)
             self.calibrated_unit.wait_until_still(1)
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2] - 5000, 2)
+            self.calibrated_unit.wait_until_still(2)
+            self.calibrated_unit.absolute_move(self.paramecium_tank_position[0], 0)
+            self.calibrated_unit.wait_until_still(0)
             self.calibrated_unit.absolute_move(self.paramecium_tank_position[2], 2)
             self.calibrated_unit.wait_until_still(2)
 
             #Take the liquid. Calculated later
-            self.pressure.set_pressure(-500)
-            self.sleep(20)
+            self.pressure.set_pressure(-self.config.droplet_pressure)
+            self.sleep(self.config.droplet_time*self.config.droplet_quantity)
+            self.pressure.set_pressure(0)
 
+            #
             # Move back.
-            self.calibrated_unit.absolute_move(0, 0)
+            self.calibrated_unit.absolute_move(start_position[0] + 15000, 0)
             self.calibrated_unit.wait_until_still(0)
+            self.calibrated_unit.absolute_move(start_position[2]-5000, 2)
+            self.calibrated_unit.wait_until_still(2)
             self.calibrated_unit.absolute_move(start_position[1], 1)
             self.calibrated_unit.wait_until_still(1)
             self.calibrated_unit.absolute_move(start_position[2], 2)
             self.calibrated_unit.wait_until_still(2)
-            self.calibrated_unit.absolute_move(start_position[0], 0)
-            self.calibrated_unit.wait_until_still(0)
 
-            #Droplet making
-            self.calibrated_unit.relative_move(-1000,axis=0)
-            self.calibrated_unit.wait_until_still()
-            self.calibrated_unit.relative_move(-1000,axis=1)
-            self.calibrated_unit.wait_until_still()
-            distance = 2000/MatrixCalculation(self.config.droplet_quantity)
-            for i in range(MatrixCalculation(self.config.droplet_quantity)):
-                for j in range(MatrixCalculation(self.config.droplet_quantity)):
-                    self.pressure.set_pressure(self.config.droplet_pressure)
-                    self.sleep(self.config.droplet_time)
-                    self.pressure.set_pressure(0)
-                    i=i+1
-                    if i >= self.config.droplet_quantity:
-                        break
-                    self.calibrated_unit.relative_move(distance,axis=1)
-                    self.calibrated_unit.wait_until_still()
-                if i >= self.config.droplet_quantity:
-                    break
-                self.calibrated_unit.relative_move(distance,axis=0)
-                self.calibrated_unit.relative_move(-2000, axis =1)
-
-            self.calibrated_unit.absolute_move(start_position[1], 1)
-            self.calibrated_unit.wait_until_still(1)
-            self.calibrated_unit.absolute_move(start_position[2], 2)
-            self.calibrated_unit.wait_until_still(2)
             self.calibrated_unit.absolute_move(start_position[0], 0)
             self.calibrated_unit.wait_until_still(0)
             self.microscope.absolute_move(z0)
-            calibrated_stage.relative_move(1000, axis=0)
-            calibrated_stage.wait_until_still()
-            calibrated_stage.relative_move(1000, axis=1)
-            calibrated_stage.wait_until_still()
+            self.microscope.wait_until_still()
 
-            #Paramecium hunting
-
-
-
-
-
+            self.pressure.set_pressure(self.config.droplet_pressure)
+            self.sleep(self.config.droplet_time)
 
         finally:
-            self.pressure.set_pressure(self.config.pressure_near)
+            self.pressure.set_pressure(15)
+

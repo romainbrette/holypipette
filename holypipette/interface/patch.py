@@ -42,9 +42,9 @@ class PatchConfig(Config):
 
     zap = Boolean(False, doc='Zap the cell to break the seal')
 
-    droplet_quantity = Number(20, bounds=(1, 100), doc='Number of microdroplet to make')
-    droplet_pressure = NumberWithUnit(20, bounds=(0, 100), doc='Pressure to make droplet', unit='mbar')
-    droplet_time = NumberWithUnit(10, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
+    droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplet to make')
+    droplet_pressure = NumberWithUnit(15, bounds=(-1000, 1000), doc='Pressure to make droplet', unit='mbar')
+    droplet_time = NumberWithUnit(5, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
 
 
     categories = [('Pressure', ['pressure_near', 'pressure_sealing',
@@ -114,7 +114,7 @@ class AutoPatchInterface(TaskInterface):
     @command(category='Patch',
              description='Store the position of the paramecium tank')
     def store_paramecium_position(self):
-        self.current_autopatcher.paramecium_tank_position = self.pipette_controller.calibrated_unit.position()
+        self.current_autopatcher.paramecium_tank_position = self.pipette_controller.calibrated_units[1].position()
         self.info('Paramecium tank position stored')
 
     @blocking_command(category='Patch',

@@ -6,6 +6,8 @@ from holypipette.devices.manipulator import *
 
 camera = Hamamatsu()
 controller = LuigsNeumann_SM5(name='COM3', stepmoves=True)
+#####HOANG
+#stage = ManipulatorUnit(controller,[10,11])
 stage = ManipulatorUnit(controller,[7,8])
 microscope = Leica()
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
