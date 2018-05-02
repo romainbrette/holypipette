@@ -358,3 +358,25 @@ class AutoPatcher(TaskController):
         finally:
             self.pressure.set_pressure(15)
 
+    def paramecium_movement(self):
+        from holypipette.gui import movingList
+        try:
+            while movingList.paramecium_stop is False:
+                moveto(movingList.position_history[-1])
+        finally:
+            self.info("Paramecium stopped!")
+
+    def paramecium_catching(self):
+        from holypipette.gui import movingList
+        try:
+            move_position = movingList.position_history[-1]
+            self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 10, recalibrate=True)
+            while movingList.contact == False:
+                self.calibrated_unit.relative_move(1, axis=2)
+
+        finally:
+            movingList.paramecium_stop = False
+            del movingList.position_history[:]
+            movingList.contact = False
+            movingList.black_area = None
+

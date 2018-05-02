@@ -2,8 +2,10 @@ from __future__ import print_function
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
 import cv2
-
+from numpy import *
 from holypipette.interface import TaskInterface, command
+from holypipette.vision import *
+from setup_script import *
 
 
 class CameraInterface(TaskInterface):
@@ -25,6 +27,8 @@ class CameraInterface(TaskInterface):
         self.signal_updated_exposure()
         if self.with_tracking:
             main_gui.image_edit_funcs.append(self.show_tracked_objects)
+            main_gui.image_edit_funcs.append(self.show_tracked_paramecium)
+            main_gui.image_edit_funcs.append(self.pipette_contact_detection)
 
     def signal_updated_exposure(self):
         # Should be called by subclasses that actually support setting the exposure
@@ -75,6 +79,45 @@ class CameraInterface(TaskInterface):
             moveList.append(np.array([xs, ys]))
 
         return img
+
+    def show_tracked_paramecium(self, img):
+        pixel_per_um = calibrated_stage.pixel_per_um()
+        from holypipette.gui import movingList
+        x,y,norm = where_is_paramecium(img, pixel_per_um = pixel_per_um, background = None, debug = True,
+                                  previous_x = None, previous_y = None, max_dist = 1e6)
+        if x is not None:
+            cv2.circle(img, (int(x), int(y)), 30, (0, 255, 0), 2)
+            # Calculate variance of position
+            if len(movingList.position_history) == movingList.position_history.maxlen:
+                xpos, ypos = zip(*movingList.position_history)
+                movement = (var(xpos) + var(ypos)) ** .5
+                if movement < 1:  # 1 pixel
+                    print
+                    "Paramecium has stopped!"
+                movingList.paramecium_stop = True
+            movingList.position_history.append((x, y))
+
+        return img
+
+    def pipette_contact_detection(self, img):
+        from holypipette.gui import movingList
+        height, width = img.shape[:2]
+        pixel_per_um = calibrated_stage.pixel_per_um()
+        x = width / 2
+        y = height / 2 + 20
+        size = int(30 / pixel_per_um)  # 30 um around tip
+        framelet = img[y:y + size, x:x + size, :]
+        ret, thresh = cv2.threshold(framelet, 127, 255, cv2.THRESH_BINARY)
+        black_area = sum(thresh == 0)
+        movingList.black_area.append(black_area)
+        if movingList.contact == False:
+            increase = black_area - movingList.black_area[0]
+            if increase > 25 / pixel_per_um ** 2:  # 5 x 5 um
+                movingList.contact = True
+
+        return img
+
+
 
     @command(category='Camera',
              description='Select an object for automatic tracking')
