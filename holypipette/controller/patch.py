@@ -16,12 +16,13 @@ class AutopatchError(Exception):
         return self.message
 
 class AutoPatcher(TaskController):
-    def __init__(self, amplifier, pressure, calibrated_unit, microscope, config):
+    def __init__(self, amplifier, pressure, calibrated_unit, microscope, calibrated_stage, config):
         super(AutoPatcher, self).__init__()
         self.config = config
         self.amplifier = amplifier
         self.pressure = pressure
         self.calibrated_unit = calibrated_unit
+        self.calibrated_stage = calibrated_stage
         self.microscope = microscope
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
@@ -353,8 +354,7 @@ class AutoPatcher(TaskController):
                 if len(movingList.position_history) > 1:
                     xs = movingList.position_history[-1][0]
                     ys = movingList.position_history[-1][1]
-                    #self.calibrated_stage.reference_move(self.calibrated_stage.reference_position() - array([xs, ys, 0]))
-                    pass
+                    self.calibrated_stage.reference_move(self.calibrated_stage.reference_position() - array([xs, ys, 0]))
 
         finally:
             self.info("Paramecium stopped!")
