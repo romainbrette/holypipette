@@ -96,7 +96,9 @@ class CameraInterface(TaskInterface):
                     "Paramecium has stopped!"
                 movingList.paramecium_stop = True
             if (movingList.tracking == True)and(movingList.paramecium_stop == False):
-                movingList.position_history.append((x, y))
+                xs = x - self.camera.width / 2
+                ys = y - self.camera.height / 2
+                movingList.position_history.append((xs, ys))
 
         return img
 

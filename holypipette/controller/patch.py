@@ -8,19 +8,6 @@ from .base import TaskController
 from setup_script import *
 from holypipette.vision.paramecium_tracking import*
 
-def MatrixCalculation(n):
-    i =1;
-    while (i**2 < n):
-        i=i+1
-    return i
-
-def moveto(x, y):
-    xs = x-camera.width/2
-    ys = y-camera.height/2
-    #print xs, ys
-    calibrated_stage.reference_move(calibrated_stage.reference_position()-array([xs, ys, 0]))
-
-
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
         self.message = message
@@ -364,8 +351,10 @@ class AutoPatcher(TaskController):
             movingList.tracking = True
             while movingList.paramecium_stop is False:
                 if len(movingList.position_history) > 1:
-                    #print("position history: ", movingList.position_history[-1])
-                    moveto(movingList.position_history[-1][0],movingList.position_history[-1][1])
+                    xs = movingList.position_history[-1][0]
+                    ys = movingList.position_history[-1][1]
+                    #self.calibrated_stage.reference_move(self.calibrated_stage.reference_position() - array([xs, ys, 0]))
+                    pass
 
         finally:
             self.info("Paramecium stopped!")
