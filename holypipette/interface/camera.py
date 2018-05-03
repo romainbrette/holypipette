@@ -81,7 +81,7 @@ class CameraInterface(TaskInterface):
         return img
 
     def show_tracked_paramecium(self, img):
-        pixel_per_um = 5.0
+        pixel_per_um = 1.5
         from holypipette.gui import movingList
         x,y,norm = where_is_paramecium(img, pixel_per_um = pixel_per_um, background = None, debug = True,
                                   previous_x = None, previous_y = None, max_dist = 1e6)
@@ -95,14 +95,15 @@ class CameraInterface(TaskInterface):
                     print
                     "Paramecium has stopped!"
                 movingList.paramecium_stop = True
-            movingList.position_history.append((x, y))
+            if (movingList.tracking == True)and(movingList.paramecium_stop == False):
+                movingList.position_history.append((x, y))
 
         return img
 
     def pipette_contact_detection(self, img):
         from holypipette.gui import movingList
         height, width = img.shape[:2]
-        pixel_per_um = 5.0
+        pixel_per_um = 1.5
         x = width / 2
         y = height / 2 + 20
         size = int(30 / pixel_per_um)  # 30 um around tip

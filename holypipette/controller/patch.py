@@ -331,7 +331,7 @@ class AutoPatcher(TaskController):
             self.calibrated_unit.absolute_move(self.paramecium_tank_position[2], 2)
             self.calibrated_unit.wait_until_still(2)
 
-            #Take the liquid. Calculated later
+            #Take the liquid. Calculate later
             self.pressure.set_pressure(-self.config.droplet_pressure)
             self.sleep(self.config.droplet_time*self.config.droplet_quantity)
             self.pressure.set_pressure(0)
@@ -361,8 +361,12 @@ class AutoPatcher(TaskController):
     def paramecium_movement(self):
         from holypipette.gui import movingList
         try:
+            movingList.tracking = True
             while movingList.paramecium_stop is False:
-                moveto(movingList.position_history[-1])
+                if len(movingList.position_history) > 1:
+                    #print("position history: ", movingList.position_history[-1])
+                    moveto(movingList.position_history[-1][0],movingList.position_history[-1][1])
+
         finally:
             self.info("Paramecium stopped!")
 
@@ -378,5 +382,6 @@ class AutoPatcher(TaskController):
             movingList.paramecium_stop = False
             del movingList.position_history[:]
             movingList.contact = False
+            movingList.tracking = False
             movingList.black_area = []
 
