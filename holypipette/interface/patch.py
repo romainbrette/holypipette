@@ -135,3 +135,15 @@ class AutoPatchInterface(TaskInterface):
                       task_description='Microdroplet making')
     def microdroplet_making(self):
         self.execute(self.current_autopatcher, 'microdroplet_making')
+
+    @blocking_command(category='Patch',
+                      description='Calibrated stage moving to compensate the movement of paramecium',
+                      task_description='Paramecium tracking')
+    def paramecium_movement(self):
+        self.execute(self.current_autopatcher, 'paramecium_movement')
+
+    @blocking_command(category='Patch',
+                      description='Moving down the calibrated manipulator to hold the paramecium',
+                      task_description='Paramecium immobilization')
+    def paramecium_catching(self):
+        self.execute(self.current_autopatcher, 'paramecium_catching')

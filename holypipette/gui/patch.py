@@ -60,5 +60,9 @@ class TrackingPatchGui(PatchGui):
                                  self.patch_interface.sequential_patching)
         self.register_key_action(Qt.Key_F6, None,
                                  self.patch_interface.microdroplet_making)
+        self.register_key_action(Qt.Key_F7, None,
+                                 self.patch_interface.paramecium_movement)
+        self.register_key_action(Qt.Key_F8, None,
+                                 self.patch_interface.paramecium_catching)
         self.register_mouse_action(Qt.RightButton, None,
                                    self.camera_interface.track_object)

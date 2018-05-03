@@ -40,7 +40,7 @@ def where_is_droplet(frame, pixel_per_um = 5., ratio = None,
     filtered=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
 
     # Find circles
-    circles = cv2.HoughCircles(filtered[:,:,0], cv2.cv.CV_HOUGH_GRADIENT, 1, int(400*pixel_per_um),\
+    circles = cv2.HoughCircles(filtered[:,:,0], cv2.HOUGH_GRADIENT, 1, int(400*pixel_per_um),\
                 param1 = int(50/pixel_per_um), param2 = 30, minRadius = int(200*pixel_per_um), maxRadius = int(1000*pixel_per_um))
 
     # Center
