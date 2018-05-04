@@ -86,7 +86,8 @@ class CameraInterface(TaskInterface):
         x,y,norm = where_is_paramecium(img, pixel_per_um = pixel_per_um, background = None, debug = True,
                                   previous_x = None, previous_y = None, max_dist = 1e6)
         if x is not None:
-            cv2.circle(img, (int(x), int(y)), 30, (0, 255, 0), 2)
+            if movingList.tracking == False:
+                pass
             # Calculate variance of position
             if len(movingList.position_history) == movingList.position_history.maxlen:
                 xpos, ypos = zip(*movingList.position_history)
