@@ -363,13 +363,13 @@ class AutoPatcher(TaskController):
         from holypipette.gui import movingList
         try:
             move_position = movingList.position_history[-1]
-            self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 10, recalibrate=True)
+            self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=True)
             while movingList.contact == False:
                 self.calibrated_unit.relative_move(1, axis=2)
 
         finally:
             movingList.paramecium_stop = False
-            del movingList.position_history[:]
+            movingList.position_history.clear()
             movingList.contact = False
             movingList.tracking = False
             movingList.black_area = []

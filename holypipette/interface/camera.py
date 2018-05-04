@@ -94,7 +94,9 @@ class CameraInterface(TaskInterface):
                 if movement < 1:  # 1 pixel
                     print
                     "Paramecium has stopped!"
-                movingList.paramecium_stop = True
+                    movingList.paramecium_stop = True
+                else:
+                    movingList.position_history.clear()
             if (movingList.tracking == True)and(movingList.paramecium_stop == False):
                 xs = x - self.camera.width / 2
                 ys = y - self.camera.height / 2
