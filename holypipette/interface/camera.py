@@ -110,19 +110,18 @@ class CameraInterface(TaskInterface):
         height, width = img.shape[:2]
         pixel_per_um = 1.5
         x = width / 2
-        y = height / 2 + 20
-        size = int(30 / pixel_per_um)  # 30 um around tip
-        framelet = img[y:y + size, x:x + size]
-        ret, thresh = cv2.threshold(framelet, 127, 255, cv2.THRESH_BINARY)
-        black_area = sum(thresh == 0)
-        movingList.black_area.append((black_area))
-        if movingList.contact == False:
-            increase = black_area - movingList.black_area[0]
-            if increase > 25 / pixel_per_um ** 2:  # 5 x 5 um
-                movingList.contact = True
+        y = height / 2
+        size = int(15 / pixel_per_um)  # 30 um around tip
+        framelet = img[y -size:y + size, x-size:x + size]
 
-        return img
-
+        framelet = cv2.cvtColor(framelet, cv2.COLOR_BGR2GRAY)
+        otsu, _ = cv2.threshold(framelet, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        ret, thresh = cv2.threshold(framelet, otsu, 255, cv2.THRESH_BINARY_INV)
+        _, contours, _ = cv2.findContours(thresh, 1, 2)
+        cnt = contours[0]
+        x, y, w, h = cv2.boundingRect(cnt)
+        if (w >= 0.9 * size) and (movingList.contact == False):
+            movingList.contact = True
 
 
     @command(category='Camera',

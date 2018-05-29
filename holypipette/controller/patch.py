@@ -27,6 +27,7 @@ class AutoPatcher(TaskController):
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
         self.paramecium_tank_position =  None
+        self.contact_position = None
 
     def break_in(self):
         '''
@@ -362,15 +363,23 @@ class AutoPatcher(TaskController):
     def paramecium_catching(self):
         from holypipette.gui import movingList
         try:
-            move_position = movingList.position_history[-1]
-            self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=True)
-            while movingList.contact == False:
-                self.calibrated_unit.relative_move(1, axis=2)
+            if self.contact_position == None:
+                print ("Please detect the contact position!")
+            else:
+                self.calibrated_unit.safe_move(np.array([self.calibrated_unit.position()[0], self.calibrated_unit.position()[1], self.calibrated_unit.position()[2]]), recalibrate=False)
 
         finally:
             movingList.paramecium_stop = False
-            movingList.position_history.clear()
-            movingList.contact = False
+            del movingList.position_history[:]
             movingList.tracking = False
-            movingList.black_area = []
 
+
+    def paramecium_catching(self):
+        from holypipette.gui import movingList
+        try:
+            movingList.contact = False
+            while movingList.contact == False:
+                self.calibrated_unit.relative_move(1, axis=2)
+            self.contact_position = self.calibrated_unit.position()
+        finally:
+            movingList.contact = True

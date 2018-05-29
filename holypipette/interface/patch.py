@@ -145,3 +145,9 @@ class AutoPatchInterface(TaskInterface):
                       task_description='Paramecium immobilization')
     def paramecium_catching(self):
         self.execute(self.current_autopatcher, 'paramecium_catching')
+
+    @blocking_command(category='Patch',
+                      description='Moving down the calibrated manipulator to detect the contact point with the coverslip',
+                      task_description='Contact detection')
+    def contact_detection(self):
+        self.execute(self.current_autopatcher, 'contact_detection')
