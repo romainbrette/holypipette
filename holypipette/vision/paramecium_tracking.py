@@ -9,7 +9,7 @@ import numpy as np
 from holypipette.gui import movingList
 from numpy import zeros,uint8,pi, uint16, around
 
-__all__ = ["where_is_paramecium", "where_is_droplet"]
+__all__ = ["where_is_paramecium", "where_is_droplet", "where_is_paramecium2"]
 
 def backproject(source, target, scale = 1):
     #Grayscale
