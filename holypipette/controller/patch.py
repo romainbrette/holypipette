@@ -374,7 +374,7 @@ class AutoPatcher(TaskController):
             movingList.tracking = False
 
 
-    def paramecium_catching(self):
+    def contact_detection(self):
         from holypipette.gui import movingList
         try:
             movingList.contact = False
