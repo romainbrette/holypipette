@@ -366,9 +366,9 @@ class AutoPatcher(TaskController):
             if self.contact_position == None:
                 print ("Please detect the contact position!")
             else:
-                self.calibrated_unit.safe_move(np.array([self.calibrated_unit.position()[0], self.calibrated_unit.position()[1], self.calibrated_unit.position()[2]]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=False)
+                self.calibrated_unit.safe_move(np.array([self.contact_position()[0], self.contact_position()[1], self.calibrated_unit.position()[2]]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=False)
                 self.calibrated_unit.wait_until_still()
-                self.calibrated_unit.absolute_move(self.calibrated_unit.position()[2],2)
+                self.calibrated_unit.absolute_move(self.contact_position()[2],2)
                 self.calibrated_unit.wait_until_still()
         finally:
             movingList.paramecium_stop = False
