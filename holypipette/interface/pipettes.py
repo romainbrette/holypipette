@@ -43,6 +43,7 @@ class PipetteInterface(TaskInterface):
         self.current_unit = 0
         self.calibrated_unit = None
         self.cleaning_bath_position = None
+        self.contact_position = None
         self.rinsing_bath_position = None
         self.paramecium_tank_position = None
 

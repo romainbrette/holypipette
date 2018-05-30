@@ -356,23 +356,24 @@ class AutoPatcher(TaskController):
                     xs = movingList.position_history[-1][0]
                     ys = movingList.position_history[-1][1]
                     self.calibrated_stage.reference_move(self.calibrated_stage.reference_position() - array([xs, ys, 0]))
-
         finally:
             self.info("Paramecium stopped!")
 
     def paramecium_catching(self):
         from holypipette.gui import movingList
         try:
-            if self.contact_position == None:
+            if self.contact_position is None:
                 print ("Please detect the contact position!")
             else:
-                self.calibrated_unit.safe_move(np.array([self.contact_position()[0], self.contact_position()[1], self.calibrated_unit.position()[2]]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=False)
+                move_position = movingList.position_history[-1]
+                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=False)
                 self.calibrated_unit.wait_until_still()
-                self.calibrated_unit.absolute_move(self.contact_position()[2],2)
+                self.calibrated_unit.absolute_move(self.contact_position[2],2)
                 self.calibrated_unit.wait_until_still()
         finally:
+            print("Paramecium immobilized!")
             movingList.paramecium_stop = False
-            #del movingList.position_history[:]
+            del movingList.position_history[:]
             movingList.tracking = False
 
     def contact_detection(self):
@@ -383,4 +384,5 @@ class AutoPatcher(TaskController):
                 self.calibrated_unit.relative_move(1, axis=2)
             self.contact_position = self.calibrated_unit.position()
         finally:
+            print("Detection Finished")
             movingList.contact = True

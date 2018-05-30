@@ -119,8 +119,9 @@ class CameraInterface(TaskInterface):
         _, contours, _ = cv2.findContours(thresh, 1, 2)
         cnt = contours[0]
         x, y, w, h = cv2.boundingRect(cnt)
-        if (w >= 0.9 * size) and (movingList.contact == False):
+        if (w >= 1.8 * size) and (movingList.contact == False):
             movingList.contact = True
+            print("Contact")
         return img
 
     @command(category='Camera',
