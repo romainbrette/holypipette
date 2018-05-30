@@ -6,7 +6,7 @@ TODO: look for the closest in ellipse property space
 from math import atan2
 import cv2
 import numpy as np
-from holypipette.gui import movingList
+
 from numpy import zeros,uint8,pi, uint16, around
 
 __all__ = ["where_is_paramecium", "where_is_droplet", "where_is_paramecium2"]
@@ -168,7 +168,7 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
 
 def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
                         ratio = None, background = None, debug = False, max_dist = 1e6): # Locate paramecium
-
+    from holypipette.gui import movingList
     height, width = frame.shape[:2]
     if ratio is None:
         ratio = width / 256
@@ -179,7 +179,7 @@ def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previou
     normalized_img = uint8(normalized_img)
 
     pixel_per_um = pixel_per_um / ratio
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     frame1 = cv2.adaptiveThreshold(frame, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 11, 2)
     kernel = np.ones((2, 2), np.uint8)
     frame1 = cv2.morphologyEx(frame1, cv2.MORPH_GRADIENT, kernel)

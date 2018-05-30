@@ -113,7 +113,7 @@ class CameraInterface(TaskInterface):
         size = int(15 / pixel_per_um)  # 30 um around tip
         framelet = img[y -size:y + size, x-size:x + size]
 
-        framelet = cv2.cvtColor(framelet, cv2.COLOR_BGR2GRAY)
+        #framelet = cv2.cvtColor(framelet, cv2.COLOR_BGR2GRAY)
         otsu, _ = cv2.threshold(framelet, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         ret, thresh = cv2.threshold(framelet, otsu, 255, cv2.THRESH_BINARY_INV)
         _, contours, _ = cv2.findContours(thresh, 1, 2)
@@ -121,7 +121,7 @@ class CameraInterface(TaskInterface):
         x, y, w, h = cv2.boundingRect(cnt)
         if (w >= 0.9 * size) and (movingList.contact == False):
             movingList.contact = True
-
+        return img
 
     @command(category='Camera',
              description='Select an object for automatic tracking')
