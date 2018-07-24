@@ -387,6 +387,7 @@ class CameraGui(QtWidgets.QMainWindow):
         handler.setLevel(logging.ERROR)
         logging.getLogger('holypipette').addHandler(handler)
         self.log_signal.connect(self.error_status)
+        self.installEventFilter(self)
 
     def display_edit(self, pixmap):
         for func in self.display_edit_funcs:
@@ -522,28 +523,32 @@ class CameraGui(QtWidgets.QMainWindow):
         self.running_task = None
         self.running_task_interface = None
 
-    def keyPressEvent(self, event):
-        # Look for an exact match first (key + modifier)
-        event_tuple = (event.key(), int(event.modifiers()))
-        description = self.key_actions.get(event_tuple, None)
-        # If not found, check for keys that ignore the modifier
-        if description is None:
-            description = self.key_actions.get((event.key(), None), None)
+    def eventFilter(self, object, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            # Look for an exact match first (key + modifier)
+            event_tuple = (event.key(), int(event.modifiers()))
+            description = self.key_actions.get(event_tuple, None)
+            # If not found, check for keys that ignore the modifier
+            if description is None:
+                description = self.key_actions.get((event.key(), None), None)
 
-        if description is not None:
-            command, argument = description
-            if self.running_task and not command.category == 'General':
-                # Another task is running, ignore the key press
-                # (we allow the "General" category to still allow to see the
-                # help, etc.)
-                return
-            if command.is_blocking:
-                self.start_task(command.task_description, command.__self__)
-            if command.__self__ in self.interface_signals:
-                command_signal, _ = self.interface_signals[command.__self__]
-                command_signal.emit(command, argument)
-            else:
-                command(argument)
+            if description is not None:
+                command, argument = description
+                if self.running_task and not command.category == 'General':
+                    # Another task is running, ignore the key press
+                    # (we allow the "General" category to still allow to see the
+                    # help, etc.)
+                    return True
+                if command.is_blocking:
+                    self.start_task(command.task_description, command.__self__)
+                if command.__self__ in self.interface_signals:
+                    command_signal, _ = self.interface_signals[command.__self__]
+                    command_signal.emit(command, argument)
+                else:
+                    command(argument)
+                return True
+
+        return False  # let someone else handle the event
 
     @command(category='General',
              description='Toggle display of keyboard/mouse commands')
