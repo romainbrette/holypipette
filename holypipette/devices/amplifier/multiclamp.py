@@ -23,6 +23,8 @@ import logging
 import os
 import traceback
 
+from holypipette.devices.amplifier.amplifier import Amplifier
+
 __all__ = ['MultiClampChannel', 'MultiClamp']
 
 NO_ERROR = 6000
@@ -154,7 +156,7 @@ class MultiClamp(object):
         # Adjust the gains on the board
         pass
 
-class MultiClampChannel(object):
+class MultiClampChannel(Amplifier):
     """
     Device representing a MultiClamp amplifier channel (i.e., one amplifier with
     two channels is represented by two devices).
@@ -710,7 +712,6 @@ class MultiClampChannel(object):
                                                       ctypes.byref(self.last_error)):
             self.check_error()
         return frequency.value
-
 
     def close(self):
         self.dll.MCCMSG_DestroyObject(self.msg_handler)

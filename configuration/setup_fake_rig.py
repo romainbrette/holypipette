@@ -1,6 +1,7 @@
 '''
 "Fake setup" for GUI development on a computer without access to a rig
 '''
+from holypipette.devices.amplifier.amplifier import FakeAmplifier
 from holypipette.devices.pressurecontroller import FakePressureController
 from holypipette.devices.camera.camera import FakeCamera
 from holypipette.devices.manipulator import *
@@ -16,5 +17,5 @@ microscope = Microscope(controller, 9)
 microscope.floor_Z = 0
 microscope.up_direction = 1.0
 units = [ManipulatorUnit(controller, [1, 2, 3]), ManipulatorUnit(controller, [4, 5, 6])]
-amplifier = object()  # Dummy object
+amplifier = FakeAmplifier()
 pressure = FakePressureController()
