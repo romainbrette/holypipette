@@ -65,7 +65,7 @@ class LiveFeedQt(QtWidgets.QLabel):
                     format = QtGui.QImage.Format_RGB32
                 else:
                     bytesPerLine = self.width
-                    format = QtGui.QImage.Format_Grayscale8
+                    format = QtGui.QImage.Format_Indexed8
 
             else:
                 # Color image via OpenCV
