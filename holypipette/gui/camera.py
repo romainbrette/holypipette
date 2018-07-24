@@ -523,8 +523,14 @@ class CameraGui(QtWidgets.QMainWindow):
         self.running_task_interface = None
 
     def keyPressEvent(self, event):
+        # We remove the keypad modifier, since we do not want to make a
+        # difference between key presses as part of the keypad or on the main
+        # keyboard (e.g. for the +/- keys). Most importantly, arrow keys always
+        # use the keypad modifier on OS X.
+        modifiers = event.modifiers() & ~Qt.KeypadModifier
+
         # Look for an exact match first (key + modifier)
-        event_tuple = (event.key(), int(event.modifiers()))
+        event_tuple = (event.key(), int(modifiers))
         description = self.key_actions.get(event_tuple, None)
         # If not found, check for keys that ignore the modifier
         if description is None:
