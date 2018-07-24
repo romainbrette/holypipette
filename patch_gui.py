@@ -1,5 +1,6 @@
 import sys
 
+import traceback
 from PyQt5 import QtWidgets
 
 from holypipette.log_utils import console_logger
