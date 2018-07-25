@@ -3,7 +3,6 @@
 A class to handle a manipulator unit with coordinates calibrated to the reference system of a camera.
 It contains methods to calibrate the unit.
 
-Should these run in a thread?
 Should messages be issued?
 Also ranges should be taken into account
 

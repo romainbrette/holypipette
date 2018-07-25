@@ -123,11 +123,13 @@ class ManipulatorUnit(Manipulator):
     def is_accessible(self, x, axis = None):
         """
         Checks whether position x is accessible.
+
+        THIS METHOD IS INCORRECT.
         """
         if axis is None:
             return all([self.is_accessible(x[i]) for i in range(self.axes)])
         else:
-            return (x>=min) and (x<=max)
+            return (x>=min) and (x<=max) # This is clearly wrong!
 
     def wait_until_still(self, axes = None):
         """
