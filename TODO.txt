@@ -1,3 +1,10 @@
+* Separate GUIs for Paramecium and patch
+** paramecium_gui, not "tracking"
+** separate the methods (currently in AutoPatcher + TrackingPatchGui)
+
+-----
+
+
 *** Multiple calibrations (objective and immersion)
 
 * Actually start patch is problematic: capa comp etc, not at the right moment

@@ -10,8 +10,12 @@ Welcome to holypipette's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   source/holypipette
+   manipulator
+   pressure
+   amplifier
+   autopatch
 
+   source/holypipette
 
 
 Indices and tables
