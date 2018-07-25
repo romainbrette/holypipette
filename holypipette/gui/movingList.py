@@ -1,3 +1,4 @@
+# What is this doing here?
 import collections
 
 moveList = []

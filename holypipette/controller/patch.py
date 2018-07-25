@@ -66,7 +66,7 @@ class AutoPatcher(TaskController):
 
             if move_position is not None:
                 # Move pipette to target
-                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=True)
+                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=False)
                 self.calibrated_unit.wait_until_still()
 
                 # Wait for a few seconds
