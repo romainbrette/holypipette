@@ -43,21 +43,15 @@ class PatchConfig(Config):
 
     zap = Boolean(False, doc='Zap the cell to break the seal')
 
-    droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplet to make')
+    droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplets to make')
     droplet_pressure = NumberWithUnit(15, bounds=(-1000, 1000), doc='Pressure to make droplet', unit='mbar')
     droplet_time = NumberWithUnit(5, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
 
 
-    categories = [('Pressure', ['pressure_near', 'pressure_sealing',
-                                'pressure_ramp_increment', 'pressure_ramp_max',
-                                'pressure_ramp_duration']),
-                  ('Resistance', ['min_R', 'max_R', 'max_R_increase',
-                                  'cell_R_increase', 'max_cell_R',
-                                  'gigaseal_R']),
-                  ('Distance', ['cell_distance', 'max_distance']),
-                  ('Seal', ['seal_min_time', 'seal_deadline', 'zap']),
-                  ('Voltage ramp', ['Vramp_duration', 'Vramp_amplitude']),
-                  ('Paramecium', ['droplet_quantity', 'droplet_pressure','droplet_time'])]
+    categories = [('Approach',['min_R', 'max_R','pressure_near', 'cell_distance', 'max_distance', 'cell_R_increase']),
+                  ('Sealing',['pressure_sealing','gigaseal_R','Vramp_duration', 'Vramp_amplitude','seal_min_time', 'seal_deadline']),
+                  ('Break-in',['zap','pressure_ramp_increment', 'pressure_ramp_max','pressure_ramp_duration','max_cell_R']),
+                  ('Paramecium', ['droplet_quantity', 'droplet_pressure', 'droplet_time'])]
 
 
 class AutoPatchInterface(TaskInterface):
