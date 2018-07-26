@@ -25,7 +25,7 @@ Examples::
     calibrated_stage = CalibratedStage(stage, microscope=microscope, camera=camera)
     XYZ = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
 
-The position in the camera system is given by
+The position in the camera system is given by :math:`a^2=b`.
 
 
 Calibration algorithms

@@ -11,18 +11,6 @@ from holypipette.devices import *
 
 from setup_script import *
 
-amplifier, pressure = None, None
-try:
-    amplifier = MultiClampChannel()
-except Exception:
-    print(traceback.format_exc())
-
-try:
-    pressure = OB1()
-    pressure.set_pressure(25)
-except Exception:
-    print(traceback.format_exc())
-
 console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
