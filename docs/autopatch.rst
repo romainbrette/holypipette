@@ -34,7 +34,7 @@ Sealing:
 3. Set pressure at ``pressure_sealing`` (<0).
 4. If ``R>gigaseal_R``: success (next stage).
 5. Ramp V down to ``Vramp_amplitude`` (default -70 mV) over duration ``Vramp_duration``.
-6. Wait until ``R>gigaseal_R`` (success) or time is out (``seal_min_time``).
+6. Wait for at least ``seal_min_time``, and until ``R>gigaseal_R`` (success) or time is out (``seal_deadline``) (failure).
 7. Success or failure: release pressure.
 
 Break-in:
