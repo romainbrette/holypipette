@@ -22,7 +22,7 @@ class PipetteInterface(TaskInterface):
         self.microscope = microscope
         self.camera = camera
         # Create a common calibration configuration for all stages/manipulators
-        self.calibration_config = CalibrationConfig(name='Calibration config')
+        self.calibration_config = CalibrationConfig(name='Calibration')
         self.calibrated_stage = CalibratedStage(stage, None, microscope, camera,
                                                 config=self.calibration_config)
         self.calibrated_units = [CalibratedUnit(unit,

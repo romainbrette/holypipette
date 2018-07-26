@@ -60,7 +60,7 @@ class AutoPatchInterface(TaskInterface):
     '''
     def __init__(self, amplifier, pressure, pipette_interface):
         super(AutoPatchInterface, self).__init__()
-        self.config = PatchConfig(name='Patch config')
+        self.config = PatchConfig(name='Patch')
         self.amplifier = amplifier
         self.pressure = pressure
         self.pipette_controller = pipette_interface
