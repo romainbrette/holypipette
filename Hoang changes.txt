@@ -1,0 +1,12 @@
+List of changes by Hoang
+------------------------
+* gui.movingList: should not there
+* controller.patch.AutoPatcher
+    clean_pipette
+    sequential_patching: patching several cells in sequence with cleaning
+    microdroplet_making: should be in specific paramecium stuff
+    paramecium_movement: (should be in specific paramecium stuff)
+        tracks paramecium (with stage movements) until it stops
+    paramecium_catching: should be in specific paramecium stuff
+        moves pipette down until contact
+    contact_detection: should be in specific paramecium stuff
