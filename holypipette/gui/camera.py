@@ -685,10 +685,11 @@ class ConfigGui(QtWidgets.QWidget):
     def value_changed(self, key, value):
         if key not in self.value_widgets:
             return
+        magnitude = getattr(self.config.params()[key], 'magnitude', 1)
         # We do not update the GUI directly here (that's done in
         # display_changed_value), because it is possible that this is triggered
         # from code running in a different thread
-        self.value_changed_signal.emit(key, value)
+        self.value_changed_signal.emit(key, value/magnitude)
 
     @QtCore.pyqtSlot('QString', object)
     def display_changed_value(self, key, value):
