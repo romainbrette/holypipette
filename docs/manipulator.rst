@@ -164,8 +164,30 @@ unless it has been specified explicitly (floor position).
 
 *Calibration*
 
+Each axis is calibrated in turn. For each axis:
+
+1. Double the movement amplitude.
+2. Check whether the movement is reachable (which presupposes that ranges have been set).
+3. Estimate whether the movement will make the pipette move out from the field of view.
+4. Move the pipette and track, and move the stage to compensate if the pipette is out of field.
+5. Calculate the relevant column of :math:`{\bf M}`, based on camera positions before and after
+   the movement.
+6. Repeat `calibration_moves` times.
+7. Move back to the initial position.
+8. Calculate the relevant column of :math:`{\bf M}`, based on camera positions before and after
+   the movement.
+
+Thus, only the last movement (which is the largest one) is actually used to calculate the matrix.
+
 Manual calibration
 ^^^^^^^^^^^^^^^^^^
 
+The ``manual_calibration`` method takes 4 points chosen by the user, and deduce the matrix
+from them.
+
 Automatic recalibration
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+1. Locate the pipette over a depth of +-25 um, using templates and movements of microscope Z.
+2. Update the offset :math:`{\bf r_0}` (recalibration).
+3. With option ``center``, move the stage and focus so that the pipette tip is centered.

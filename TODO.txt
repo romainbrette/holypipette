@@ -5,7 +5,7 @@
 -----
 
 
-*** Multiple calibrations (objective and immersion)
+*** Multiple calibrations (objective)
 
 * Actually start patch is problematic: capa comp etc, not at the right moment
 * pulses for R measurement should be small
@@ -14,7 +14,6 @@
 * Paramecium tracking: autoexposure?
 * Paramecium tracking: angle doesn't work
 * it looks like photos are not stored during calibration
-* Selected manipulator in status bar
 * Paramecium stuff: maybe all this automatically from tracking?
     1) Approach above coverslip
     2) Move right above
@@ -22,9 +21,6 @@
     save floor Z
 
 * Pressure wobble (see latest papers)
-* Automatic recalibration when moving
-    * recalibrate function, which moves stage/microscope and then moves back
-      based on extension of locate_pipette which may move stage and microscope (as in calibration in fact)
 * Recalibrate only X axis (for angle change)
 * Safe move: mvt in plane should also be safe, it's not
 * Image analysis:
