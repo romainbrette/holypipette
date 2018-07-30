@@ -7,6 +7,7 @@ import numpy as np
 
 from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
+from holypipette.interface import command
 
 
 class ManipulatorGui(CameraGui):
@@ -27,6 +28,23 @@ class ManipulatorGui(CameraGui):
         self.display_edit_funcs.append(self.draw_scale_bar)
 
         self.add_config_gui(self.interface.calibration_config)
+
+        # Measure manipulator positions
+        self.position_timer = QtCore.QTimer()
+        self.position_timer.timeout.connect(self.interface.measure_ranges)
+        self.position_measurement = False
+
+    @command(category='Manipulators',
+             description='Measure manipulator ranges')
+    def measure_ranges(self):
+        if self.position_measurement is False:
+            self.position_measurement = True
+            # Reset ranges
+            self.interface.reset_ranges()
+            self.position_timer.start(500)
+        else:
+            self.position_measurement = False
+            self.position_timer.stop()
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
         if autoscale and not text:
@@ -125,6 +143,8 @@ class ManipulatorGui(CameraGui):
                                  self.interface.calibrate_manipulator2)
         self.register_key_action(Qt.Key_R, Qt.NoModifier,
                                  self.interface.recalibrate_manipulator)
+        self.register_key_action(Qt.Key_M, Qt.NoModifier,
+                                 self.measure_ranges)
         # Pipette selection
         number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):

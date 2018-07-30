@@ -54,6 +54,31 @@ class PipetteInterface(TaskInterface):
         self.command_received(self.load_configuration, None)
 
     @command(category='Manipulators',
+             description='Measure manipulator ranges')
+    def measure_ranges(self):
+        for calibrated_unit in self.calibrated_units:
+            position = calibrated_unit.position()
+            calibrated_unit.min = np.array([position,calibrated_unit.min]).min(axis=0)
+            calibrated_unit.max = np.array([position,calibrated_unit.max]).max(axis=0)
+        position = self.calibrated_stage.position()
+        self.calibrated_stage.min = np.array([position, self.calibrated_stage.min]).min(axis=0)
+        self.calibrated_stage.max = np.array([position, self.calibrated_stage.max]).max(axis=0)
+        position = self.microscope.position()
+        self.microscope.min = min(self.microscope.min, position)
+        self.microscope.max = max(self.microscope.max, position)
+
+    @command(category='Manipulators',
+             description='Reset manipulator ranges')
+    def reset_ranges(self):
+        for calibrated_unit in self.calibrated_units:
+            calibrated_unit.min = np.ones(len(calibrated_unit.min))*1e6
+            calibrated_unit.max = -np.ones(len(calibrated_unit.max))*1e6
+        self.calibrated_stage.min = np.ones(len(self.calibrated_stage.min))*1e6
+        self.calibrated_stage.max = -np.ones(len(self.calibrated_stage.max))*1e6
+        self.microscope.min = 1e6
+        self.microscope.max = -1e6
+
+    @command(category='Manipulators',
              description='Move pipette in x direction by {:.0f}μm',
              default_arg=10)
     def move_pipette_x(self, distance):
