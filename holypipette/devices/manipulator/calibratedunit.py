@@ -599,6 +599,11 @@ class CalibratedUnit(ManipulatorUnit):
         oldz += self.microscope.position()
 
         # Calculate floor (min Z)
+        if self.microscope.up_direction>0:
+            self.microscope.floor_Z = self.microscope.min
+        else:
+            self.microscope.floor_Z = self.microscope.max
+
         if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
             floor = z0-300.*self.microscope.up_direction
             self.debug('Setting floor to {} (300 um below current position)'.format(floor))

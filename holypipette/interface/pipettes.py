@@ -66,7 +66,6 @@ class PipetteInterface(TaskInterface):
         position = self.microscope.position()
         self.microscope.min = min(self.microscope.min, position)
         self.microscope.max = max(self.microscope.max, position)
-        self.microscope.floor_Z = self.microscope.min
 
     @command(category='Manipulators',
              description='Reset manipulator ranges')
@@ -83,10 +82,13 @@ class PipetteInterface(TaskInterface):
              description='Check manipulator ranges')
     def check_ranges(self):
         for i,calibrated_unit in enumerate(self.calibrated_units):
+            print(calibrated_unit.min,calibrated_unit.max)
             if ((calibrated_unit.max-calibrated_unit.min)<500.).any():
                 self.debug("Ranges of unit "+str(i)+" might not have been updated")
+        print(self.calibrated_stage.min,self.calibrated_stage.max)
         if ((self.calibrated_stage.max - self.calibrated_stage.min) < 500.).any():
             self.debug("Ranges of the stage might not have been updated")
+        print(self.microscope.min,self.microscope.max)
         if self.microscope.max-self.microscope.min<500.:
             self.debug("Ranges of the microscope might not have been updated")
 
