@@ -66,6 +66,7 @@ class PipetteInterface(TaskInterface):
         position = self.microscope.position()
         self.microscope.min = min(self.microscope.min, position)
         self.microscope.max = max(self.microscope.max, position)
+        self.microscope.floor_Z = self.microscope.min
 
     @command(category='Manipulators',
              description='Reset manipulator ranges')
@@ -77,6 +78,17 @@ class PipetteInterface(TaskInterface):
         self.calibrated_stage.max = -np.ones(len(self.calibrated_stage.max))*1e6
         self.microscope.min = 1e6
         self.microscope.max = -1e6
+
+    @command(category='Manipulators',
+             description='Check manipulator ranges')
+    def check_ranges(self):
+        for i,calibrated_unit in enumerate(self.calibrated_units):
+            if ((calibrated_unit.max-calibrated_unit.min)<500.).any():
+                self.debug("Ranges of unit "+str(i)+" might not have been updated")
+        if ((self.calibrated_stage.max - self.calibrated_stage.min) < 500.).any():
+            self.debug("Ranges of the stage might not have been updated")
+        if self.microscope.max-self.microscope.min<500.:
+            self.debug("Ranges of the microscope might not have been updated")
 
     @command(category='Manipulators',
              description='Move pipette in x direction by {:.0f}μm',

@@ -45,6 +45,8 @@ class ManipulatorGui(CameraGui):
         else:
             self.position_measurement = False
             self.position_timer.stop()
+            # Check whether all positions have been updated
+            self.interface.check_ranges()
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True):
         if autoscale and not text:
