@@ -812,16 +812,17 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.calibrated = True
 
-    def recalibrate(self):
+    def recalibrate(self, xy=(0,0)):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
         It assumes that the pipette is centered on screen.
         '''
-        #    Offset is such that the position is (0,0,z0) in the reference system
+        #    Offset is such that the position is (x,y,z0) in the reference system
         u0 = self.position()
         z0 = self.microscope.position()
         stager0 = self.stage.reference_position()
-        r0 = array([0, 0, z0]) - dot(self.M, u0) - stager0
+        x,y = xy
+        r0 = array([x, y, z0]) - dot(self.M, u0) - stager0
         self.r0 = r0
 
     def manual_calibration(self, landmarks):

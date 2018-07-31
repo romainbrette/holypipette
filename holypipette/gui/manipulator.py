@@ -145,6 +145,8 @@ class ManipulatorGui(CameraGui):
                                  self.interface.calibrate_manipulator2)
         self.register_key_action(Qt.Key_R, Qt.NoModifier,
                                  self.interface.recalibrate_manipulator)
+        self.register_mouse_action(Qt.RightButton, Qt.NoModifier,
+                                   self.interface.recalibrate_manipulator_on_click)
         self.register_key_action(Qt.Key_M, Qt.NoModifier,
                                  self.measure_ranges)
         # Pipette selection

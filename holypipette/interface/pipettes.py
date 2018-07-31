@@ -156,6 +156,9 @@ class PipetteInterface(TaskInterface):
                       description='Calibrate stage only',
                       task_description='Calibrating stage')
     def calibrate_stage(self):
+
+        print("hello")
+
         if self.execute(self.calibrated_stage, 'calibrate', final_task=False):
             self.execute(self.calibrated_unit, 'analyze_calibration')
 
@@ -178,6 +181,13 @@ class PipetteInterface(TaskInterface):
                       task_description='Recalibrating stage and manipulator')
     def recalibrate_manipulator(self):
         self.execute(self.calibrated_unit, 'recalibrate')
+
+    @blocking_command(category='Manipulators',
+                     description='Recalibrate manipulator',
+                     task_description='Recalibrate manipulator at click position')
+    def recalibrate_manipulator_on_click(self, xy_position):
+        self.debug('asking for recalibration at {}'.format(xy_position))
+        self.execute(self.calibrated_unit, 'recalibrate', argument=xy_position)
 
     @blocking_command(category='Manipulators',
                      description='Move pipette to position',
