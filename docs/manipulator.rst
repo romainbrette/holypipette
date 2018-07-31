@@ -118,7 +118,8 @@ Recalibration
 ^^^^^^^^^^^^^
 This assumes that the manipulator is correctly calibrated, except for an offset.
 The method ``recalibrate`` updates :math:`{\bf r}_0` assuming that the tip is in the center of view
-(red cross).
+(red cross), or at the given (x,y) position on screen if provided (right-click on the standard
+interface).
 
 Stage calibration
 ^^^^^^^^^^^^^^^^^
