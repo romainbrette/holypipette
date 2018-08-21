@@ -198,10 +198,11 @@ def run_apidoc(_):
     import sphinx.apidoc as apidoc
     holypipette_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                    '..', 'holypipette'))
-    apidoc.main(argv=['-F', '-e', '-M', '-o', './reference', holypipette_dir])
-    # Remove unnecessary files
     if not os.path.exists('reference'):
         os.mkdir('reference')
+    apidoc.main(argv=['-F', '-e', '-M', '-o', './reference', holypipette_dir])
+
+    # Remove unnecessary files
     os.remove(os.path.join('reference', 'index.rst'))
     os.remove(os.path.join('reference', 'conf.py'))
     os.remove(os.path.join('reference', 'make.bat'))
