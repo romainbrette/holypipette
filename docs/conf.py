@@ -33,7 +33,7 @@ release = u'0.1'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+needs_sphinx = '1.7'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -195,16 +195,17 @@ napoleon_use_ivar = True
 
 # Run sphinx-apidoc automatically
 def run_apidoc(_):
-    from sphinx.ext.apidoc import main as apidoc_main
-    if not os.path.exists('source'):
-        os.mkdir('source')
-    apidoc_main(['-e', '-F', '-o', 'source', '../holypipette'])
+    import sphinx.apidoc as apidoc
+    holypipette_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                   '..', 'holypipette'))
+    apidoc.main(argv=['-F', '-e', '-M', '-o', './reference', holypipette_dir])
     # Remove unnecessary files
-    os.remove(os.path.join('source', 'index.rst'))
-    os.remove(os.path.join('source', 'conf.py'))
-    os.remove(os.path.join('source', 'make.bat'))
-    os.remove(os.path.join('source', 'Makefile'))
+    if not os.path.exists('reference'):
+        os.mkdir('reference')
+    os.remove(os.path.join('reference', 'index.rst'))
+    os.remove(os.path.join('reference', 'conf.py'))
+    os.remove(os.path.join('reference', 'make.bat'))
+    os.remove(os.path.join('reference', 'Makefile'))
 
 def setup(app):
     app.connect('builder-inited', run_apidoc)
-
