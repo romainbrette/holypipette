@@ -193,20 +193,22 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
+
 # Run sphinx-apidoc automatically
 def run_apidoc(_):
     import sphinx.apidoc as apidoc
     holypipette_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                    '..', 'holypipette'))
-    if not os.path.exists('reference'):
-        os.mkdir('reference')
-    apidoc.main(argv=['-F', '-e', '-M', '-o', './reference', holypipette_dir])
+    reference_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                 'reference'))
+    if not os.path.exists(reference_dir):
+        os.mkdir(reference_dir)
+    apidoc.main(argv=['-F', '-e', '-M', '-o', reference_dir, holypipette_dir])
 
     # Remove unnecessary files
-    os.remove(os.path.join('reference', 'index.rst'))
-    os.remove(os.path.join('reference', 'conf.py'))
-    os.remove(os.path.join('reference', 'make.bat'))
-    os.remove(os.path.join('reference', 'Makefile'))
+    for fname in ['index.rst', 'conf.py', 'make.bat', 'Makefile']:
+        os.remove(os.path.join(reference_dir, fname))
+
 
 def setup(app):
     app.connect('builder-inited', run_apidoc)
