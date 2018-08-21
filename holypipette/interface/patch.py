@@ -28,8 +28,8 @@ class PatchConfig(Config):
     min_R = NumberWithUnit(2e6, bounds=(0, 1000e6), doc='Minimum normal resistance', unit='MΩ', magnitude=1e6)
     max_R = NumberWithUnit(25e6, bounds=(0, 1000e6), doc='Maximum normal resistance', unit='MΩ', magnitude=1e6)
     max_cell_R = NumberWithUnit(300e6, bounds=(0, 1000e6), doc='Maximum cell resistance', unit='MΩ', magnitude=1e6)
-    cell_distance = NumberWithUnit(10, bounds=(0, 100), doc='Initial distance above the target cell', unit='μm')
-    max_distance = NumberWithUnit(20, bounds=(0, 100), doc='Maximum length of movement during approach', unit='μm')
+    cell_distance = NumberWithUnit(10, bounds=(0, 100), doc='Initial distance above target cell', unit='μm')
+    max_distance = NumberWithUnit(20, bounds=(0, 100), doc='Maximum movement during approach', unit='μm')
 
     max_R_increase = NumberWithUnit(1e6, bounds=(0, 100e6), doc='Increase in resistance indicating obstruction', unit='MΩ', magnitude=1e6)
     cell_R_increase = Number(.15, bounds=(0, 1), doc='Proportional increase in resistance indicating cell presence')

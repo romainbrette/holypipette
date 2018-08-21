@@ -27,12 +27,14 @@ from holypipette.config import Config, NumberWithUnit, Number
 
 class CalibrationConfig(Config):
     position_tolerance = NumberWithUnit(0.5, unit='μm',
-                                        doc='Position tolerance', bounds=(0, 10))
-    sleep_time = NumberWithUnit(1., unit='s', doc='Sleep time before taking pictures after a pipette move, because the pipette might vibrate',
+                                        doc='Position tolerance',
+                                        bounds=(0, 10))
+    sleep_time = NumberWithUnit(1., unit='s',
+                                doc='Sleep time before taking pictures',
                                 bounds=(0, 2))
-    stack_depth = NumberWithUnit(8, unit='μm', doc='Depth of the vertical stack of photos (+- stack_depth)',
+    stack_depth = NumberWithUnit(8, unit='μm', doc='Depth of stack of photos',
                                  bounds=(0, 20))
-    calibration_moves = Number(9, doc='Number of calibration moves: total distance is 2^calibration_moves',
+    calibration_moves = Number(9, doc='Number of calibration moves',
                                bounds=(1, 20))
 
     categories = [('Calibration', ['sleep_time', 'position_tolerance',
