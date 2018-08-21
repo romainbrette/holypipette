@@ -618,6 +618,23 @@ class CameraGui(QtWidgets.QMainWindow):
         self.splitter.setSizes(new_sizes)
 
 
+class ElidedLabel(QtWidgets.QLabel):
+    def __init__(self, text, minimum_width=200, *args, **kwds):
+        self.minimum_width = minimum_width
+        self.text = text
+        super(ElidedLabel, self).__init__(*args, **kwds)
+
+    def minimumSizeHint(self):
+        return QtCore.QSize(self.minimum_width,
+                            super(ElidedLabel, self).minimumSizeHint().height())
+
+    def resizeEvent(self, event):
+        metric = QtGui.QFontMetrics(self.font())
+        elidedText = metric.elidedText(self.text, QtCore.Qt.ElideRight,
+                                       self.width())
+        self.setText(elidedText)
+
+
 class ConfigGui(QtWidgets.QWidget):
     value_changed_signal = QtCore.pyqtSignal('QString', object)
 
@@ -650,7 +667,7 @@ class ConfigGui(QtWidgets.QWidget):
             for param_name in params:
                 param_obj = all_params[param_name]
                 row = QtWidgets.QHBoxLayout()
-                label = QtWidgets.QLabel(param_name)
+                label = ElidedLabel(param_obj.doc)
                 label.setToolTip(param_obj.doc)
                 if isinstance(param_obj, param.Number):
                     value_widget = QtWidgets.QDoubleSpinBox()
