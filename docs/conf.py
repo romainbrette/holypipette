@@ -205,10 +205,6 @@ def run_apidoc(_):
         os.mkdir(reference_dir)
     apidoc.main(argv=['-F', '-e', '-M', '-o', reference_dir, holypipette_dir])
 
-    # Remove unnecessary files
-    for fname in ['index.rst', 'conf.py', 'make.bat', 'Makefile']:
-        os.remove(os.path.join(reference_dir, fname))
-
 
 def setup(app):
     app.connect('builder-inited', run_apidoc)
