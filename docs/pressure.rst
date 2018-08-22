@@ -2,7 +2,7 @@ Pressure control
 ================
 
 Holy Pipette can control a pressure controller.
-Classes inherit the ``PressureController`` class, which implements
+Classes inherit the `.PressureController` class, which implements
 three methods. Currently only Elveflow's ``OB1`` controller is implemented.
 
 Example::
@@ -16,5 +16,5 @@ Pressure is mBar.
 
 Fake pressure controller
 ------------------------
-For development purposes, a ``FakePressureController`` is implemented.
+For development purposes, a `.FakePressureController` is implemented.
 It behaves as a pressure controller, except it is not connected to an actual device.

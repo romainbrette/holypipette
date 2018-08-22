@@ -4,7 +4,7 @@ Manipulators
 Hardware control
 ----------------
 Manipulators are groups of motorized axes, typically an XY stage or an XYZ unit.
-The basic class is a ``ManipulatorUnit``, which depends on a controller. The controller is
+The basic class is a `.ManipulatorUnit`, which depends on a controller. The controller is
 a set of axes that can be moved independently (for example the Luigs and Neumann controller, which
 controls up to 9 axes).
 Example::
@@ -12,14 +12,14 @@ Example::
     controller = LuigsNeumann_SM10()
     stage = ManipulatorUnit(controller, [7, 8])
 
-A ``ManipulatorUnit`` can be moved with relative or absolute displacements expressed in um.
+A `.ManipulatorUnit` can be moved with relative or absolute displacements expressed in um.
 
 Calibrated units
 ----------------
 Calibrated units are manipulator units that can be moved in the coordinate system of the camera, called
 the reference system.
-A ``CalibratedUnit`` must be associated to a camera, a microscope Z axis, and can be attached to an XY stage.
-A ``CalibratedStage`` is a special kind that a horizontal XY stage (i.e., to be parallel to the focal plane of the
+A `.CalibratedUnit` must be associated to a camera, a microscope Z axis, and can be attached to an XY stage.
+A `.CalibratedStage` is a special kind that a horizontal XY stage (i.e., to be parallel to the focal plane of the
 microscope).
 Examples::
 
@@ -36,7 +36,7 @@ Movement algorithms
 
 Reference move
 ^^^^^^^^^^^^^^
-The basic move is a ``reference_move``. It simply inverts the matrix relation to find the
+The basic move is a `~.CalibratedUnit.reference_move`. It simply inverts the matrix relation to find the
 target position in the coordinate system of the manipulator coordinates.
 However, this is not as simple as it sounds. For some manipulators (including Luigs and Neumann),
 the resulting displacement is not necessarily a straight line because each axis has a fixed speed independent
@@ -51,17 +51,17 @@ This is only done with absolute moves and not relative moves.
 
 Withdraw
 ^^^^^^^^
-The ``withdraw`` method moves the first axis to its upper endpoint. This presupposes that the two endpoints
+The `~.CalibratedUnit.withdraw` method moves the first axis to its upper endpoint. This presupposes that the two endpoints
 have been previously identified.
 
 Focus
 ^^^^^
-The ``focus`` method moves the microscope Z axis so that the tip is in focus. This does not use an autofocus
+The `~.CalibratedUnit.focus` method moves the microscope Z axis so that the tip is in focus. This does not use an autofocus
 but rather the calibration system (so the manipulator must be correctly calibrated for this to work).
 
-Save move
+Safe move
 ^^^^^^^^^
-The ``safe_move`` method moves the manipulator to a target point, with a trajectory that aims at minimizing
+The `~.CalibratedUnit.safe_move` method moves the manipulator to a target point, with a trajectory that aims at minimizing
 mechanical interaction with the tissue. It also essentially removes the pipette from the field of view during the
 approach, which could be helpful if tracking the cell.
 
@@ -71,13 +71,13 @@ Note that by horizontally, it is meant that the start and end positions are on t
 the trajectory does not necessarily remain in that plane for reasons explained above; thus the
 ``safe`` option is also used.
 
-If the ``recalibrate`` option is True and the movement is at least 500 um, then the program tries to fix
+If the `recalibrate`` option is ``True`` and the movement is at least 500 um, then the program tries to fix
 errors in calibration before the target. To this end, the manipulator stops 50 um before the target,
 then focus on the tip, automatically recalibrate (see below), then move the focus back, and finish the movement.
 
 Moving a new pipette in the field
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-This is not fully tested code. The ``move_new_pipette_back`` method moves a new pipette into the field.
+This is not fully tested code. The `~.CalibratedUnit.move_new_pipette_back` method moves a new pipette into the field.
 This assumes that the calibration is right, except for an offset (due e.g. to the length and slightly different
 geometry of the pipette). The algorithm is as follows:
 
@@ -93,7 +93,7 @@ In practice, if the pipette is cleaned, this method might not be that useful.
 
 Move and track
 ^^^^^^^^^^^^^^
-The ``move_and_track`` is used by calibration algorithms. It moves the pipette along one axis,
+The `~.CalibratedUnit.move_and_track` is used by calibration algorithms. It moves the pipette along one axis,
 then focus the microscope on the tip using calculation and then template matching. Optionally,
 it also moves the stage to center the tip. The final image is focused on the tip, but the tip
 is not necessarily in the center (depending on the precision of calibration).
@@ -101,7 +101,7 @@ Finally, it returns the position of the tip on screen and focal plane.
 
 Move back
 ^^^^^^^^^
-The ``move_back`` method is used by calibration algorithms.
+The `~.CalibratedUnit.move_back` method is used by calibration algorithms.
 It moves the microscope, manipulator and stage to a given position (previously stored), in
 a certain order that is intended to avoid collisions.
 First, the microscope is moved (normally, up), then the manipulator, then the stage.
@@ -117,7 +117,7 @@ as whether the axes go up or down (in Z) in the positive direction.
 Recalibration
 ^^^^^^^^^^^^^
 This assumes that the manipulator is correctly calibrated, except for an offset.
-The method ``recalibrate`` updates :math:`{\bf r}_0` assuming that the tip is in the center of view
+The method `~.CalibratedUnit.recalibrate` updates :math:`{\bf r}_0` assuming that the tip is in the center of view
 (red cross), or at the given (x,y) position on screen if provided (right-click on the standard
 interface).
 
@@ -137,7 +137,7 @@ It is assumed that there is an object in focus in the field of view, attached to
 
 Manipulator calibration
 ^^^^^^^^^^^^^^^^^^^^^^^
-This is the ``calibrate`` method, plus a number of methods that it calls.
+This is the `~.CalibratedUnit.calibrate` method, plus a number of methods that it calls.
 The tip must be in focus at the center of view.
 
 *Initial steps*
@@ -158,7 +158,7 @@ This first very crude estimate is used to calculate the vertical direction of th
 
 *Up directions*
 
-This is done in method ``calculate_up_directions``. It takes the matrix and estimates
+This is done in method `~.CalibratedUnit.calculate_up_directions`. It takes the matrix and estimates
 for each axis whether a positive movement makes the pipette go up or down.
 Then the minimum reachable Z (coverslip) is determined as 300 um below the current position,
 unless it has been specified explicitly (floor position).
@@ -183,7 +183,7 @@ Thus, only the last movement (which is the largest one) is actually used to calc
 Manual calibration
 ^^^^^^^^^^^^^^^^^^
 
-The ``manual_calibration`` method takes 4 points chosen by the user, and deduce the matrix
+The `~.CalibratedUnit.manual_calibration` method takes 4 points chosen by the user, and deduce the matrix
 from them.
 
 Automatic recalibration
