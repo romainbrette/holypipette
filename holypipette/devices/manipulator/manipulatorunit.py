@@ -63,19 +63,6 @@ class ManipulatorUnit(Manipulator):
         self.sleep(.05)
 
     def absolute_move_group(self, x, axes):
-        ## What is this??
-        '''
-        if isinstance(x, ndarray):
-            pos = []
-            for j in range(len(x)):
-                for i in range(len(x[j])):
-                    pos += [x[j, i]]
-        else:
-            pos = x
-
-        if len(pos) != len(axes):
-            raise ValueError('Length of arrays do not match.')
-        '''
         self.dev.absolute_move_group(x, self.axes[axes])
         self.sleep(.05)
 

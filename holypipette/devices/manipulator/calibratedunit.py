@@ -6,7 +6,7 @@ It contains methods to calibrate the unit.
 Should messages be issued?
 Also ranges should be taken into account
 
-Should this be in devices/*? Maybe in a separate calibration folder
+Should this be in devices/ ? Maybe in a separate calibration folder
 """
 from __future__ import print_function
 from __future__ import absolute_import
@@ -936,7 +936,7 @@ class CalibratedStage(CalibratedUnit):
     unit : ManipulatorUnit for this stage
     stage : CalibratedUnit for a stage on which this stage might be mounted
     microscope : ManipulatorUnit for the microscope (single axis)
-    camera : a camera, ie, object with a snap() method (optional, for visual calibration)
+    camera : a camera, ie, object with a ``snap()`` method (optional, for visual calibration)
     '''
     def __init__(self, unit, stage=None, microscope=None, camera=None,
                  config=None):

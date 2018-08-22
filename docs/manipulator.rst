@@ -12,7 +12,7 @@ Example::
     controller = LuigsNeumann_SM10()
     stage = ManipulatorUnit(controller, [7, 8])
 
-A `.ManipulatorUnit` can be moved with relative or absolute displacements expressed in um.
+A `.ManipulatorUnit` can be moved with relative or absolute displacements expressed in µm.
 
 Calibrated units
 ----------------
@@ -26,7 +26,7 @@ Examples::
     calibrated_stage = CalibratedStage(stage, microscope=microscope, camera=camera)
     XYZ = CalibratedUnit(unit, calibrated_stage, microscope, camera=camera)
 
-The position in the camera system is given by :math:`{\bf M}.{\bf u} + {\bf r}_0 + {\bf r}_S`,
+The position in the camera system is given by :math:`{\bf M}\cdot{\bf u} + {\bf r}_0 + {\bf r}_S`,
 where :math:`{\bf u}` is the position of the manipulator axes,
 :math:`{\bf r}_S` is the position of the stage in the reference system to which the manipulator
 is attached, :math:`{\bf M}` is coordinate change matrix and :math:`{\bf r}_0` is an offset.
@@ -71,8 +71,8 @@ Note that by horizontally, it is meant that the start and end positions are on t
 the trajectory does not necessarily remain in that plane for reasons explained above; thus the
 ``safe`` option is also used.
 
-If the `recalibrate`` option is ``True`` and the movement is at least 500 um, then the program tries to fix
-errors in calibration before the target. To this end, the manipulator stops 50 um before the target,
+If the ``recalibrate`` option is ``True`` and the movement is at least 500 µm, then the program tries to fix
+errors in calibration before the target. To this end, the manipulator stops 50 µm before the target,
 then focus on the tip, automatically recalibrate (see below), then move the focus back, and finish the movement.
 
 Moving a new pipette in the field
@@ -85,7 +85,7 @@ geometry of the pipette). The algorithm is as follows:
    which is the center of the microscope view.
 2. Take 10 photos at 10 Hz.
 3. Calculate the mean standard deviation of the images (more or less the contrast).
-4. Move the pipette down by 100 um along the axis.
+4. Move the pipette down by 100 µm along the axis.
 5. If the standard deviation of the image differs by at least 20% from the mean calculated previously, stop.
 6. Otherwise, go to 4; stop at 5 mm.
 
@@ -128,7 +128,7 @@ It is assumed that there is an object in focus in the field of view, attached to
 (pipette, or coverslip). Algorithm:
 
 1. Take a photo of the center of the field: this is the template.
-2. Move the first axis by 40 um, and locate the template in the image: deduce
+2. Move the first axis by 40 µm, and locate the template in the image: deduce
    the first column of :math:`{\bf M}`.
 3. Repeat for the second axis.
 4. Using the first estimate of :math:`{\bf M}`, move to each of three corners of the image
@@ -143,7 +143,7 @@ The tip must be in focus at the center of view.
 *Initial steps*
 
 1. Calibrate the stage to which it is attached.
-2. Take photos of the pipette along the Z axis of the microscope, every 1 um over
+2. Take photos of the pipette along the Z axis of the microscope, every 1 µm over
    distance ``stack_depth`` (positive and negative).
 
 *First estimate*
@@ -160,7 +160,7 @@ This first very crude estimate is used to calculate the vertical direction of th
 
 This is done in method `~.CalibratedUnit.calculate_up_directions`. It takes the matrix and estimates
 for each axis whether a positive movement makes the pipette go up or down.
-Then the minimum reachable Z (coverslip) is determined as 300 um below the current position,
+Then the minimum reachable Z (coverslip) is determined as 300 µm below the current position,
 unless it has been specified explicitly (floor position).
 
 *Calibration*
@@ -173,7 +173,7 @@ Each axis is calibrated in turn. For each axis:
 4. Move the pipette and track, and move the stage to compensate if the pipette is out of field.
 5. Calculate the relevant column of :math:`{\bf M}`, based on camera positions before and after
    the movement.
-6. Repeat `calibration_moves` times.
+6. Repeat ``calibration_moves`` times.
 7. Move back to the initial position.
 8. Calculate the relevant column of :math:`{\bf M}`, based on camera positions before and after
    the movement.
@@ -189,6 +189,6 @@ from them.
 Automatic recalibration
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-1. Locate the pipette over a depth of +-25 um, using templates and movements of microscope Z.
+1. Locate the pipette over a depth of +-25 µm, using templates and movements of microscope Z.
 2. Update the offset :math:`{\bf r_0}` (recalibration).
 3. With option ``center``, move the stage and focus so that the pipette tip is centered.

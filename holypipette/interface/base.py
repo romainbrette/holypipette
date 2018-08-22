@@ -1,6 +1,6 @@
 """
-Package defining the `Command` and `TaskInterface` classes, central to the
-interface between GUI and `TaskController` objects.
+Package defining the `TaskInterface` class, central to the interface between
+GUI and `.TaskController` objects.
 """
 import functools
 from types import MethodType
@@ -94,14 +94,14 @@ def blocking_command(category, description, task_description,
 class TaskInterface(QtCore.QObject, LoggingObject):
     """
     Class defining the basic interface between the GUI and the objects
-    controlling the hardware. Classes inheritting from this class should:
-    * Call this class's ``__init__`` function in its ``__init__` and then add
-      all supported commands by calling `add_command`.
-    * Overwrite `handle_command` to deal with all declared non-blocking commands
-    * Overwrite `handle_blocking_command` to deal with all declared blocking
-      commands. To correctly interact with the GUI (show that task is running,
-      show error message if task fails, etc.), the method needs to call the
-      `execute` function to execute the command.
+    controlling the hardware. Classes inheriting from this class should:
+
+    * Call this class's ``__init__`` function in its ``__init__``
+    * Annotate all functions providing commands with the `@command <.command>`
+      or `@blocking_command <.blocking_command>` decorator.
+    * To correctly interact with the GUI for blocking commands (show that task
+      is running, show error message if task fails, etc.), the method needs to
+      call the `~.TaskInterface.execute` function to execute the command.
     """
     #: Signals the end of a task with an "error code":
     #: 0: successful execution; 1: error during execution; 2: aborted
@@ -115,11 +115,11 @@ class TaskInterface(QtCore.QObject, LoggingObject):
     def command_received(self, command, argument):
         """
         Slot that is triggered when the GUI triggers a command handled by this
-        `TaskInterface`. If an error occurs in the handling of the command
+        `.TaskInterface`. If an error occurs in the handling of the command
         (e.g., the command does not exist or received the wrong number of
-        arguments), an error is logged and the `task_finished` signal is
+        arguments), an error is logged and the `.task_finished` signal is
         emitted. Note that the handling of errors *within* the command, as well
-        as the handling of abort requests is performed in the `execute` method.
+        as the handling of abort requests is performed in the `.execute` method.
 
         Parameters
         ----------
@@ -141,12 +141,12 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
     def execute(self, controller, func_name, argument=None, final_task=True):
         """
-        Execute a function in a `TaskController` and signal the (successful or
-        unsuccessful) completion via the `task_finished` signal.
+        Execute a function in a `.TaskController` and signal the (successful or
+        unsuccessful) completion via the `.task_finished` signal.
 
         Parameters
         ----------
-        controller : `TaskController`
+        controller : `.TaskController`
             The object responsible for executing the task.
         func_name : str
             The name of the function in the ``controller`` object
@@ -156,9 +156,9 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         final_task : bool, optional
             Whether this call is the final (or only) task that is executed for
             the command. For commands that need to call functions in several
-            `TaskController` objects, this will avoid that a successful completion
-            triggers the `task_finished` signal (note that error/aborts always
-            trigger `task_finished`). Defaults to ``True``
+            `.TaskController` objects, this will avoid that a successful
+            completion triggers the `.task_finished` signal (note that
+            error/aborts always trigger `.task_finished`). Defaults to ``True``
 
         Returns
         -------
@@ -207,7 +207,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         Parameters
         ----------
-        controller : `TaskController`
+        controller : `.TaskController`
             The object that was executing the task that failed or was aborted.
             This object is requested to reset its state.
 
@@ -227,8 +227,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         `TaskController.abort_requested` attribute. The object runs in a separate
         thread, but will finish its operation as soon as it checks for this
         attribute (either by explicitly checking with
-        `TaskController.abort_if_requested`, or by using `TaskController.sleep`
-        or one of the logging methods).
+        `.TaskController.abort_if_requested`, or by using
+        `.TaskController.sleep` or one of the logging methods).
         """
         for e in self.controllers:
             e.abort_requested = True
@@ -243,7 +243,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         Parameters
         ----------
-        main_gui : `CameraGui`
+        main_gui : `.CameraGui`
             The main GUI in control.
         """
         pass
