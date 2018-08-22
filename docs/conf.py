@@ -41,10 +41,19 @@ needs_sphinx = '1.7'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.napoleon'
 ]
+
+# Use KaTeX for math rendering (faster, no annoying "jumps" during page build)
+try:
+    import sphinxcontrib.katex as katex
+    extensions += ['sphinxcontrib.katex']
+    # This is the default, but it seems that sphinxcontrib-katex generates an
+    # invalid options dictionary if no options are given
+    katex_options = 'throwOnError: true'
+except ImportError:
+    extensions += ['sphinx.ext.mathjax']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
