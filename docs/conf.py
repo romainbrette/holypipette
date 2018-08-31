@@ -210,6 +210,16 @@ napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
 
+# We mock modules that are not needed just for building the documentation
+import sys
+try:
+    import unittest.mock as mock
+except ImportError:
+    import mock
+
+MOCK_MODULES = ['cv2']
+sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
+
 
 # Run sphinx-apidoc automatically
 def run_apidoc(_):

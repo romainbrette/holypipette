@@ -1,0 +1,11 @@
+dependencies:
+  - python
+  - sphinx>=1.7
+  - param
+  - pyqt=5
+  - numpy
+  - scipy
+  - pyserial
+  - qtawesome
+  - pip:
+    - sphinxcontrib-katex
