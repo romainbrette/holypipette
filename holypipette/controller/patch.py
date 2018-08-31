@@ -5,7 +5,6 @@ from numpy import array
 import cv2
 
 from .base import TaskController
-from setup_script import *
 from holypipette.vision.paramecium_tracking import*
 
 class AutopatchError(Exception):
