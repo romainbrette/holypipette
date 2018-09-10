@@ -27,6 +27,8 @@ class AutoPatcher(TaskController):
         self.rinsing_bath_position = None
         self.paramecium_tank_position =  None
         self.contact_position = None
+        self.initial_resistance = None
+
 
     def break_in(self):
         '''
@@ -60,17 +62,12 @@ class AutoPatcher(TaskController):
         '''
         try:
             self.amplifier.start_patch()
+
             # Pressure level 1
             self.pressure.set_pressure(self.config.pressure_near)
 
-            if move_position is not None:
-                # Move pipette to target
-                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=False)
-                self.calibrated_unit.wait_until_still()
-
-                # Wait for a few seconds
-
             # Check initial resistance
+            #self.pressure.set_pressure(0)
             self.amplifier.auto_pipette_offset()
             self.sleep(4.)
             R = self.amplifier.resistance()
@@ -79,16 +76,25 @@ class AutoPatcher(TaskController):
                 raise AutopatchError("Resistance is too low (broken tip?)")
             elif R > self.config.max_R:
                 raise AutopatchError("Resistance is too high (obstructed?)")
+            #self.initial_resistance = R
 
-            # Check resistance again
-            #oldR = R
+            # Measure resistance again (it might have increased because of pressure)
+            #self.sleep(1.)
             #R = self.amplifier.resistance()
-            #if abs(R - oldR) > self.config.max_R_increase:
-            #    raise AutopatchError("Pipette is obstructed; R = " + str(R/1e6))
 
-            # Pipette offset
-            self.amplifier.auto_pipette_offset()
-            self.sleep(2)  # why?
+            if move_position is not None:
+                # Move pipette to target
+                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1],self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * self.config.cell_distance, recalibrate=False)
+                self.calibrated_unit.wait_until_still()
+
+                # Check resistance again
+                Rnow = self.amplifier.resistance()
+                if Rnow > R * (1 + self.config.cell_R_increase):
+                    raise AutopatchError("Pipette is obstructed; R = " + str(Rnow/1e6))
+
+                # Pipette offset
+                self.amplifier.auto_pipette_offset()
+                self.sleep(2)
 
             # Approach and make the seal
             self.info("Approaching the cell")
@@ -108,6 +114,7 @@ class AutoPatcher(TaskController):
                     self.info("Releasing pressure")
                     self.pressure.set_pressure(0)
                     self.sleep(10)
+                    #oldR = self.initial_resistance
                     if R > oldR * (1 + self.config.cell_R_increase):
                         # Still higher, we are near the cell
                         self.debug("Sealing, R = " + str(self.amplifier.resistance()/1e6))
