@@ -49,6 +49,8 @@ class ManipulatorGui(CameraGui):
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True,
                        position=True):
+        if not self.show_overlay:
+            return
         if autoscale and not text:
             raise ValueError('Automatic scaling of the bar without showing text '
                              'will not be very helpful...')
@@ -185,4 +187,8 @@ class ManipulatorGui(CameraGui):
         # Show configuration pane
         self.register_key_action(Qt.Key_P, None,
                                  self.configuration_keypress)
+
+        # Toggle overlays
+        self.register_key_action(Qt.Key_O, None,
+                                 self.toggle_overlay)
 

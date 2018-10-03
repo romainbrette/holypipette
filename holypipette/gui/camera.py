@@ -275,27 +275,29 @@ class LogNotifyHandler(logging.Handler):
             message = '{} ({})'.format(record.msg, str(exc))
         self.signal.emit(message)
 
-# Add a cross to the display
-def draw_cross(pixmap):
-    '''
-    Draws a cross at the center
-    '''
-    painter = QtGui.QPainter(pixmap)
-    pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-    pen.setWidth(4)
-    painter.setPen(pen)
-    c_x, c_y = pixmap.width()/2, pixmap.height()/2
-    painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
-    painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
-    painter.end()
-
 
 class CameraGui(QtWidgets.QMainWindow):
     log_signal = QtCore.pyqtSignal('QString')
     camera_signal = QtCore.pyqtSignal(MethodType, object)
     camera_reset_signal = QtCore.pyqtSignal(TaskController)
 
-    def __init__(self, camera, image_edit=None, display_edit=draw_cross,
+    # Add a cross to the display
+    def draw_cross(self, pixmap):
+        '''
+        Draws a cross at the center
+        '''
+        if not self.show_overlay:
+            return
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        pen.setWidth(4)
+        painter.setPen(pen)
+        c_x, c_y = pixmap.width() / 2, pixmap.height() / 2
+        painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
+        painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
+        painter.end()
+
+    def __init__(self, camera, image_edit=None, display_edit=None,
                  with_tracking=False):
         super(CameraGui, self).__init__()
         self.with_tracking = with_tracking
@@ -347,7 +349,11 @@ class CameraGui(QtWidgets.QMainWindow):
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
         self.display_edit_funcs = []
-        if display_edit is not None:
+        if display_edit is None:
+            display_edit = self.draw_cross
+        if isinstance(display_edit, collections.Sequence):
+            self.display_edit_funcs.extend(display_edit)
+        else:
             self.display_edit_funcs.append(display_edit)
         self.image_edit_funcs = []
         if image_edit is not None:
@@ -367,6 +373,8 @@ class CameraGui(QtWidgets.QMainWindow):
         self.setCentralWidget(self.splitter)
         self.splitter.setSizes([1, 0])
         self.splitter.splitterMoved.connect(self.splitter_size_changed)
+
+        self.show_overlay = True
 
         # Display error messages directly in the status bar
         handler = LogNotifyHandler(self.log_signal)
@@ -590,6 +598,11 @@ class CameraGui(QtWidgets.QMainWindow):
              description='Show/hide the configuration pane')
     def configuration_keypress(self):
         self.config_button.click()
+
+    @command(category='General',
+             description='Show/hide the overlay information on the image')
+    def toggle_overlay(self):
+        self.show_overlay = not self.show_overlay
 
     def toggle_configuration_display(self):
         current_sizes = self.splitter.sizes()
