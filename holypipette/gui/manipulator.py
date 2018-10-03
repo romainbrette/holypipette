@@ -26,7 +26,6 @@ class ManipulatorGui(CameraGui):
         self.interface_signals[self.interface] = (self.pipette_command_signal,
                                                   self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
-
         self.add_config_gui(self.interface.calibration_config)
 
         # Measure manipulator positions
@@ -48,7 +47,8 @@ class ManipulatorGui(CameraGui):
             # Check whether all positions have been updated
             self.interface.check_ranges()
 
-    def draw_scale_bar(self, pixmap, text=True, autoscale=True):
+    def draw_scale_bar(self, pixmap, text=True, autoscale=True,
+                       position=True):
         if autoscale and not text:
             raise ValueError('Automatic scaling of the bar without showing text '
                              'will not be very helpful...')
@@ -82,6 +82,12 @@ class ManipulatorGui(CameraGui):
                              int(c_x + round(length_in_um*scaled_length)), c_y)
             if text:
                 painter.drawText(c_x, c_y - 10, '{}µm'.format(length_in_um))
+            if position:
+                x = stage.position(axis=0)
+                y = stage.position(axis=1)
+                z = self.interface.microscope.position()
+                position_text = 'x: {:.0f}µm, y: {:.0f}µm, z: {:.0f}µm'
+                painter.drawText(c_x, c_y + 20, position_text.format(x, y, z))
             painter.end()
 
     def register_commands(self):

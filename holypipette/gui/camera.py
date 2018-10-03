@@ -20,20 +20,6 @@ from holypipette.interface.base import command
 from .livefeed import LiveFeedQt
 
 
-def draw_cross(pixmap):
-    '''
-    Draws a cross at the center
-    '''
-    painter = QtGui.QPainter(pixmap)
-    pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-    pen.setWidth(4)
-    painter.setPen(pen)
-    c_x, c_y = pixmap.width()/2, pixmap.height()/2
-    painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
-    painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
-    painter.end()
-
-
 class Logger(QtCore.QAbstractTableModel, logging.Handler):
     def __init__(self):
         super(Logger, self).__init__()
