@@ -5,7 +5,7 @@ from numpy import array
 import cv2
 
 from .base import TaskController
-from holypipette.vision.paramecium_tracking import*
+
 
 class AutopatchError(Exception):
     def __init__(self, message = 'Automatic patching error'):
@@ -13,6 +13,7 @@ class AutopatchError(Exception):
 
     def __str__(self):
         return self.message
+
 
 class AutoPatcher(TaskController):
     def __init__(self, amplifier, pressure, calibrated_unit, microscope, calibrated_stage, config):
@@ -28,7 +29,6 @@ class AutoPatcher(TaskController):
         self.paramecium_tank_position =  None
         self.contact_position = None
         self.initial_resistance = None
-
 
     def break_in(self):
         '''
@@ -54,7 +54,6 @@ class AutoPatcher(TaskController):
             self.sleep(1.3)
 
         self.info("Successful break-in, R = " + str(self.amplifier.resistance() / 1e6))
-
 
     def patch(self, move_position=None):
         '''
@@ -297,90 +296,6 @@ class AutoPatcher(TaskController):
 
         finally:
             self.pressure.set_pressure(self.config.pressure_near)
-
-    def microdroplet_making(self):
-        if self.paramecium_tank_position is None:
-            raise ValueError('Paramecium tank has not been set')
-        try:
-            self.pressure.set_pressure(0)
-            i = 0
-            self.calibrated_unit = calibrated_units[1]
-            start_position = self.calibrated_unit.position()
-            z0 = self.microscope.position()
-
-            self.calibrated_unit = calibrated_units[1]
-            # Move the pipette to the paramecium tank.
-
-            self.microscope.absolute_move(0)
-            self.microscope.wait_until_still()
-            self.calibrated_unit.absolute_move(start_position[0]+15000, 0)
-            self.calibrated_unit.wait_until_still(0)
-            self.calibrated_unit.absolute_move(start_position[2] - 5000, 2)
-            self.calibrated_unit.wait_until_still(2)
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[1], 1)
-            self.calibrated_unit.wait_until_still(1)
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2] - 5000, 2)
-            self.calibrated_unit.wait_until_still(2)
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[0], 0)
-            self.calibrated_unit.wait_until_still(0)
-            self.calibrated_unit.absolute_move(self.paramecium_tank_position[2], 2)
-            self.calibrated_unit.wait_until_still(2)
-
-            #Take the liquid. Calculate later
-            self.pressure.set_pressure(-self.config.droplet_pressure)
-            self.sleep(self.config.droplet_time*self.config.droplet_quantity)
-            self.pressure.set_pressure(0)
-
-            #
-            # Move back.
-            self.calibrated_unit.absolute_move(start_position[0] + 15000, 0)
-            self.calibrated_unit.wait_until_still(0)
-            self.calibrated_unit.absolute_move(start_position[2]-5000, 2)
-            self.calibrated_unit.wait_until_still(2)
-            self.calibrated_unit.absolute_move(start_position[1], 1)
-            self.calibrated_unit.wait_until_still(1)
-            self.calibrated_unit.absolute_move(start_position[2], 2)
-            self.calibrated_unit.wait_until_still(2)
-
-            self.calibrated_unit.absolute_move(start_position[0], 0)
-            self.calibrated_unit.wait_until_still(0)
-            self.microscope.absolute_move(z0)
-            self.microscope.wait_until_still()
-
-            self.pressure.set_pressure(self.config.droplet_pressure)
-            self.sleep(self.config.droplet_time)
-
-        finally:
-            self.pressure.set_pressure(15)
-
-    def paramecium_movement(self):
-        from holypipette.gui import movingList
-        try:
-            movingList.tracking = True
-            while movingList.paramecium_stop is False:
-                if len(movingList.position_history) > 1:
-                    xs = movingList.position_history[-1][0]
-                    ys = movingList.position_history[-1][1]
-                    self.calibrated_stage.reference_move(self.calibrated_stage.reference_position() - array([xs, ys, 0]))
-        finally:
-            self.info("Paramecium stopped!")
-
-    def paramecium_catching(self):
-        from holypipette.gui import movingList
-        try:
-            if self.contact_position is None:
-                print ("Please detect the contact position!")
-            else:
-                move_position = movingList.position_history[-1]
-                self.calibrated_unit.safe_move(np.array([move_position[0], move_position[1], self.microscope.position()]) + self.microscope.up_direction * np.array([0, 0, 1.]) * 15, recalibrate=False)
-                self.calibrated_unit.wait_until_still()
-                self.calibrated_unit.absolute_move(self.contact_position[2],2)
-                self.calibrated_unit.wait_until_still()
-        finally:
-            print("Paramecium immobilized!")
-            movingList.paramecium_stop = False
-            del movingList.position_history[:]
-            movingList.tracking = False
 
     def contact_detection(self):
         from holypipette.gui import movingList

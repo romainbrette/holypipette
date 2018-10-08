@@ -300,6 +300,7 @@ class CameraGui(QtWidgets.QMainWindow):
     def __init__(self, camera, image_edit=None, display_edit=None,
                  with_tracking=False):
         super(CameraGui, self).__init__()
+        self.show_overlay = True
         self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
         self.task_abort_button = QtWidgets.QToolButton(clicked=self.abort_task)
@@ -373,8 +374,6 @@ class CameraGui(QtWidgets.QMainWindow):
         self.setCentralWidget(self.splitter)
         self.splitter.setSizes([1, 0])
         self.splitter.splitterMoved.connect(self.splitter_size_changed)
-
-        self.show_overlay = True
 
         # Display error messages directly in the status bar
         handler = LogNotifyHandler(self.log_signal)

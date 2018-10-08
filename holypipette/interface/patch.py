@@ -43,15 +43,10 @@ class PatchConfig(Config):
 
     zap = Boolean(False, doc='Zap the cell to break the seal')
 
-    droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplets to make')
-    droplet_pressure = NumberWithUnit(15, bounds=(-1000, 1000), doc='Pressure to make droplet', unit='mbar')
-    droplet_time = NumberWithUnit(5, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
-
 
     categories = [('Approach',['min_R', 'max_R','pressure_near', 'cell_distance', 'max_distance', 'cell_R_increase']),
                   ('Sealing',['pressure_sealing','gigaseal_R','Vramp_duration', 'Vramp_amplitude','seal_min_time', 'seal_deadline']),
-                  ('Break-in',['zap','pressure_ramp_increment', 'pressure_ramp_max','pressure_ramp_duration','max_cell_R']),
-                  ('Paramecium', ['droplet_quantity', 'droplet_pressure', 'droplet_time'])]
+                  ('Break-in',['zap','pressure_ramp_increment', 'pressure_ramp_max','pressure_ramp_duration','max_cell_R'])]
 
 
 class AutoPatchInterface(TaskInterface):
@@ -104,12 +99,6 @@ class AutoPatchInterface(TaskInterface):
         self.current_autopatcher.rinsing_bath_position = self.pipette_controller.calibrated_unit.position()
         self.info('Rinsing bath position stored')
 
-    @command(category='Patch',
-             description='Store the position of the paramecium tank')
-    def store_paramecium_position(self):
-        self.current_autopatcher.paramecium_tank_position = self.pipette_controller.calibrated_units[1].position()
-        self.info('Paramecium tank position stored')
-
     @blocking_command(category='Patch',
                       description='Clean the pipette (wash and rinse)',
                       task_description='Cleaning the pipette')
@@ -121,24 +110,6 @@ class AutoPatchInterface(TaskInterface):
                       task_description='Sequential patch clamping')
     def sequential_patching(self):
         self.execute(self.current_autopatcher, 'sequential_patching')
-
-    @blocking_command(category='Patch',
-                      description='Microdroplet making for paramecium patch clamp',
-                      task_description='Microdroplet making')
-    def microdroplet_making(self):
-        self.execute(self.current_autopatcher, 'microdroplet_making')
-
-    @blocking_command(category='Patch',
-                      description='Calibrated stage moving to compensate the movement of paramecium',
-                      task_description='Paramecium tracking')
-    def paramecium_movement(self):
-        self.execute(self.current_autopatcher, 'paramecium_movement')
-
-    @blocking_command(category='Patch',
-                      description='Moving down the calibrated manipulator to hold the paramecium',
-                      task_description='Paramecium immobilization')
-    def paramecium_catching(self):
-        self.execute(self.current_autopatcher, 'paramecium_catching')
 
     @blocking_command(category='Patch',
                       description='Moving down the calibrated manipulator to detect the contact point with the coverslip',
