@@ -12,6 +12,7 @@ Contents
    pressure
    amplifier
    autopatch
+   developer
 
 API reference
 -------------
