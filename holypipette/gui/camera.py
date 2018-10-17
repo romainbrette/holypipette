@@ -330,6 +330,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.status_bar.addPermanentWidget(self.log_button)
         self.status_bar.setSizeGripEnabled(False)
         self.setStatusBar(self.status_bar)
+        self.status_bar.messageChanged.connect(self.status_message_updated)
         self.status_messages = collections.OrderedDict()
         self.key_actions = {}
         self.mouse_actions = {}
@@ -448,7 +449,13 @@ class CameraGui(QtWidgets.QMainWindow):
                 command(position)
 
     @QtCore.pyqtSlot('QString')
+    def status_message_updated(self, message):
+        if not message:
+            self.status_bar.setStyleSheet('QStatusBar{color: black;}')
+
+    @QtCore.pyqtSlot('QString')
     def error_status(self, message):
+        self.status_bar.setStyleSheet('QStatusBar{color: red;}')
         self.status_bar.showMessage(message, 5000)
 
     def initialize(self):
@@ -495,9 +502,14 @@ class CameraGui(QtWidgets.QMainWindow):
         self.task_progress.setVisible(False)
         self.task_abort_button.setVisible(False)
         # 0: correct execution (no need to show a message)
+        if exit_reason == 0:
+            text = "Task '{}' finished successfully.".format(self.running_task)
+            self.status_bar.setStyleSheet('QStatusBar{color: black;}')
+            self.status_bar.showMessage(text, 5000)
         # 1: an error occurred (error will be displayed via `error_status`)
-        if exit_reason == 2:
+        elif exit_reason == 2:
             text = "Task '{}' aborted.".format(self.running_task)
+            self.status_bar.setStyleSheet('QStatusBar{color: black;}')
             self.status_bar.showMessage(text, 5000)
 
         # If the task was aborted or failed, and the "controller" object has a

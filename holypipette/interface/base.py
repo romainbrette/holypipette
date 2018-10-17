@@ -185,8 +185,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             else:
                 func()
         except RequestedAbortException:
+            self.info('Task "{}" aborted'.format(func_name))
             self.task_finished.emit(2, controller)
-            self.error('Task "{}" aborted'.format(func_name))
             return False
         except Exception:
             self.exception('Task "{}" failed'.format(func_name))
