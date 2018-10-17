@@ -354,6 +354,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.camera = camera
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
+
         self.display_edit_funcs = []
         if display_edit is None:
             display_edit = self.draw_cross
@@ -361,9 +362,13 @@ class CameraGui(QtWidgets.QMainWindow):
             self.display_edit_funcs.extend(display_edit)
         else:
             self.display_edit_funcs.append(display_edit)
+
         self.image_edit_funcs = []
-        if image_edit is not None:
+        if isinstance(image_edit, collections.Sequence):
+            self.image_edit_funcs.extend(image_edit)
+        elif image_edit is not None:
             self.image_edit_funcs.append(image_edit)
+
         self.video = LiveFeedQt(self.camera,
                                 image_edit=self.image_edit,
                                 display_edit=self.display_edit,
