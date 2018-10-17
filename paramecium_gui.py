@@ -15,9 +15,9 @@ console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
 
-pipette_controller = PipetteInterface(stage, microscope, camera, units)
-patch_controller = AutoPatchInterface(amplifier, pressure, pipette_controller)
-gui = ParameciumGui(camera, patch_controller, pipette_controller)
+pipette_interface = PipetteInterface(stage, microscope, camera, units)
+patch_interface = AutoPatchInterface(amplifier, pressure, pipette_interface)
+gui = ParameciumGui(camera, patch_interface, pipette_interface)
 gui.initialize()
 gui.show()
 ret = app.exec_()

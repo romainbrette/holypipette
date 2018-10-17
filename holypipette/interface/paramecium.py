@@ -11,19 +11,32 @@ class ParameciumConfig(Config):
     categories = [('Droplets', ['droplet_quantity', 'droplet_pressure', 'droplet_time'])]
 
 
+class CalibratedUnitProxy(object):
+    '''
+    Small helper object that forwards all requests to the currently selected
+    manipulator.
+    '''
+    def __init__(self, pipette_interface):
+        self._pipette_interface = pipette_interface
+
+    def __getattr__(self, item):
+        if item == '_pipette_interface':
+            return getattr(super(CalibratedUnitProxy, self), item)
+
+        return getattr(self._pipette_interface.calibrated_unit, item)
+
+
 class ParameciumInterface(TaskInterface):
 
-    def __init__(self, calibrated_unit, microscope, calibrated_stage, pressure):
+    def __init__(self, pipette_interface, patch_interface):
         super(ParameciumInterface, self).__init__()
         self.config = ParameciumConfig(name='Paramecium')
-        # TODO: Make this work correctly with changes in the selected manipulator
-        self.calibrated_unit = calibrated_unit
-        self.calibrated_stage = calibrated_stage
-        self.microscope = microscope
-        self.pressure = pressure
-        self.controller = ParameciumController(calibrated_unit, microscope,
-                                               calibrated_stage, pressure,
-                                               self.config)
+        self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
+        self.controller = ParameciumController(self.calibrated_unit,
+                                               pipette_interface.microscope,
+                                               pipette_interface.calibrated_stage,
+                                               patch_interface.pressure, self.config)
+        self.controllers.add(self.controller)
 
     @command(category='Paramecium',
              description='Store the position of the paramecium tank')

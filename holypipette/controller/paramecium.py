@@ -22,6 +22,7 @@ class ParameciumController(TaskController):
             z0 = self.microscope.position()
 
             # Move the pipette to the paramecium tank.
+            self.info('Moving the pipette to the paramecium tank')
             self.microscope.absolute_move(0)
             self.microscope.wait_until_still()
             self.calibrated_unit.absolute_move(start_position[0]+15000, 0)
@@ -38,12 +39,14 @@ class ParameciumController(TaskController):
             self.calibrated_unit.wait_until_still(2)
 
             #Take the liquid. Calculate later
+            self.info('Taking liquid')
             self.pressure.set_pressure(-self.config.droplet_pressure)
             self.sleep(self.config.droplet_time*self.config.droplet_quantity)
             self.pressure.set_pressure(0)
 
             #
             # Move back.
+            self.info('Moving back to original position')
             self.calibrated_unit.absolute_move(start_position[0] + 15000, 0)
             self.calibrated_unit.wait_until_still(0)
             self.calibrated_unit.absolute_move(start_position[2]-5000, 2)
@@ -58,6 +61,7 @@ class ParameciumController(TaskController):
             self.microscope.absolute_move(z0)
             self.microscope.wait_until_still()
 
+            self.info('Releasing liquid')
             self.pressure.set_pressure(self.config.droplet_pressure)
             self.sleep(self.config.droplet_time)
 

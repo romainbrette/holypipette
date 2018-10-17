@@ -26,7 +26,6 @@ class AutoPatcher(TaskController):
         self.microscope = microscope
         self.cleaning_bath_position = None
         self.rinsing_bath_position = None
-        self.paramecium_tank_position =  None
         self.contact_position = None
         self.initial_resistance = None
 
