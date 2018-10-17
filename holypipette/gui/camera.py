@@ -191,6 +191,10 @@ class KeyboardHelpWindow(QtWidgets.QMainWindow):
         self.mouse_catalog = collections.OrderedDict()
         self.custom_catalog = collections.OrderedDict()
 
+    def keyPressEvent(self, event):
+        # Forward key presses to the parent window
+        return self.parent().keyPressEvent(event)
+
     def register_key_action(self, key, modifier, category, description):
         if category not in self.key_catalog:
             self.key_catalog[category] = []
