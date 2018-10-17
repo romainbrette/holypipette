@@ -28,6 +28,7 @@ def _check_error(task, error):
 
 class OB1(PressureController):
     def __init__(self, calibrate=False):
+        super(OB1, self).__init__()
         self.instr_ID = c_int32()
         print('Instrument name and regulator types hardcoded in the python script'.encode('utf-8'))
         # see User guide to determine regulator type NI MAX to determine the instrument name
@@ -53,12 +54,10 @@ class OB1(PressureController):
             error = Elveflow_Calibration_Load(calib_path.encode('ascii'), byref(self.calib), 1000)
             _check_error('Loading calibration file', error)
 
-
     def measure(self, port=0):
         '''
         Measures the instantaneous pressure, on designated port.
         '''
-        set_channel = int(port)  # convert to int
         set_channel = c_int32(port)  # convert to c_int32
         get_pressure = c_double()
         error =  OB1_Get_Sens_Data(self.instr_ID.value, set_channel, 1, byref(get_pressure))  # Acquire_data =1 -> Read all the analog value
@@ -69,13 +68,11 @@ class OB1(PressureController):
         '''
         Sets the pressure, on designated port.
         '''
-        set_channel = int(port)  # convert to int
         set_channel = c_int32(port)  # convert to c_int32
-        set_pressure = float(pressure)
         set_pressure = c_double(pressure)  # convert to c_double
         error = OB1_Set_Press(self.instr_ID.value, set_channel, set_pressure, byref(self.calib), 1000)
         _check_error('Setting pressure', error)
-
+        super(OB1, self).set_pressure(pressure, port=port)
 
 if __name__ == '__main__':
     ob1 = OB1(calibrate = True)

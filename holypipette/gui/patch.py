@@ -26,13 +26,13 @@ class PatchGui(ManipulatorGui):
         self.interface_signals[self.patch_interface] = (self.patch_command_signal,
                                                         self.patch_reset_signal)
         self.add_config_gui(self.patch_interface.config)
-        # Update the pressure and information in the status bar every 500ms
+        # Update the pressure and information in the status bar every 50ms
         self.pressure_timer = QtCore.QTimer()
         self.pressure_timer.timeout.connect(self.display_pressure)
-        self.pressure_timer.start(500)
+        self.pressure_timer.start(50)
 
     def display_pressure(self):
-        pressure = self.patch_interface.pressure.measure()
+        pressure = self.patch_interface.pressure.get_pressure()
         self.set_status_message('pressure', 'Pressure: {:.0f} mbar'.format(pressure))
 
     def register_commands(self):
