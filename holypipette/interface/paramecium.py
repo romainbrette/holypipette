@@ -39,10 +39,10 @@ class ParameciumInterface(TaskInterface):
         self.controllers.add(self.controller)
 
     @command(category='Paramecium',
-             description='Store the position of the paramecium tank')
+             description='Store the position of the paramecium tank',
+             success_message='Paramecium tank position stored')
     def store_paramecium_position(self):
         self.controller.paramecium_tank_position = self.calibrated_unit.position()
-        self.info('Paramecium tank position stored')
 
     @blocking_command(category='Paramecium',
                       description='Microdroplet making for paramecium '

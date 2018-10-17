@@ -495,9 +495,13 @@ class CameraGui(QtWidgets.QMainWindow):
         self.running_task_interface.abort_task()
 
     @QtCore.pyqtSlot(int, object)
-    def task_finished(self, exit_reason, controller):
+    def task_finished(self, exit_reason, controller_or_message):
         if self.running_task is None:
-            return  # Nothing to do
+            # This might be a success message for a non-blocking command
+            if isinstance(controller_or_message, str):
+                self.status_bar.setStyleSheet('QStatusBar{color: black;}')
+                self.status_bar.showMessage(controller_or_message, 1000)
+            return  # Nothing else to do
 
         self.task_progress.setVisible(False)
         self.task_abort_button.setVisible(False)
@@ -515,14 +519,16 @@ class CameraGui(QtWidgets.QMainWindow):
         # If the task was aborted or failed, and the "controller" object has a
         # saved state (e.g. the position of the pipette), ask the user whether
         # they want to reset the state
-        if exit_reason != 0 and controller is not None and controller.has_saved_state():
+        if (exit_reason != 0 and
+                controller_or_message is not None and
+                controller_or_message.has_saved_state()):
             reply = QtWidgets.QMessageBox.question(self, "Reset",
-                                                   controller.saved_state_question,
+                                                   controller_or_message.saved_state_question,
                                                    QtWidgets.QMessageBox.Yes |
                                                    QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
                 _, reset_signal = self.interface_signals[self.running_task_interface]
-                reset_signal.emit(controller)
+                reset_signal.emit(controller_or_message)
 
         self.running_task = None
         self.running_task_interface = None

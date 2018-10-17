@@ -11,7 +11,7 @@ from holypipette.controller import TaskController, RequestedAbortException
 from holypipette.log_utils import LoggingObject
 
 
-def command(category, description, default_arg=None):
+def command(category, description, default_arg=None, success_message=None):
     '''
     Decorator that annotates a function with information about the implemented
     command.
@@ -24,6 +24,13 @@ def command(category, description, default_arg=None):
         A descriptive text for the command (used in the help window).
     default_arg : object, optional
         A default argument provided to the method or ``None`` (the default).
+    success_message : str, optional
+        A message that will be displayed in the status bar of the GUI window
+        after the execution of the command. For simple commands that have visual
+        feedback, e.g. moving the manipulator or changing the exposure time,
+        this should not be set to avoid unnecessary messages. For actions that
+        have no visual feedback, e.g. storing a position, this should be set to
+        give the user an indication that something happened.
     '''
     def decorator(func):
         @functools.wraps(func)
@@ -31,9 +38,17 @@ def command(category, description, default_arg=None):
             if argument is None and default_arg is not None:
                 argument = default_arg
             if argument is None:
-                return func(self)
+                result = func(self)
+                if success_message:
+                    self.task_finished.emit(0, success_message)
+                    self.info(success_message)
+                return result
             else:
-                return func(self, argument)
+                result = func(self, argument)
+                if success_message:
+                    self.task_finished.emit(0, success_message)
+                    self.info(success_message)
+                return result
         wrapped.category = category
         wrapped.description = description
         wrapped.default_arg = default_arg

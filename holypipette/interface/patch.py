@@ -88,16 +88,16 @@ class AutoPatchInterface(TaskInterface):
         self.execute(self.current_autopatcher, 'patch')
 
     @command(category='Patch',
-             description='Store the position of the washing bath')
+             description='Store the position of the washing bath',
+             success_message='Cleaning path position stored')
     def store_cleaning_position(self):
         self.current_autopatcher.cleaning_bath_position = self.pipette_controller.calibrated_unit.position()
-        self.info('Cleaning bath position stored')
 
     @command(category='Patch',
-             description='Store the position of the rinsing bath')
+             description='Store the position of the rinsing bath',
+             success_message='Rinsing bath position stored')
     def store_rinsing_position(self):
         self.current_autopatcher.rinsing_bath_position = self.pipette_controller.calibrated_unit.position()
-        self.info('Rinsing bath position stored')
 
     @blocking_command(category='Patch',
                       description='Clean the pipette (wash and rinse)',

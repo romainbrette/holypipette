@@ -117,7 +117,8 @@ class PipetteInterface(TaskInterface):
         self.microscope.relative_move(distance)
 
     @command(category='Microscope',
-             description='Set the position of the floor (cover slip)')
+             description='Set the position of the floor (cover slip)',
+             success_message='Cover slip position stored')
     def set_floor(self):
         self.microscope.floor_Z = self.microscope.position()
 
@@ -207,7 +208,8 @@ class PipetteInterface(TaskInterface):
 
     # TODO: Make the configuration system more general/clean
     @command(category='Manipulators',
-             description='Save the calibration information for the current manipulator')
+             description='Save the calibration information for the current manipulator',
+             success_message='Calibration information stored')
     def save_configuration(self):
         # Saves configuration
         self.info("Saving configuration")
@@ -218,7 +220,8 @@ class PipetteInterface(TaskInterface):
             pickle.dump(cfg, f)
 
     @command(category='Manipulators',
-             description='Load the calibration information for the current manipulator')
+             description='Load the calibration information for the current manipulator',
+             success_message='Calibration information loaded')
     def load_configuration(self):
         # Loads configuration
         self.info("Loading configuration")
