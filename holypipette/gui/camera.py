@@ -281,6 +281,26 @@ class LogNotifyHandler(logging.Handler):
 
 
 class CameraGui(QtWidgets.QMainWindow):
+    '''
+    The basic GUI for showing a camera image.
+
+    Parameters
+    ----------
+    camera : `.Camera`
+        The `.Camera` object that will be used for displaying an image via
+        `.LiveFeedQt`.
+    image_edit : function or list of functions, optional
+        A function that will be called with the numpy array returned by the
+        camera. Can be used to post-process the image, e.g. to change its
+        brightness.
+    display_edit : function or list of functions, optional
+        A function that will be called with the `.QPixmap` that is based on
+        the camera image. Can be used to display additional information on top
+        of this image, e.g. a scale bar or text.
+    with_tracking : bool, optional
+        Whether to activate the object tracking interface. Defaults to
+        ``False``.
+    '''
     log_signal = QtCore.pyqtSignal('QString')
     camera_signal = QtCore.pyqtSignal(MethodType, object)
     camera_reset_signal = QtCore.pyqtSignal(TaskController)
