@@ -310,8 +310,6 @@ class CameraGui(QtWidgets.QMainWindow):
         '''
         Draws a cross at the center
         '''
-        if not self.show_overlay:
-            return
         painter = QtGui.QPainter(pixmap)
         pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
         pen.setWidth(4)
@@ -412,8 +410,9 @@ class CameraGui(QtWidgets.QMainWindow):
         self.log_signal.connect(self.error_status)
 
     def display_edit(self, pixmap):
-        for func in self.display_edit_funcs:
-            func(pixmap)
+        if self.show_overlay:
+            for func in self.display_edit_funcs:
+                func(pixmap)
 
     def image_edit(self, image):
         for func in self.image_edit_funcs:
