@@ -153,24 +153,21 @@ class PipetteInterface(TaskInterface):
                       description='Calibrate stage only',
                       task_description='Calibrating stage')
     def calibrate_stage(self):
-
-        print("hello")
-
-        if self.execute(self.calibrated_stage, 'calibrate', final_task=False):
+        if self.execute(self.calibrated_stage, 'calibrate'):
             self.execute(self.calibrated_unit, 'analyze_calibration')
 
     @blocking_command(category='Manipulators',
                       description='Calibrate stage and manipulator',
                       task_description='Calibrating stage and manipulator')
     def calibrate_manipulator(self):
-        if self.execute(self.calibrated_unit, 'calibrate', final_task=False):
+        if self.execute(self.calibrated_unit, 'calibrate'):
             self.execute(self.calibrated_unit, 'analyze_calibration')
 
     @blocking_command(category='Manipulators',
                       description='Calibrate stage and manipulator (2nd Method)',
                       task_description='Calibrating stage and manipulator (2nd Method)')
     def calibrate_manipulator2(self):
-        if self.execute(self.calibrated_unit, 'calibrate', argument = 2, final_task=False):
+        if self.execute(self.calibrated_unit, 'calibrate', argument=2):
             self.execute(self.calibrated_unit, 'analyze_calibration')
 
     @blocking_command(category='Manipulators',

@@ -42,13 +42,12 @@ def command(category, description, default_arg=None, success_message=None):
                 if success_message:
                     self.task_finished.emit(0, success_message)
                     self.info(success_message)
-                return result
             else:
                 result = func(self, argument)
-                if success_message:
-                    self.task_finished.emit(0, success_message)
-                    self.info(success_message)
-                return result
+            if success_message:
+                self.task_finished.emit(0, success_message)
+                self.info(success_message)
+            return result
         wrapped.category = category
         wrapped.description = description
         wrapped.default_arg = default_arg
@@ -87,9 +86,11 @@ def blocking_command(category, description, task_description,
             if argument is None and default_arg is not None:
                 argument = default_arg
             if argument is None:
-                return func(self)
+                result = func(self)
             else:
-                return func(self, argument)
+                result = func(self, argument)
+            self.task_finished.emit(0, None)
+            return result
         wrapped.category = category
         wrapped.description = description
         wrapped.task_description = task_description
@@ -152,7 +153,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             self.exception('"{}" failed.'.format(command.__name__))
             self.task_finished.emit(1, None)
 
-    def execute(self, controller, func_name, argument=None, final_task=True):
+    def execute(self, controller, func_name, argument=None):
         """
         Execute a function in a `.TaskController` and signal the (successful or
         unsuccessful) completion via the `.task_finished` signal.
@@ -166,20 +167,13 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         argument : object, optional
             An argument that will be provided to ``func_name`` or ``None`` (the
             default).
-        final_task : bool, optional
-            Whether this call is the final (or only) task that is executed for
-            the command. For commands that need to call functions in several
-            `.TaskController` objects, this will avoid that a successful
-            completion triggers the `.task_finished` signal (note that
-            error/aborts always trigger `.task_finished`). Defaults to ``True``
 
         Returns
         -------
         success : bool
             Whether the execution was completed successfully. This is important
-            for enchaining multiple tasks (where all but the last are executed
-            with ``final_task=False``) to avoid calling subsequent tasks after
-            a failed/aborted task.
+            for enchaining multiple tasks to avoid calling subsequent tasks
+            after a failed/aborted task.
         """
         controller.save_state()
         func = getattr(controller, func_name, None)
@@ -188,10 +182,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
                                  'function {}.'.format(self.__class__.__name__,
                                                        func_name))
 
-        # We send a reference to the "controller" with the task_finished signal,
-        # this can be used to ask the user for a state reset after a failed
-        # command (e.g. move back the pipette to its start position in case a
-        # calibration failed or was aborted)
         self._current_controller = controller
         controller.abort_requested = False
         try:
@@ -199,6 +189,10 @@ class TaskInterface(QtCore.QObject, LoggingObject):
                 func(argument)
             else:
                 func()
+        # We send a reference to the "controller" with the task_finished signal,
+        # this can be used to ask the user for a state reset after a failed
+        # command (e.g. move back the pipette to its start position in case a
+        # calibration failed or was aborted)
         except RequestedAbortException:
             self.info('Task "{}" aborted'.format(func_name))
             self.task_finished.emit(2, controller)
@@ -212,9 +206,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         # Task finished successfully
         controller.delete_state()
-        # TODO: Move this into the blocking command decorator
-        if final_task:
-            self.task_finished.emit(0, controller)
         self._current_controller = None
         return True
 
