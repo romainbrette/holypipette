@@ -35,7 +35,8 @@ class ParameciumInterface(TaskInterface):
         self.controller = ParameciumController(self.calibrated_unit,
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
-                                               patch_interface.pressure, self.config)
+                                               patch_interface.pressure,
+                                               self.config)
 
     @command(category='Paramecium',
              description='Store the position of the paramecium tank',
@@ -48,18 +49,18 @@ class ParameciumInterface(TaskInterface):
                                   'patch clamp',
                       task_description='Microdroplet making')
     def microdroplet_making(self):
-        self.execute(self.controller, 'microdroplet_making')
+        self.execute(self.controller.microdroplet_making)
 
     @blocking_command(category='Paramecium',
                       description='Calibrated stage moving to compensate the '
                                   'movement of paramecium',
                       task_description='Paramecium tracking')
     def paramecium_movement(self):
-        self.execute(self.controller, 'paramecium_movement')
+        self.execute(self.controller.paramecium_movement)
 
     @blocking_command(category='Paramecium',
                       description='Moving down the calibrated manipulator to '
                                   'hold the paramecium',
                       task_description='Paramecium immobilization')
     def paramecium_catching(self):
-        self.execute(self.controller, 'paramecium_catching')
+        self.execute(self.controller.paramecium_catching)

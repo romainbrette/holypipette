@@ -153,35 +153,37 @@ class PipetteInterface(TaskInterface):
                       description='Calibrate stage only',
                       task_description='Calibrating stage')
     def calibrate_stage(self):
-        if self.execute(self.calibrated_stage, 'calibrate'):
-            self.execute(self.calibrated_unit, 'analyze_calibration')
+        self.execute([self.calibrated_stage.calibrate,
+                      self.calibrated_unit.analyze_calibration])
+
 
     @blocking_command(category='Manipulators',
                       description='Calibrate stage and manipulator',
                       task_description='Calibrating stage and manipulator')
     def calibrate_manipulator(self):
-        if self.execute(self.calibrated_unit, 'calibrate'):
-            self.execute(self.calibrated_unit, 'analyze_calibration')
+        self.execute([self.calibrated_unit.calibrate,
+                      self.calibrated_unit.analyze_calibration])
 
     @blocking_command(category='Manipulators',
                       description='Calibrate stage and manipulator (2nd Method)',
                       task_description='Calibrating stage and manipulator (2nd Method)')
     def calibrate_manipulator2(self):
-        if self.execute(self.calibrated_unit, 'calibrate', argument=2):
-            self.execute(self.calibrated_unit, 'analyze_calibration')
+        self.execute([self.calibrated_unit.calibrate,
+                      self.calibrated_unit.analyze_calibration],
+                     argument=[2, None])
 
     @blocking_command(category='Manipulators',
                       description='Recalibrate stage and manipulator',
                       task_description='Recalibrating stage and manipulator')
     def recalibrate_manipulator(self):
-        self.execute(self.calibrated_unit, 'recalibrate')
+        self.execute(self.calibrated_unit.recalibrate)
 
     @blocking_command(category='Manipulators',
                      description='Recalibrate manipulator',
                      task_description='Recalibrate manipulator at click position')
     def recalibrate_manipulator_on_click(self, xy_position):
         self.debug('asking for recalibration at {}'.format(xy_position))
-        self.execute(self.calibrated_unit, 'recalibrate', argument=xy_position)
+        self.execute(self.calibrated_unit.recalibrate, argument=xy_position)
 
     @blocking_command(category='Manipulators',
                      description='Move pipette to position',
@@ -190,13 +192,13 @@ class PipetteInterface(TaskInterface):
         x, y = xy_position
         position = np.array([x, y, self.microscope.position()])
         self.debug('asking for safe move to {}'.format(position))
-        self.execute(self.calibrated_unit, 'safe_move', argument=position)
+        self.execute(self.calibrated_unit.safe_move, argument=position)
 
     @blocking_command(category='Microscope',
                       description='Go to the floor (cover slip)',
                       task_description='Go to the floor (cover slip)')
     def go_to_floor(self):
-        self.execute(self.microscope, 'absolute_move',
+        self.execute(self.microscope.absolute_move,
                      argument=self.microscope.floor_Z)
 
     # TODO: Make the configuration system more general/clean

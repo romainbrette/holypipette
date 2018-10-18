@@ -3,6 +3,7 @@ Package defining the `TaskInterface` class, central to the interface between
 GUI and `.TaskController` objects.
 """
 import functools
+import collections
 from types import MethodType
 
 from PyQt5 import QtCore
@@ -153,34 +154,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             self.exception('"{}" failed.'.format(command.__name__))
             self.task_finished.emit(1, None)
 
-    def execute(self, controller, func_name, argument=None):
-        """
-        Execute a function in a `.TaskController` and signal the (successful or
-        unsuccessful) completion via the `.task_finished` signal.
-
-        Parameters
-        ----------
-        controller : `.TaskController`
-            The object responsible for executing the task.
-        func_name : str
-            The name of the function in the ``controller`` object
-        argument : object, optional
-            An argument that will be provided to ``func_name`` or ``None`` (the
-            default).
-
-        Returns
-        -------
-        success : bool
-            Whether the execution was completed successfully. This is important
-            for enchaining multiple tasks to avoid calling subsequent tasks
-            after a failed/aborted task.
-        """
+    def _execute_single_task(self, controller, func, argument):
         controller.save_state()
-        func = getattr(controller, func_name, None)
-        if func is None:
-            raise AttributeError('Object of type {} does not have a '
-                                 'function {}.'.format(self.__class__.__name__,
-                                                       func_name))
 
         self._current_controller = controller
         controller.abort_requested = False
@@ -194,12 +169,12 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         # command (e.g. move back the pipette to its start position in case a
         # calibration failed or was aborted)
         except RequestedAbortException:
-            self.info('Task "{}" aborted'.format(func_name))
+            self.info('Task "{}" aborted'.format(func.__name__))
             self.task_finished.emit(2, controller)
             self._current_controller = None
             return False
         except Exception:
-            self.exception('Task "{}" failed'.format(func_name))
+            self.exception('Task "{}" failed'.format(func.__name__))
             self.task_finished.emit(1, controller)
             self._current_controller = None
             return False
@@ -208,6 +183,49 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         controller.delete_state()
         self._current_controller = None
         return True
+
+    def execute(self, task, argument=None):
+        """
+        Execute a function in a `.TaskController` and signal the (successful or
+        unsuccessful) completion via the `.task_finished` signal.
+
+        Can either execute a single task or a chain of tasks where each task is
+        only executed when the previous was successful.
+
+        Parameters
+        ----------
+        task: method or list of methods
+            A method of a `TaskController` object that should be executed, or
+            a list of such methods.
+        argument : object or list of object, optional
+            An argument that will be provided to ``task`` or ``None`` (the
+            default). For a chain of function calls, provide a list of
+            arguments.
+
+        Returns
+        -------
+        success : bool
+            Whether the execution was completed successfully. This can be used
+            to manually enchain multiple tasks to avoid calling subsequent tasks
+            after a failed/aborted task. Note that it can be easier to pass a
+            list of functions instead.
+        """
+        if not isinstance(task, collections.Sequence):
+            task = [task]
+            argument = [argument]
+        if argument is None:
+            argument = [None]
+
+        for one_task, one_argument in zip(task, argument):
+            controller = one_task.__self__
+            if not isinstance(controller, TaskController):
+                raise TypeError('Can only execute methods of TaskController'
+                                'objects, but object for method {} is of type '
+                                '{}'.format(one_task.__name__, type(controller)))
+            success = self._execute_single_task(controller, one_task,
+                                                one_argument)
+            if not success:
+                break
 
     @QtCore.pyqtSlot(TaskController)
     def reset_requested(self, controller):

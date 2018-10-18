@@ -43,10 +43,9 @@ class PatchConfig(Config):
 
     zap = Boolean(False, doc='Zap the cell to break the seal')
 
-
-    categories = [('Approach',['min_R', 'max_R','pressure_near', 'cell_distance', 'max_distance', 'cell_R_increase']),
-                  ('Sealing',['pressure_sealing','gigaseal_R','Vramp_duration', 'Vramp_amplitude','seal_min_time', 'seal_deadline']),
-                  ('Break-in',['zap','pressure_ramp_increment', 'pressure_ramp_max','pressure_ramp_duration','max_cell_R'])]
+    categories = [('Approach', ['min_R', 'max_R', 'pressure_near', 'cell_distance', 'max_distance', 'cell_R_increase']),
+                  ('Sealing', ['pressure_sealing', 'gigaseal_R', 'Vramp_duration', 'Vramp_amplitude', 'seal_min_time', 'seal_deadline']),
+                  ('Break-in', ['zap', 'pressure_ramp_increment', 'pressure_ramp_max', 'pressure_ramp_duration', 'max_cell_R'])]
 
 
 class AutoPatchInterface(TaskInterface):
@@ -61,7 +60,10 @@ class AutoPatchInterface(TaskInterface):
         self.pipette_controller = pipette_interface
         self.autopatcher_by_unit = {}
         for idx, calibrated_unit in enumerate(self.pipette_controller.calibrated_units):
-            autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit, calibrated_unit.microscope, calibrated_stage= self.pipette_controller.calibrated_stage, config=self.config)
+            autopatcher = AutoPatcher(amplifier, pressure, calibrated_unit,
+                                      calibrated_unit.microscope,
+                                      calibrated_stage=self.pipette_controller.calibrated_stage,
+                                      config=self.config)
             self.autopatcher_by_unit[idx] = autopatcher
 
     @property
@@ -71,12 +73,13 @@ class AutoPatchInterface(TaskInterface):
     @blocking_command(category='Patch', description='Break into the cell',
                       task_description='Breaking into the cell')
     def break_in(self):
-        self.execute(self.current_autopatcher, 'break_in')
+        self.execute(self.current_autopatcher.break_in)
 
     @blocking_command(category='Patch', description='Move to cell and patch it',
                       task_description='Moving to cell and patching it')
     def patch_with_move(self, position):
-        self.execute(self.current_autopatcher, 'patch', np.array(position))
+        self.execute(self.current_autopatcher.patch,
+                     argument=np.array(position))
 
     @blocking_command(category='Patch',
                       description='Patch cell at current position',
@@ -84,7 +87,7 @@ class AutoPatchInterface(TaskInterface):
     def patch_without_move(self, position=None):
         # If this command is linked to a mouse click, it will receive the
         # position as an argument -- we simply ignore it
-        self.execute(self.current_autopatcher, 'patch')
+        self.execute(self.current_autopatcher.patch)
 
     @command(category='Patch',
              description='Store the position of the washing bath',
@@ -102,16 +105,16 @@ class AutoPatchInterface(TaskInterface):
                       description='Clean the pipette (wash and rinse)',
                       task_description='Cleaning the pipette')
     def clean_pipette(self):
-        self.execute(self.current_autopatcher, 'clean_pipette')
+        self.execute(self.current_autopatcher.clean_pipette)
 
     @blocking_command(category='Patch',
                       description='Sequential patching and cleaning for multiple cells',
                       task_description='Sequential patch clamping')
     def sequential_patching(self):
-        self.execute(self.current_autopatcher, 'sequential_patching')
+        self.execute(self.current_autopatcher.sequential_patching)
 
     @blocking_command(category='Patch',
                       description='Moving down the calibrated manipulator to detect the contact point with the coverslip',
                       task_description='Contact detection')
     def contact_detection(self):
-        self.execute(self.current_autopatcher, 'contact_detection')
+        self.execute(self.current_autopatcher.contact_detection)
