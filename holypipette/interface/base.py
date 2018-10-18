@@ -124,7 +124,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
     def __init__(self):
         super(TaskInterface, self).__init__()
-        self.controllers = set()
+        self._current_controller = None
 
     @QtCore.pyqtSlot(MethodType, object)
     def command_received(self, command, argument):
@@ -144,8 +144,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             The argument of the requested command (possibly ``None``).
         """
         try:
-            for e in self.controllers:
-                e.abort_requested = False
             if argument is None:
                 command()
             else:
@@ -194,6 +192,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         # this can be used to ask the user for a state reset after a failed
         # command (e.g. move back the pipette to its start position in case a
         # calibration failed or was aborted)
+        self._current_controller = controller
+        controller.abort_requested = False
         try:
             if argument is not None:
                 func(argument)
@@ -202,16 +202,20 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         except RequestedAbortException:
             self.info('Task "{}" aborted'.format(func_name))
             self.task_finished.emit(2, controller)
+            self._current_controller = None
             return False
         except Exception:
             self.exception('Task "{}" failed'.format(func_name))
             self.task_finished.emit(1, controller)
+            self._current_controller = None
             return False
 
         # Task finished successfully
         controller.delete_state()
+        # TODO: Move this into the blocking command decorator
         if final_task:
             self.task_finished.emit(0, controller)
+        self._current_controller = None
         return True
 
     @QtCore.pyqtSlot(TaskController)
@@ -228,8 +232,6 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         """
         try:
-            for e in self.controllers:
-                e.abort_requested = False
             controller.recover_state()
         except Exception:
             self.exception('Recovering the state for {} failed.'.format(controller))
@@ -245,8 +247,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
         `.TaskController.abort_if_requested`, or by using
         `.TaskController.sleep` or one of the logging methods).
         """
-        for e in self.controllers:
-            e.abort_requested = True
+        self._current_controller.abort_requested = True
 
     # This function will be automatically called by the main GUI and can be
     # overwritten to connect signals in this class to the main GUI (e.g. to

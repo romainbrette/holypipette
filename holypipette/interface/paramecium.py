@@ -36,7 +36,6 @@ class ParameciumInterface(TaskInterface):
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
                                                patch_interface.pressure, self.config)
-        self.controllers.add(self.controller)
 
     @command(category='Paramecium',
              description='Store the position of the paramecium tank',

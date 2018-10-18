@@ -32,10 +32,6 @@ class PipetteInterface(TaskInterface):
                                                 config=self.calibration_config)
                                  for unit in units]
 
-        self.controllers.add(self.calibrated_stage)
-        for calibrated_unit in self.calibrated_units:
-            self.controllers.add(calibrated_unit)
-
         if config_filename is None:
             config_filename = os.path.join(os.path.expanduser('~'),
                                            'config_manipulator.cfg')
