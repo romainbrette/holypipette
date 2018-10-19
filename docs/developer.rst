@@ -39,6 +39,8 @@ micromanipulators should inherit from `.ManipulatorGui` (which itself inherits
 from `.CameraGui`). Finally, the `.PatchGui` supports semi-automatic patch-clamp
 recordings and itself inherits from `.ManipulatorGui`.
 
+.. _interface_classes:
+
 Interface classes (second column)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The interface classes provide the link between the GUI and the actual operations
@@ -210,6 +212,41 @@ regular timer).
 
 Exposing existing functionality in the GUI
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If a functionality has been defined in the interface class (see
+:ref:`interface_classes` above, and :ref:`low_level_functionality` below), it
+can be exposed in the GUI. There are two standard methods which also take care
+of integrating the function with the automatic help window:
+`~.CameraGui.register_key_action` and `~.CameraGui.register_mouse_action`. By
+convention, these functions should be called in an overwritten version of
+`.CameraGui.register_commands` (which should normally call the parent
+implementation). The first two arguments of these are the key (as a ``Qt``
+constant, e.g. ``Qt.Key_X``), respectively the mouse button (e.g.
+``Qt.RightButton``) and the modifier. The modifier can either be a
+``Qt`` constant such as ``Qt.ShiftModifier`` to only trigger the action if the
+modifier is pressed, or ``None`` if the action should be triggered independent
+of the modifier. The modifier ``Qt.NoModifier`` should be used if the action
+should only by triggered if the key or mouse button is pressed without any
+modifier.
+
+.. warning::
+    Do not use ``Qt.KeypadModifier``, it will be automatically removed from the
+    key event, in particular to avoid problems on OS X where all number key
+    presses carry this modifier.
+
+The third argument is the action to trigger, this should be a method of a
+`.TaskInterface` annotated with `@command <.command>` or
+`@blocking_command <.blocking_command>` (see :ref:`interface_classes`). Key
+actions can take an additional ``argument``, this can be used to perform a
+parametrized action, e.g. a move of a given size. Functions that are triggered
+by mouse clicks automatically receive the mouse position in the camera image
+(i.e. rescaled and independent of the window size on screen) as an argument.
+Finally, the optional ``default_doc`` argument can be set to ``False`` to not
+automatically document the action in the Help window. This can be useful when
+registering many similar commands (e.g. moves of different directions/sizes);
+they can be summarized with fewer custom help entries by calling
+`.KeyboardHelpWindow.register_custom_action`.
+
 
 .. _low_level_functionality:
 
