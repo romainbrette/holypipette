@@ -8,7 +8,18 @@ class ParameciumConfig(Config):
     droplet_pressure = NumberWithUnit(15, bounds=(-1000, 1000), doc='Pressure to make droplet', unit='mbar')
     droplet_time = NumberWithUnit(5, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
 
-    categories = [('Droplets', ['droplet_quantity', 'droplet_pressure', 'droplet_time'])]
+    downsample = Number(3.37, bounds=(1, 32), doc='Downsampling factor for the image')
+    min_gradient = NumberWithUnit(50, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
+    max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
+    blur_size = NumberWithUnit(10, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
+    minimum_contour = NumberWithUnit(100, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
+    min_length = NumberWithUnit(10, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
+    max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
+    min_width = NumberWithUnit(5, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
+    max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
+    categories = [('Droplets', ['droplet_quantity', 'droplet_pressure', 'droplet_time']),
+                  ('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
+                                'min_length', 'max_length', 'min_length', 'max_length'])]
 
 
 class CalibratedUnitProxy(object):
@@ -51,16 +62,16 @@ class ParameciumInterface(TaskInterface):
     def microdroplet_making(self):
         self.execute(self.controller.microdroplet_making)
 
-    @blocking_command(category='Paramecium',
-                      description='Calibrated stage moving to compensate the '
-                                  'movement of paramecium',
-                      task_description='Paramecium tracking')
-    def paramecium_movement(self):
-        self.execute(self.controller.paramecium_movement)
-
-    @blocking_command(category='Paramecium',
-                      description='Moving down the calibrated manipulator to '
-                                  'hold the paramecium',
-                      task_description='Paramecium immobilization')
-    def paramecium_catching(self):
-        self.execute(self.controller.paramecium_catching)
+    # @blocking_command(category='Paramecium',
+    #                   description='Calibrated stage moving to compensate the '
+    #                               'movement of paramecium',
+    #                   task_description='Paramecium tracking')
+    # def paramecium_movement(self):
+    #     self.execute(self.controller.paramecium_movement)
+    #
+    # @blocking_command(category='Paramecium',
+    #                   description='Moving down the calibrated manipulator to '
+    #                               'hold the paramecium',
+    #                   task_description='Paramecium immobilization')
+    # def paramecium_catching(self):
+    #     self.execute(self.controller.paramecium_catching)

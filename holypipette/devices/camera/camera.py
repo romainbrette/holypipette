@@ -5,6 +5,8 @@ TODO:
 * A stack() method which takes a series of photos along Z axis
 '''
 from __future__ import print_function
+import time
+
 import numpy as np
 import scipy.misc
 from scipy.ndimage.filters import gaussian_filter
@@ -45,16 +47,41 @@ class Camera(object):
     def reset(self):
         pass
 
+
+class FakeParamecium(object):
+    def __init__(self):
+        self.position = np.array([0., 0., 0.])
+        self.center = np.array([0., 0., 0.])
+        self.velocity = 200  # um per second
+        self.sigma = 1
+        self._last_update = time.time()
+        self.angle = 0
+
+    def update_position(self):
+        dt = time.time() - self._last_update
+        self._last_update = time.time()
+        to_center = np.arctan2(self.position[1], self.position[0])
+        bias = (self.position[0]**2 + self.position[1]**2)/20000  # bias is quadratic function of distance
+        angle = self.angle + dt*(self.sigma*np.random.randn() +
+                                 bias*((to_center - self.angle + np.pi) % (2*np.pi) - np.pi))
+        self.angle = (angle + np.pi) % (2*np.pi) - np.pi
+        self.position += self.velocity*dt*np.array([np.cos(self.angle), np.sin(self.angle), 0.0])
+
+
 class FakeCamera(Camera):
-    def __init__(self, manipulator=None, image_z=0):
+    def __init__(self, manipulator=None, image_z=0, paramecium=False):
         super(FakeCamera, self).__init__()
         self.width = 1024
         self.height = 768
         self.exposure_time = 30
         self.manipulator = manipulator
         self.image_z = image_z
-        self.scale_factor = 2.  # micrometers in pixels
+        self.scale_factor = .5  # micrometers in pixels
         self.depth_of_field = 2.
+        if paramecium:
+            self.paramecium = FakeParamecium()
+        else:
+            self.paramecium = None
         self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2), 10)*50 + 128, 0, 255), dtype=np.uint8)
 
     def set_exposure(self, value):
@@ -85,6 +112,21 @@ class FakeCamera(Camera):
             stage_y *= self.scale_factor
             stage_z *= self.scale_factor
             frame = self.get_microscope_image(stage_x, stage_y, stage_z)
+            if self.paramecium is not None:
+                self.paramecium.update_position()
+                p_x, p_y, p_z = self.paramecium.position
+                p_angle = self.paramecium.angle + np.pi/2
+                p_x *= self.scale_factor
+                p_y *= self.scale_factor
+                p_z *= self.scale_factor
+                # FIXME: do not ignore Z
+                p_width = 30*self.scale_factor
+                p_height = 100*self.scale_factor
+                xx, yy = np.meshgrid(np.arange(-self.width//2, self.width//2), np.arange(-self.height//2, self.height//2))
+                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / p_width**2 +
+                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / p_height**2 < 1] = 50
+                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / p_width**2 +
+                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / p_height**2 < 0.8] = 100
 
             for direction, axes in [(np.pi/2, [1, 2, 3]),
                                     (-np.pi/2, [4, 5, 6])]:

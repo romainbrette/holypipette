@@ -14,7 +14,6 @@ from setup_script import *
 console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
-
 pipette_interface = PipetteInterface(stage, microscope, camera, units)
 patch_interface = AutoPatchInterface(amplifier, pressure, pipette_interface)
 gui = ParameciumGui(camera, patch_interface, pipette_interface)
