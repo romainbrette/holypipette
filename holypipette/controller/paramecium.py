@@ -3,14 +3,15 @@ from .base import TaskController
 
 class ParameciumController(TaskController):
     def __init__(self, calibrated_unit, microscope,
-                 calibrated_stage, pressure, config):
+                 calibrated_stage, config):
         super(ParameciumController, self).__init__()
         self.config = config
-        self.pressure = pressure
         self.calibrated_unit = calibrated_unit
         self.calibrated_stage = calibrated_stage
         self.microscope = microscope
         self.paramecium_tank_position = None
+
+    # Note: this is Hoang's code but we don't use for now
 
     def microdroplet_making(self):
         if self.paramecium_tank_position is None:

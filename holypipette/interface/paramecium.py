@@ -1,7 +1,7 @@
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.controller.paramecium import ParameciumController
 from holypipette.interface import TaskInterface, command, blocking_command
-
+import numpy as np
 
 class ParameciumConfig(Config):
     droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplets to make')
@@ -28,16 +28,25 @@ class CalibratedUnitProxy(object):
 
 class ParameciumInterface(TaskInterface):
 
-    def __init__(self, pipette_interface, patch_interface):
+    def __init__(self, pipette_interface):
         super(ParameciumInterface, self).__init__()
         self.config = ParameciumConfig(name='Paramecium')
         self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
         self.controller = ParameciumController(self.calibrated_unit,
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
-                                               patch_interface.pressure,
                                                self.config)
 
+    @blocking_command(category='Paramecium',
+                     description='Move pipette down to position at floor level',
+                     task_description='Move pipette down to position at floor level')
+    def move_pipette_down(self, xy_position):
+        x, y = xy_position
+        position = np.array([x, y, self.controller.microscope.floor_Z])
+        self.debug('asking for safe move to {}'.format(position))
+        self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+
+    '''
     @command(category='Paramecium',
              description='Store the position of the paramecium tank',
              success_message='Paramecium tank position stored')
@@ -64,3 +73,4 @@ class ParameciumInterface(TaskInterface):
                       task_description='Paramecium immobilization')
     def paramecium_catching(self):
         self.execute(self.controller.paramecium_catching)
+    '''
