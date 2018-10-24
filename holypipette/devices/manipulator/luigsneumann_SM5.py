@@ -52,7 +52,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
             self.set_ramp_length(axis,3)
             self.sleep(.05)
 
-    def send_command(self, ID, data, nbytes_answer, ack_ID=''):
+    def send_command(self, ID, data, nbytes_answer, ack_ID='', resends=0):
         '''
         Send a command to the controller
         '''
@@ -85,9 +85,12 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         answer = self.port.read(nbytes_answer+6)
 
         if answer[:len(expected)] != expected :
+            if resends >= 5:
+                raise serial.SerialException('No expected response received after 5 tries for '
+                                             'command with ID ' + ID)
             warnings.warn('Did not get expected response for command with ID ' + ID +' ; resending')
             # Resend
-            return self.send_command(ID, data, nbytes_answer, ack_ID)
+            return self.send_command(ID, data, nbytes_answer, ack_ID, resends=resends+1)
 
         return answer[4:4+nbytes_answer]
 
