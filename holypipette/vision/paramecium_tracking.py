@@ -9,6 +9,8 @@ import numpy as np
 
 from numpy import zeros,uint8,pi, uint16, around
 
+from holypipette.interface.paramecium import ParameciumConfig
+
 __all__ = ["where_is_paramecium", "where_is_droplet", "where_is_paramecium2"]
 
 def backproject(source, target, scale = 1):
@@ -70,8 +72,8 @@ def where_is_droplet(frame, pixel_per_um = 5., ratio = None,
     return x,y,r
 
 
-def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
-                        ratio = None, background = None, debug = False, max_dist = 1e6): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = None,
+                        config=None, max_dist = 1e6): # Locate paramecium
     '''
     Locate paramecium in an image.
 
@@ -90,21 +92,22 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     -------
     x, y (, angle) : position on screen and angle
     '''
-    #pixel_per_um = 0.5
+    if config is None:
+        config = ParameciumConfig()
+
     # Resize
     height, width = frame.shape[:2]
-    if ratio is None:
-        ratio = width/256
-    resized = cv2.resize(frame, (width/ratio, height/ratio))
+    ratio = config.downsample
+    resized = cv2.resize(frame, (int(width/ratio), int(height/ratio)))
     pixel_per_um = pixel_per_um/ratio
-
     # Filter
-    blur_size = int(pixel_per_um*10)
+    blur_size = int(config.blur_size * pixel_per_um)
     if blur_size % 2 == 0:
         blur_size+=1
     filtered=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
 
     # Filter background
+    background = None  # TODO: remove completely?
     if background is not None:
         resized_background = cv2.resize(background, (width / ratio, height / ratio))
         filtered_background=cv2.GaussianBlur(resized_background, (blur_size, blur_size), 0)
@@ -119,9 +122,16 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
     normalized_img = cv2.normalize(img, normalized_img, 0, 255, cv2.NORM_MINMAX)
     normalized_img = uint8(normalized_img)
 
+    # Get (simplified) intensity gradient, slightly redundant because Canny
+    # algorithm will do the same thing, but having the distribution is useful to
+    # use more robust quantiles instead of fixed values
+    sobel_x = cv2.Sobel(normalized_img, cv2.CV_64F, 1, 0)
+    sobel_y = cv2.Sobel(normalized_img, cv2.CV_64F, 0, 1)
+    intensity_grad = np.abs(sobel_x) + np.abs(sobel_y)
+    min_grad, max_grad = np.percentile(intensity_grad.flat, [config.min_gradient,
+                                                             config.max_gradient])
     # Extract edges
-    canny = cv2.Canny(normalized_img, int(800*pixel_per_um), int(800*pixel_per_um)) # should depend on pixel_per_um
-    #canny = cv2.Canny(normalized_img, 40, 40)  # should depend on pixel_per_um
+    canny = cv2.Canny(normalized_img, min_grad, max_grad)
 
     # Find contours
     ret = cv2.findContours(canny, 1, 2)
@@ -134,37 +144,27 @@ def where_is_paramecium(frame, pixel_per_um = 5., return_angle = False, previous
         previous_y = height / 2
     previous_x = previous_x/ratio
     previous_y = previous_y/ratio
-    found = False
+    best_x, best_y, best_angle, best_MA, best_ma = None, None, None, None, None
     for contour in contours:
         try:
             length = cv2.arcLength(contour, True) / pixel_per_um
-            if (length>150) & (contour.shape[0]>10): # at least 10 points
-                cv2.drawContours(normalized_img, [contour], 0, (0, 255, 0), 1)
-                (x, y), (MA, ma), theta = cv2.fitEllipse(contour)
+            if (length>config.minimum_contour) & (contour.shape[0]>10): # at least 10 points
+                (x, y), (ma, MA), theta = cv2.fitEllipse(contour)
                 MA,ma = MA/pixel_per_um, ma/pixel_per_um
-                ma,MA = MA,ma
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
-                if (MA>70) & (MA<250) & (ma>15) & (ma<45) & (dist<distmin):
+                if ((MA>config.min_length) and (MA<config.max_length) and
+                        (ma>config.min_width) and (ma<config.max_width) and
+                        (MA > 1.5*ma) and (dist<distmin)):
                     distmin=dist
-                    xmin, ymin =x, y
                     angle = (theta+90)*pi/180.
-                    found = True
+                    best_x, best_y = x*ratio, y*ratio
+                    best_angle = angle
+                    best_MA, best_ma = MA, ma
         except cv2.error:
-            pass
-    if found:
-        if debug:
-            return xmin*ratio,ymin*ratio,normalized_img
-        elif return_angle:
-            return xmin * ratio, ymin * ratio, angle
-        else:
-            return xmin*ratio,ymin*ratio
-    else:
-        if debug:
-            return None,None,normalized_img
-        elif return_angle:
-            return None,None,None
-        else:
-            return None, None
+            continue
+
+    return best_x, best_y, best_angle, best_ma, best_MA
+
 
 def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
                         ratio = None, background = None, debug = False, max_dist = 1e6): # Locate paramecium
