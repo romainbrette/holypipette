@@ -166,7 +166,8 @@ class LogViewerWindow(QtWidgets.QMainWindow):
 
     def save_log(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save Log File',
-                                                            filter='Text files(*.txt)')
+                                                            filter='Text files(*.txt)',
+                                                            options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if not filename:
             return
         try:
@@ -771,7 +772,8 @@ class ConfigGui(QtWidgets.QWidget):
 
     def save_config(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save configuration",
-                                                            filter='Configuration files (*.cfg)')
+                                                            filter='Configuration files (*.cfg)',
+                                                            options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if filename:
             try:
                 self.config.to_file(filename)
@@ -785,7 +787,8 @@ class ConfigGui(QtWidgets.QWidget):
 
     def load_config(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Load configuration",
-                                                            filter='Configuration files (*.cfg)')
+                                                            filter='Configuration files (*.cfg)',
+                                                            options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if filename:
             try:
                 self.config.from_file(filename)

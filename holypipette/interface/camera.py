@@ -60,7 +60,8 @@ class CameraInterface(TaskInterface):
             return
         frame = self.camera.snap()
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(caption='Save image',
-                                                         filter='Images (*.png, *.tiff)')
+                                                         filter='Images (*.png, *.tiff)',
+                                                         options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if len(fname):
             imageio.imwrite(fname, frame)
 
