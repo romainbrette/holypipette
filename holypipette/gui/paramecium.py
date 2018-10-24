@@ -53,9 +53,7 @@ class ParameciumGui(PatchGui):
                                      previous_x=self.paramecium_position[0],
                                      previous_y=self.paramecium_position[1],
                                      config=self.paramecium_interface.config)
-        if result[0] is not None:
-            # If we lost track, just keep the old position
-            self.paramecium_position = result
+        self.paramecium_position = result
         return frame
 
     def show_paramecium(self, pixmap):
@@ -78,4 +76,5 @@ class ParameciumGui(PatchGui):
         painter.translate(x / scale, y / scale)
         painter.rotate(rotate_by)
         painter.drawEllipse(-width/scale, -height/scale, 2*width/scale, 2*height/scale)
+        painter.drawPoint(0, 0)
         painter.end()

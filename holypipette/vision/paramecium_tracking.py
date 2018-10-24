@@ -154,7 +154,7 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = 
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
                 if ((MA>config.min_length) and (MA<config.max_length) and
                         (ma>config.min_width) and (ma<config.max_width) and
-                        (dist<distmin)):
+                        (MA > 1.5*ma) and (dist<distmin)):
                     distmin=dist
                     angle = (theta+90)*pi/180.
                     best_x, best_y = x*ratio, y*ratio

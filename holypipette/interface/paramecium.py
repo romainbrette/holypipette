@@ -10,16 +10,16 @@ class ParameciumConfig(Config):
 
     downsample = Number(3.37, bounds=(1, 32), doc='Downsampling factor for the image')
     min_gradient = NumberWithUnit(50, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
-    max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
+    max_gradient = NumberWithUnit(96, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
     blur_size = NumberWithUnit(10, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
     minimum_contour = NumberWithUnit(100, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
-    min_length = NumberWithUnit(10, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
+    min_length = NumberWithUnit(50, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
     max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
     min_width = NumberWithUnit(5, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
     max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
     categories = [('Droplets', ['droplet_quantity', 'droplet_pressure', 'droplet_time']),
                   ('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
-                                'min_length', 'max_length', 'min_length', 'max_length'])]
+                                'min_length', 'max_length', 'min_width', 'max_width'])]
 
 
 class CalibratedUnitProxy(object):
