@@ -1,3 +1,4 @@
+# coding=utf-8
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.controller.paramecium import ParameciumController
 from holypipette.interface import TaskInterface, command, blocking_command
