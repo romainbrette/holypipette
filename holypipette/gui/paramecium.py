@@ -11,7 +11,6 @@ import numpy as np
 
 from holypipette.controller import TaskController
 from holypipette.interface.paramecium import ParameciumInterface
-from holypipette.vision.paramecium_tracking import where_is_paramecium
 from holypipette.gui.manipulator import ManipulatorGui
 
 class ParameciumGui(ManipulatorGui):
@@ -38,20 +37,20 @@ class ParameciumGui(ManipulatorGui):
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
                                    self.paramecium_interface.move_pipette_down)
+        self.register_mouse_action(Qt.RightButton, Qt.ShiftModifier,
+                                   self.paramecium_interface.start_tracking)
+        self.register_key_action(Qt.Key_T, None,
+                                 self.paramecium_interface.toggle_tracking)
 
     def track_paramecium(self, frame):
-        result = where_is_paramecium(frame, 1/self.camera.scale_factor,
-                                     previous_x=self.paramecium_position[0],
-                                     previous_y=self.paramecium_position[1],
-                                     config=self.paramecium_interface.config)
-        self.paramecium_position = result
+        self.paramecium_interface.track_paramecium(frame)
         return frame
 
     def show_paramecium(self, pixmap):
-        if self.paramecium_position[0] is None:
+        interface = self.paramecium_interface
+        if (not interface.tracking or
+                any(p is None for p in interface.paramecium_position)):
             return
-        stage = self.interface.calibrated_stage
-
         scale = 1.0 * self.camera.width / pixmap.size().width()
         # print('pixel_per_um', pixel_per_um, 'scale', scale)
         painter = QtGui.QPainter(pixmap)
@@ -62,7 +61,7 @@ class ParameciumGui(ManipulatorGui):
         # pos_x *= scale
         # pos_y *= scale
         # print('position for plotting', pos_x, pos_y)
-        x, y, angle, width, height = self.paramecium_position
+        x, y, angle, width, height = interface.paramecium_position
         rotate_by = (angle - np.pi/2)*180/np.pi
         painter.translate(x / scale, y / scale)
         painter.rotate(rotate_by)

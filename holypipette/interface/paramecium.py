@@ -1,7 +1,10 @@
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.controller.paramecium import ParameciumController
 from holypipette.interface import TaskInterface, command, blocking_command
+from holypipette.vision.paramecium_tracking import where_is_paramecium
+
 import numpy as np
+
 
 class ParameciumConfig(Config):
     droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplets to make')
@@ -47,15 +50,38 @@ class ParameciumInterface(TaskInterface):
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
                                                self.config)
+        self.paramecium_position = (None, None, None, None, None, None)
+        self.tracking = False
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at floor level',
-                     task_description='Move pipette down to position at floor level')
+                     task_description='Moving pipette to position at floor level')
     def move_pipette_down(self, xy_position):
         x, y = xy_position
         position = np.array([x, y, self.controller.microscope.floor_Z])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+
+    @command(category='Paramecium',
+             description='Start tracking paramecium at mouse position')
+    def start_tracking(self, xy_position):
+        self.tracking = True
+        x, y = xy_position
+        self.paramecium_position = (x, y, None, None, None, None)
+
+    @command(category='Paramecium',
+             description='Toggle paramecium tracking')
+    def toggle_tracking(self):
+        self.tracking = not self.tracking
+
+    def track_paramecium(self, frame):
+        if not self.tracking:
+            return
+        result = where_is_paramecium(frame, 1 / self.calibrated_unit.stage.pixel_per_um()[0],
+                                     previous_x=self.paramecium_position[0],
+                                     previous_y=self.paramecium_position[1],
+                                     config=self.config)
+        self.paramecium_position = result
 
     '''
     @command(category='Paramecium',

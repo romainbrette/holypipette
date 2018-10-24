@@ -9,8 +9,6 @@ import numpy as np
 
 from numpy import zeros,uint8,pi, uint16, around
 
-from holypipette.interface.paramecium import ParameciumConfig
-
 __all__ = ["where_is_paramecium", "where_is_droplet", "where_is_paramecium2"]
 
 def backproject(source, target, scale = 1):
@@ -93,6 +91,8 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = 
     x, y (, angle) : position on screen and angle
     '''
     if config is None:
+        # Avoid circular imports
+        from holypipette.interface.paramecium import ParameciumConfig
         config = ParameciumConfig()
 
     # Resize
