@@ -3,6 +3,7 @@ Package defining the `TaskInterface` class, central to the interface between
 GUI and `.TaskController` objects.
 """
 import functools
+import textwrap
 import collections
 from types import MethodType
 
@@ -60,6 +61,38 @@ def command(category, description, default_arg=None, success_message=None):
             return description.format(argument)
         wrapped.auto_description = auto_description
 
+        if wrapped.__doc__ is None:
+            import inspect
+            try:
+                args = inspect.getfullargspec(func).args  # Python 3
+            except AttributeError:
+                args = inspect.getargspec(func).args  # Python 2
+            if len(args) > 1:
+                arg_name = args[1]
+            else:
+                arg_name = None
+            docstring = textwrap.dedent('''
+            {description}
+            ''').format(description=auto_description())
+
+            if arg_name is not None:
+                if default_arg is None:
+                    default_argument_description = ''
+                else:
+                    default_argument_description = (
+                        ' If no argument is given, {} '
+                        'will be used as a default '
+                        'argument').format(
+                        repr(default_arg))
+                docstring += textwrap.dedent('''
+                Parameters
+                ----------
+                {arg_name} : object, optional
+                    {default_argument}
+                ''').format(arg_name=arg_name,
+                            default_argument=default_argument_description)
+            wrapped.__doc__ = docstring
+
         return wrapped
     return decorator
 
@@ -103,6 +136,38 @@ def blocking_command(category, description, task_description,
                 argument = default_arg
             return description.format(argument)
         wrapped.auto_description = auto_description
+
+        if wrapped.__doc__ is None:
+            import inspect
+            try:
+                args = inspect.getfullargspec(func).args  # Python 3
+            except AttributeError:
+                args = inspect.getargspec(func).args  # Python 2
+            if len(args) > 1:
+                arg_name = args[1]
+            else:
+                arg_name = None
+            docstring = textwrap.dedent('''
+            {description}
+            ''').format(description=auto_description())
+
+            if arg_name is not None:
+                if default_arg is None:
+                    default_argument_description = ''
+                else:
+                    default_argument_description = (
+                        ' If no argument is given, {} '
+                        'will be used as a default '
+                        'argument').format(
+                        repr(default_arg))
+                docstring += textwrap.dedent('''
+                Parameters
+                ----------
+                {arg_name} : object, optional
+                    {default_argument}
+                ''').format(arg_name=arg_name,
+                            default_argument=default_argument_description)
+            wrapped.__doc__ = docstring
 
         return wrapped
     return decorator
