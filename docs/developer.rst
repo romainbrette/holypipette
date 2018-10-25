@@ -252,3 +252,16 @@ they can be summarized with fewer custom help entries by calling
 
 Adding new low-level functionality
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Low-level functionality should be added in a `.TaskController` class. Such
+classes should not use any ``Qt``-specific code, i.e. should stay independent
+of the GUI. However, they should make use of the logging functions such as
+`~.LoggingObject.debug` and `~.LoggingObject.info`, which will automatically
+check for user-requested cancellations of a running task. Similarly, a task that
+needs to wait (e.g. for a manipulator that is still moving), should use the
+`.TaskController.sleep` method instead of Python's standard `~time.sleep`.
+
+After adding such functionality, it should be exposed in the `.TaskInterface` by
+adding a method annotated with `@command <.command>` or
+`@blocking_command <.blocking_command>` (see :ref:`interface_classes`). Finally,
+this method can then be linked to a keypress or a mouse click in the GUI (see
+:ref:`gui_functionality`).

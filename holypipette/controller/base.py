@@ -35,11 +35,13 @@ class TaskController(LoggingObject):
     asynchronously requested abort of the current task. A long-running task
     can check explicitly whether an abort has been requested with
     `abort_if_requested` which will raise a `RequestedAbortException` if the
-    `abort_requested` attribute has been set. This check will also be
-    performed automatically if `debug`, `info`, or `warn` is called (which
-    otherwise simply forward their message to the logging system). Finally,
-    tasks should call `sleep` (instead of `time.sleep`) which will periodically
-    check for an abort request during the sleep time.
+    ``abort_requested`` attribute has been set. This check will also be
+    performed automatically if `~TaskController.debug`,
+    `~TaskController.info`, or
+    `~TaskController.warn` is called (which otherwise simply forward their
+    message to the logging system). Finally, tasks should call `sleep`
+    (instead of `time.sleep`) which will periodically check for an abort
+    request during the sleep time.
     """
     def __init__(self):
         super(TaskController, self).__init__()
