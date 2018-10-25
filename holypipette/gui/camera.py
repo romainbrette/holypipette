@@ -309,7 +309,13 @@ class CameraGui(QtWidgets.QMainWindow):
     # Add a cross to the display
     def draw_cross(self, pixmap):
         '''
-        Draws a cross at the center
+        Draws a cross at the center. Meant to be used as a ``display_edit``
+        function.
+
+        Parameters
+        ----------
+        pixmap : `QPixmap`
+            The pixmap to draw on.
         '''
         painter = QtGui.QPainter(pixmap)
         pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
@@ -411,11 +417,36 @@ class CameraGui(QtWidgets.QMainWindow):
         self.log_signal.connect(self.error_status)
 
     def display_edit(self, pixmap):
+        '''
+        Applies the functions stored in `~.CameraGui.display_edit_funcs` to the
+        video image pixmap.
+
+        Parameters
+        ----------
+        pixmap : `QPixmap`
+            The pixmap to draw on.
+        '''
         if self.show_overlay:
             for func in self.display_edit_funcs:
                 func(pixmap)
 
     def image_edit(self, image):
+        '''
+        Applies the functions stored in `~.CameraGui.image_edit_funcs` to the
+        video image. Each function works on the result of the previous function
+
+        Parameters
+        ----------
+        image : `~numpy.ndarray`
+            The original video image  or the image returned by a previously
+            called function.
+
+        Returns
+        -------
+        new_image : `~numpy.ndarray`
+            The post-processed image. Should be of the same size and data type
+            as the original image.
+        '''
         for func in self.image_edit_funcs:
             image = func(image)
         return image
@@ -426,6 +457,12 @@ class CameraGui(QtWidgets.QMainWindow):
         self.close()
 
     def register_commands(self):
+        '''
+        Tie keypresses and mouse clicks to commands. Should call
+        `.register_key_action` and `.register_mouse_action`. Overriding methods
+        in subclass should call the superclass if they want to keep the
+        commands registered by the superclass(es).
+        '''
         self.register_key_action(Qt.Key_Question, None, self.help_keypress)
         self.register_key_action(Qt.Key_L, None, self.log_keypress)
         self.register_key_action(Qt.Key_Escape, None, self.exit)
@@ -437,11 +474,36 @@ class CameraGui(QtWidgets.QMainWindow):
                                  self.camera_interface.save_image)
 
     def close(self):
+        '''
+        Close the GUI.
+        '''
         del self.camera
         super(CameraGui, self).close()
 
     def register_mouse_action(self, click_type, modifier, command,
                               default_doc=True):
+        '''
+        Link a mouse click on the camera image to an action.
+
+        Parameters
+        ----------
+        click_type : `.Qt.MouseButton`
+            The type of click that should be handled as a ``Qt`` constant, e.g.
+            `.Qt.LeftButton` or `.Qt.RightButton`.
+        modifier : `.Qt.Modifer` or ``None``
+            The modifier that needs to be pressed at the same time to trigger
+            the action. The modifier needs to be given as a ``Qt`` constant,
+            e.g. `.Qt.ShiftModifier` or `.Qt.ControlModifier`. Alternatively,
+            ``None`` can be used to specify that the mouse click should lead to
+            the action independent of the modifier.
+        command : method
+            A method implementing the action that has been annotated with the
+            `@command <.command>` or `@blocking_command <.blocking_command>`
+            decorator.
+        default_doc : bool, optional
+            Whether to include the action in the automatically generated help.
+            Defaults to ``True``.
+        '''
         self.mouse_actions[(click_type, modifier)] = command
         if default_doc:
             self.help_window.register_mouse_action(click_type, modifier,
@@ -504,6 +566,32 @@ class CameraGui(QtWidgets.QMainWindow):
 
     def register_key_action(self, key, modifier, command, argument=None,
                             default_doc=True):
+        '''
+        Link a keypress to an action.
+
+        Parameters
+        ----------
+        key : `.Qt.Key`
+            The key that should be handled, specified as a ``Qt`` constant, e.g.
+            `.Qt.Key_X` or `.Qt.Key_5`.
+        modifier : `.Qt.Modifer` or ``None``
+            The modifier that needs to be pressed at the same time to trigger
+            the action. The modifier needs to be given as a ``Qt`` constant,
+            e.g. `.Qt.ShiftModifier` or `.Qt.ControlModifier`. Alternatively,
+            ``None`` can be used to specify that the keypress should lead to
+            the action independent of the modifier.
+        command : method
+            A method implementing the action that has been annotated with the
+            `@command <.command>` or `@blocking_command <.blocking_command>`
+            decorator.
+        argument : object, optional
+            An additional argument that should be handled to the method defined
+            as ``command``. Can be used to re-use the same action in a
+            parametrized way (e.g. steps of different size).
+        default_doc : bool, optional
+            Whether to include the action in the automatically generated help.
+            Defaults to ``True``.
+        '''
         self.key_actions[(key, modifier)] = (command, argument)
         if default_doc:
             self.help_window.register_key_action(key, modifier,
