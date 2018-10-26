@@ -1,5 +1,6 @@
 # coding=utf-8
 from types import MethodType
+import time
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
@@ -28,10 +29,14 @@ class ManipulatorGui(CameraGui):
         self.display_edit_funcs.append(self.draw_scale_bar)
         self.add_config_gui(self.interface.calibration_config)
 
-        # Measure manipulator positions
+        # Measure manipulator positions (range measurement)
         self.position_timer = QtCore.QTimer()
         self.position_timer.timeout.connect(self.interface.measure_ranges)
         self.position_measurement = False
+
+        # Stage position for display
+        self._last_stage_measurement = None
+        self._stage_position = (None, None, None)
 
     @command(category='Manipulators',
              description='Measure manipulator ranges')
@@ -83,9 +88,16 @@ class ManipulatorGui(CameraGui):
             if text:
                 painter.drawText(c_x, c_y - 10, '{}µm'.format(length_in_um))
             if position:
-                x = stage.position(axis=0)
-                y = stage.position(axis=1)
-                z = self.interface.microscope.position()
+                # Only ask for positions if last measurement has been made a
+                # sufficiently long time ago
+                update_time = self.interface.calibration_config.position_update/1000.
+                if (self._last_stage_measurement is None or
+                        time.time() - self._last_stage_measurement > update_time):
+                    self._stage_position = (stage.position(axis=0),
+                                            stage.position(axis=1),
+                                            self.interface.microscope.position())
+                    self._last_stage_measurement = time.time()
+                x, y, z = self._stage_position
                 position_text = 'x: {:.0f}µm, y: {:.0f}µm, z: {:.0f}µm'
                 painter.drawText(c_x, c_y + 20, position_text.format(x, y, z))
             painter.end()

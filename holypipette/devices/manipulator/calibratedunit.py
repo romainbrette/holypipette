@@ -36,9 +36,12 @@ class CalibrationConfig(Config):
                                  bounds=(0, 20))
     calibration_moves = Number(9, doc='Number of calibration moves',
                                bounds=(1, 20))
-
+    position_update = NumberWithUnit(500, unit='ms',
+                                     doc='Update displayed position every',
+                                     bounds=(0, 10000))
     categories = [('Calibration', ['sleep_time', 'position_tolerance',
-                                   'stack_depth', 'calibration_moves'])]
+                                   'stack_depth', 'calibration_moves']),
+                  ('Display', ['position_update'])]
 
 
 class CalibrationError(Exception):
