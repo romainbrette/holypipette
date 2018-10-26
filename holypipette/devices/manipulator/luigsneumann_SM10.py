@@ -7,17 +7,21 @@ Not all commands are implemented.
 
 TODO: group commands
 """
-from __future__ import print_function
 from __future__ import absolute_import
-from ..serialdevice import SerialDevice
-from .manipulator import Manipulator
-import serial
+from __future__ import print_function
+
 import binascii
+import threading
 import time
-import struct
+
 import numpy as np
+import serial
+import struct
 from numpy import sign, array
 from numpy.linalg import norm
+
+from .manipulator import Manipulator
+from ..serialdevice import SerialDevice
 
 __all__ = ['LuigsNeumann_SM10']
 
@@ -56,8 +60,8 @@ def group_address(axes):
     return struct.unpack('9B', address)
 
 
-class LuigsNeumann_SM10(SerialDevice,Manipulator):
-    def __init__(self, name = None, stepmoves = True):
+class LuigsNeumann_SM10(SerialDevice, Manipulator):
+    def __init__(self, name=None, stepmoves=True):
         '''
         A Luigs & Neurmann SM10 controller
 
@@ -75,11 +79,13 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         # Open the serial port; 1 second time out
         self.port.baudrate = 115200
         self.port.bytesize = serial.EIGHTBITS
-        self.port.parity=serial.PARITY_NONE
-        self.port.stopbits=serial.STOPBITS_ONE
-        self.port.timeout=1. #None # blocking
+        self.port.parity = serial.PARITY_NONE
+        self.port.stopbits = serial.STOPBITS_ONE
+        self.port.timeout = 1. #None # blocking
 
         self.port.open()
+
+        self.lock = threading.RLock()
 
         # Initialize ramp length of all axes at 210 ms
         #for axis in range(1,10):
@@ -104,14 +110,26 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
         send += '%0.2X%0.2X' % (high, low)
         # Convert hex string to bytes
         sendbytes = binascii.unhexlify(send)
-        self.port.write(sendbytes)
 
-        if nbytes_answer >= 0:
-            # Expected response: <ACK><ID><byte number><data><CRC>
-            # We just check the first two bytes
-            expected = binascii.unhexlify('06' + ID)
+        if nbytes_answer == 0:
+            # command without response
+            self.lock.acquire()
+            try:
+                self.port.write(sendbytes)
+            finally:
+                self.lock.release()
+            return None
+        else:
+            self.lock.acquire()
+            try:
+                self.port.write(sendbytes)
+                # Expected response: <ACK><ID><byte number><data><CRC>
+                # We just check the first two bytes
+                expected = binascii.unhexlify('06' + ID)
 
-            answer = self.port.read(nbytes_answer + 6)
+                answer = self.port.read(nbytes_answer + 6)
+            finally:
+                self.lock.release()
             if answer[:len(expected)] != expected:
                 msg = "Expected answer '%s', got '%s' " \
                       "instead" % (binascii.hexlify(expected),
@@ -120,8 +138,6 @@ class LuigsNeumann_SM10(SerialDevice,Manipulator):
             # We should also check the CRC + the number of bytes
             # Do several reads; 3 bytes, n bytes, CRC
             return answer[4:4 + nbytes_answer]
-        else:
-            return None
 
     def position(self, axis):
         '''

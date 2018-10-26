@@ -5,16 +5,20 @@ Adapted from Michael Graupner's LandNSM5 class.
 
 Not all commands are implemented.
 """
-from __future__ import print_function
 from __future__ import absolute_import
-from ..serialdevice import SerialDevice
-from .manipulator import Manipulator
-import serial
+from __future__ import print_function
+
 import binascii
 import time
+import threading
+
+import serial
 import struct
 import warnings
 from numpy import sign
+
+from .manipulator import Manipulator
+from ..serialdevice import SerialDevice
 
 __all__ = ['LuigsNeumann_SM5']
 
@@ -47,6 +51,7 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         self.established_time = time.time()
         self.establish_connection()
 
+        self.lock = threading.RLock()
         # Initialize ramp length of all axes to 210 ms
         for axis in range(1,3):
             self.set_ramp_length(axis,3)
@@ -80,10 +85,12 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
 
         expected = binascii.unhexlify('06' + ack_ID)
 
-        self.port.write(sendbytes)
-
-        answer = self.port.read(nbytes_answer+6)
-
+        self.lock.acquire()
+        try:
+            self.port.write(sendbytes)
+            answer = self.port.read(nbytes_answer+6)
+        finally:
+            self.lock.release()
         if answer[:len(expected)] != expected :
             if resends >= 5:
                 raise serial.SerialException('No expected response received after 5 tries for '
