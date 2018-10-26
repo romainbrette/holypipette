@@ -48,10 +48,10 @@ class LuigsNeumann_SM5(SerialDevice,Manipulator):
         self.port.timeout=0.1 #None is blocking; 0 is non blocking
 
         self.port.open()
+        self.lock = threading.RLock()
         self.established_time = time.time()
         self.establish_connection()
 
-        self.lock = threading.RLock()
         # Initialize ramp length of all axes to 210 ms
         for axis in range(1,3):
             self.set_ramp_length(axis,3)
