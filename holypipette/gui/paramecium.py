@@ -52,19 +52,19 @@ class ParameciumGui(ManipulatorGui):
                 any(p is None for p in interface.paramecium_position)):
             return
         scale = 1.0 * self.camera.width / pixmap.size().width()
+        pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
         # print('pixel_per_um', pixel_per_um, 'scale', scale)
         painter = QtGui.QPainter(pixmap)
         pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
         pen.setWidth(3)
         painter.setPen(pen)
-        # pos_x, pos_y = self.paramecium_position
-        # pos_x *= scale
-        # pos_y *= scale
-        # print('position for plotting', pos_x, pos_y)
-        x, y, angle, width, height = interface.paramecium_position
-        rotate_by = (angle - np.pi/2)*180/np.pi
-        painter.translate(x / scale, y / scale)
+        x, y, width, height, angle = interface.paramecium_position
+        width *= pixel_per_um/scale
+        height *= pixel_per_um/scale
+        rotate_by = angle*180/np.pi
+        painter.translate(x/scale, y/scale)
         painter.rotate(rotate_by)
-        painter.drawEllipse(-width/scale, -height/scale, 2*width/scale, 2*height/scale)
+
+        painter.drawEllipse(-width/2, -height/2, width, height)
         painter.drawPoint(0, 0)
         painter.end()

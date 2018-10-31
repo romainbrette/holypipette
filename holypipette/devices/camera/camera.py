@@ -82,7 +82,7 @@ class FakeCamera(Camera):
             self.paramecium = FakeParamecium()
         else:
             self.paramecium = None
-        self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2), 10)*50 + 128, 0, 255), dtype=np.uint8)
+        self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2)*0.5, 10)*50 + 128, 0, 255), dtype=np.uint8)
 
     def set_exposure(self, value):
         if 0 < value <= 200:
@@ -123,10 +123,10 @@ class FakeCamera(Camera):
                 p_width = 30*self.scale_factor
                 p_height = 100*self.scale_factor
                 xx, yy = np.meshgrid(np.arange(-self.width//2, self.width//2), np.arange(-self.height//2, self.height//2))
-                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / p_width**2 +
-                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / p_height**2 < 1] = 50
-                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / p_width**2 +
-                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / p_height**2 < 0.8] = 100
+                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / (p_width/2)**2 +
+                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / (p_height/2)**2 < 1] = 50
+                frame[((xx - (p_x - stage_x))*np.cos(p_angle) + (yy - (p_y - stage_y))*np.sin(p_angle))**2 / (p_width/2)**2 +
+                      ((xx - (p_x - stage_x))*np.sin(p_angle) - (yy - (p_y - stage_y))*np.cos(p_angle))**2 / (p_height/2)**2 < 0.8] = 100
 
             for direction, axes in [(np.pi/2, [1, 2, 3]),
                                     (-np.pi/2, [4, 5, 6])]:
@@ -156,6 +156,6 @@ class FakeCamera(Camera):
         else:
             frame = scipy.misc.imresize(self.frame, size=0.5)
         exposure_factor = self.exposure_time/30.
-        frame = frame + np.random.randn(self.height, self.width)*10
+        frame = frame + np.random.randn(self.height, self.width)*5
         return np.array(np.clip(frame*exposure_factor, 0, 255),
                         dtype=np.uint8)

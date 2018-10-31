@@ -1,3 +1,4 @@
+# coding=utf-8
 '''
 These are functions to locate paramecium in an image
 
@@ -6,6 +7,7 @@ TODO: look for the closest in ellipse property space
 from math import atan2
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 from numpy import zeros,uint8,pi, uint16, around
 
@@ -70,25 +72,26 @@ def where_is_droplet(frame, pixel_per_um = 5., ratio = None,
     return x,y,r
 
 
-def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = None,
-                        config=None, max_dist = 1e6): # Locate paramecium
+def where_is_paramecium(frame, pixel_per_um=5., previous_x=None, previous_y=None,
+                        previous_MA=None, previous_ma=None, previous_angle=None,
+                        config=None):
     '''
     Locate paramecium in an image.
 
     Arguments
     ---------
     frame : the image
-    pixel_per_um : number of pixels per um
-    return_angle : if True, return the angle of the cell
-    previous_x : previous x position of the cell
-    previous_y : previous y position of the cell
-    ratio : decimating ratio (to make the image smaller)
-    background : background image to subtract
-    max_dist : maximum distance from previous position
+    pixel_per_um : number of pixels per µm
+    previous_x : previous x position of the cell (in pixels on 1:1 camera frame)
+    previous_y : previous y position of the cell in pixels on 1:1 camera frame)
+    previous_MA : previous length of cell (in µm), i.e. major axis
+    previous_ma : previous width of cell (in µm), i.e. minor axis
+    previous_angle : previous angle of cell (in radians)
+    config : `ParameciumConfig` object
 
     Returns
     -------
-    x, y (, angle) : position on screen and angle
+    x, y, MA, ma, angle : Position and size of fitted ellipse
     '''
     if config is None:
         # Avoid circular imports
@@ -100,6 +103,7 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = 
     ratio = config.downsample
     resized = cv2.resize(frame, (int(width/ratio), int(height/ratio)))
     pixel_per_um = pixel_per_um/ratio
+
     # Filter
     blur_size = int(config.blur_size * pixel_per_um)
     if blur_size % 2 == 0:
@@ -119,9 +123,8 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = 
 
     # Normalize image
     normalized_img = zeros(img.shape)
-    normalized_img = cv2.normalize(img, normalized_img, 0, 255, cv2.NORM_MINMAX)
-    normalized_img = uint8(normalized_img)
-
+    normalized_img = cv2.normalize(img, normalized_img, 0, 255, cv2.NORM_MINMAX,
+                                   dtype=cv2.CV_8UC1)
     # Get (simplified) intensity gradient, slightly redundant because Canny
     # algorithm will do the same thing, but having the distribution is useful to
     # use more robust quantiles instead of fixed values
@@ -135,35 +138,43 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x = None, previous_y = 
 
     # Find contours
     ret = cv2.findContours(canny, 1, 2)
-    contours, hierarchy = ret[-2], ret[-1] # for compatibility with opencv2 and 3
+    contours, hierarchies = ret[-2], ret[-1] # for compatibility with opencv2 and 3
 
-    distmin = max_dist*ratio
-    #previous_x=None
     if previous_x is None:
         previous_x = width / 2
         previous_y = height / 2
+    if previous_MA is None:
+        previous_MA = (config.min_length + config.max_length)*0.5
+        previous_ma = (config.min_width + config.max_width)*0.5
     previous_x = previous_x/ratio
     previous_y = previous_y/ratio
-    best_x, best_y, best_angle, best_MA, best_ma = None, None, None, None, None
-    for contour in contours:
+    ellipses = []
+    for contour, hierarchy in zip(contours, hierarchies[0, :, :]):
         try:
-            length = cv2.arcLength(contour, True) / pixel_per_um
-            if (length>config.minimum_contour) & (contour.shape[0]>10): # at least 10 points
-                (x, y), (ma, MA), theta = cv2.fitEllipse(contour)
-                MA,ma = MA/pixel_per_um, ma/pixel_per_um
+            if (contour.shape[0]>5): # at least 5 points
+                (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(contour))
+                x, y = x*ratio, y*ratio
+                MA, ma = MA/pixel_per_um, ma/pixel_per_um
                 dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
-                if ((MA>config.min_length) and (MA<config.max_length) and
-                        (ma>config.min_width) and (ma<config.max_width) and
-                        (MA > 1.5*ma) and (dist<distmin)):
-                    distmin=dist
+                if MA > config.min_length and ma > config.min_width and MA < config.max_length and ma < config.max_width and MA > 1.5*ma:
                     angle = (theta+90)*pi/180.
-                    best_x, best_y = x*ratio, y*ratio
-                    best_angle = angle
-                    best_MA, best_ma = MA, ma
+                    ellipses.append((x, y, MA, ma, angle, dist))
         except cv2.error:
             continue
 
-    return best_x, best_y, best_angle, best_ma, best_MA
+    ellipses = np.array(ellipses)
+    if len(ellipses):
+        MA_diff = np.abs(previous_MA - ellipses[:, 2])
+        ma_diff = np.abs(previous_ma - ellipses[:, 3])
+        # TODO: It would be better to have not only the previous position, but
+        # earlier positions as well
+        total_dist = MA_diff + ma_diff + ellipses[:, 5]
+        best = np.argmin(total_dist)
+
+    if len(ellipses):
+        return ellipses[best, :5]
+    else:
+        return None, None, None, None, None
 
 
 def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
