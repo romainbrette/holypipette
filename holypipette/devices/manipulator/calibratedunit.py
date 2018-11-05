@@ -314,7 +314,7 @@ class CalibratedUnit(ManipulatorUnit):
         print("Magnification for each axis of the pipette: "+str(self.pixel_per_um()[:2]))
         pixel_per_um = self.stage.pixel_per_um()
         print("Magnification for each axis of the stage: "+str(pixel_per_um))
-        print("Field size: "+str(self.camera.width/pixel_per_um)+" um x "+str(self.camera.height/pixel_per_um)+' um')
+        print("Field size: "+str(self.camera.width/pixel_per_um[0])+" µm x "+str(self.camera.height/pixel_per_um[1])+' µm')
         # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
         for axis in range(len(self.axes)):
             compensating_move = -dot(self.stage.Minv,self.M[:,axis])
