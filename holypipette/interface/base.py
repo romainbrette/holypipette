@@ -123,7 +123,6 @@ def blocking_command(category, description, task_description,
                 result = func(self)
             else:
                 result = func(self, argument)
-            self.task_finished.emit(0, None)
             return result
         wrapped.category = category
         wrapped.description = description
@@ -290,7 +289,8 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             success = self._execute_single_task(controller, one_task,
                                                 one_argument)
             if not success:
-                break
+                return
+        self.task_finished.emit(0, controller)
 
     @QtCore.pyqtSlot(TaskController)
     def reset_requested(self, controller):
@@ -306,6 +306,9 @@ class TaskInterface(QtCore.QObject, LoggingObject):
 
         """
         try:
+            # Set abort_requested to False, otherwise it will trigger another
+            # abort when it uses sleep, etc.
+            controller.abort_requested = False
             controller.recover_state()
         except Exception:
             self.exception('Recovering the state for {} failed.'.format(controller))
