@@ -115,6 +115,7 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
             # command without response
             self.lock.acquire()
             try:
+                #self.debug('Sending command %s (not expecting a response)' % send)
                 self.port.write(sendbytes)
             finally:
                 self.lock.release()
@@ -122,18 +123,38 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
         else:
             self.lock.acquire()
             try:
+                #self.debug('Called with ID %s and data %s, with %d expected bytes' %(ID, data, nbytes_answer))
+                #self.debug('Sending command %s and waiting for response' % send)
                 self.port.write(sendbytes)
                 # Expected response: <ACK><ID><byte number><data><CRC>
                 # We just check the first two bytes
                 expected = binascii.unhexlify('06' + ID)
 
                 answer = self.port.read(nbytes_answer + 6)
+                attempts = 1
+                while len(answer) < nbytes_answer + 6:
+                    if attempts > 5:
+                        self.warn('Still no reply, sending command again...')
+                        self.port.write(sendbytes)
+                        answer = self.port.read(nbytes_answer + 6)
+                        if not len(answer) == nbytes_answer + 6:
+                            raise serial.SerialException('Not able to get a response for command '
+                                                         'with ID %s, giving up' %ID)
+                        else:
+                            break
+                    self.warn(('Only received %d/%d bytes before timeout, reading '
+                              'again') % (len(answer), nbytes_answer + 6))
+                    # Try to read the remaining bytes
+                    answer += self.port.read(nbytes_answer + 6 - len(answer))
+                    attempts += 1
+                #self.debug('response received: %s' % binascii.hexlify(answer))
             finally:
                 self.lock.release()
             if answer[:len(expected)] != expected:
                 msg = "Expected answer '%s', got '%s' " \
                       "instead" % (binascii.hexlify(expected),
                                    binascii.hexlify(answer[:len(expected)]))
+                self.error(msg)
                 raise serial.SerialException(msg)
             # We should also check the CRC + the number of bytes
             # Do several reads; 3 bytes, n bytes, CRC

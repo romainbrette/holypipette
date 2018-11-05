@@ -11,7 +11,7 @@ from holypipette.gui import ParameciumGui
 
 from setup_script import *
 
-console_logger()  # Log to the standard console as well
+#console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
 pipette_interface = PipetteInterface(stage, microscope, camera, units)
