@@ -111,7 +111,7 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
         # Convert hex string to bytes
         sendbytes = binascii.unhexlify(send)
 
-        if nbytes_answer <= 0:
+        if nbytes_answer < 0:
             # command without response
             self.lock.acquire()
             try:
