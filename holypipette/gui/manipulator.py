@@ -87,7 +87,7 @@ class ManipulatorGui(CameraGui):
                              int(c_x + round(length_in_um*scaled_length)), c_y)
             if text:
                 painter.drawText(c_x, c_y - 10, '{}µm'.format(length_in_um))
-            if position:
+            if position and not self.running_task:
                 # Only ask for positions if last measurement has been made a
                 # sufficiently long time ago
                 update_time = self.interface.calibration_config.position_update/1000.
