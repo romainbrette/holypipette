@@ -11,8 +11,9 @@ import numpy as np
 import scipy.misc
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
+import cv2
 
-__all__ = ['Camera', 'FakeCamera']
+__all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']
 
 
 class Camera(object):
@@ -159,3 +160,23 @@ class FakeCamera(Camera):
         frame = frame + np.random.randn(self.height, self.width)*5
         return np.array(np.clip(frame*exposure_factor, 0, 255),
                         dtype=np.uint8)
+
+
+class RecordedVideoCamera(Camera):
+    def __init__(self, file_name, pixel_per_um):
+        super(RecordedVideoCamera, self).__init__()
+        self.file_name = file_name
+        self.video = cv2.VideoCapture(file_name)
+        self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.pixel_per_um = pixel_per_um
+
+    def snap(self):
+        success, frame = self.video.read()
+        if not success:
+            # Reopen the file
+            self.video.open(self.file_name)
+            success, frame = self.video.read()
+            if not success:
+                raise ValueError('Cannot read from file %s.' % self.file_name)
+        return frame
