@@ -54,16 +54,20 @@ class CameraInterface(TaskInterface):
              description='Save the current image to a file')
     def save_image(self):
         try:
-            import imageio
+            from PIL import Image
         except ImportError:
-            print('Saving images needs imageio')
+            self.error('Saving images needs the PIL or Pillow module')
             return
         frame = self.camera.snap()
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(caption='Save image',
                                                          filter='Images (*.png, *.tiff)',
                                                          options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if len(fname):
-            imageio.imwrite(fname, frame)
+            img = Image.fromarray(frame)
+            try:
+                img.save(fname)
+            except (KeyError, IOError):
+                self.exception('Saving image as "%s" failed.' % fname)
 
     def show_tracked_objects(self, img):
         from holypipette.gui.movingList import moveList
