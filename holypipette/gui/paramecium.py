@@ -36,9 +36,13 @@ class ParameciumGui(ManipulatorGui):
         super(ParameciumGui, self).register_commands()
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
-                                   self.paramecium_interface.move_pipette_down)
+                                   self.paramecium_interface.move_pipette_floor)
+        self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
+                                   self.paramecium_interface.move_pipette_working_level)
         self.register_mouse_action(Qt.RightButton, Qt.ShiftModifier,
                                    self.paramecium_interface.start_tracking)
+        self.register_key_action(Qt.Key_D, None,
+                                 self.paramecium_interface.move_pipette_down)
         self.register_key_action(Qt.Key_T, None,
                                  self.paramecium_interface.toggle_tracking)
 

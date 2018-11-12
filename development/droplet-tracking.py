@@ -24,7 +24,8 @@ cv2.namedWindow('camera')
 
 frame = cap.get_data(0)
 height, width = frame.shape[:2]
-xd, yd, rd = where_is_droplet(frame, pixel_per_um=pixel_per_um, xc=width * 3 / 4, yc=height / 2)
+#xd, yd, rd = where_is_droplet(frame, pixel_per_um=pixel_per_um, xc=width * 3 / 4, yc=height / 2)
+xd, yd, rd = 0, 0, None
 i=1
 if rd is None:
     rd = 1000
@@ -44,7 +45,7 @@ while 1:
 
     #cv2.circle(frame, (width*3/4, height/2), 30, (0, 0, 255), 2)
 
-    x,y,img = where_is_paramecium(frame, pixel_per_um = pixel_per_um, background = None, debug = True,
+    x,y,img = where_is_paramecium(frame, pixel_per_um = pixel_per_um,
                                   previous_x = xd, previous_y = yd, max_dist = rd-50/0.5)
 
     if xd is not None:

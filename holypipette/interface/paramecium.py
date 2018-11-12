@@ -8,10 +8,6 @@ import numpy as np
 
 
 class ParameciumConfig(Config):
-    droplet_quantity = Number(1, bounds=(1, 100), doc='Number of microdroplets to make')
-    droplet_pressure = NumberWithUnit(15, bounds=(-1000, 1000), doc='Pressure to make droplet', unit='mbar')
-    droplet_time = NumberWithUnit(5, bounds=(0, 100), doc='Necessary time to make one droplet', unit='s')
-
     downsample = Number(3.37, bounds=(1, 32), doc='Downsampling factor for the image')
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
     max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
@@ -21,8 +17,11 @@ class ParameciumConfig(Config):
     max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
     min_width = NumberWithUnit(5, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
     max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
-    categories = [('Droplets', ['droplet_quantity', 'droplet_pressure', 'droplet_time']),
-                  ('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
+
+    # Vertical distance of pipettes above the coverslip
+    working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
+
+    categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width'])]
 
 
@@ -57,11 +56,29 @@ class ParameciumInterface(TaskInterface):
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at floor level',
                      task_description='Moving pipette to position at floor level')
-    def move_pipette_down(self, xy_position):
+    def move_pipette_floor(self, xy_position):
         x, y = xy_position
         position = np.array([x, y, self.controller.microscope.floor_Z])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+
+    @blocking_command(category='Paramecium',
+                     description='Move pipette down to position at working distance level',
+                     task_description='Moving pipette to position at working distance level')
+    def move_pipette_working_level(self, xy_position):
+        x, y = xy_position
+        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.working_distance*self.controller.microscope.up_direction])
+        self.debug('asking for safe move to {}'.format(position))
+        self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+
+    @blocking_command(category='Paramecium',
+                     description='Move pipette vertically to floor level',
+                     task_description='Move pipette vertically to floor level')
+    def move_pipette_down(self):
+        x, y, _ = self.controller.calibrated_unit.position()
+        position = np.array([x, y, self.controller.microscope.floor_Z])
+        self.debug('asking for move to {}'.format(position))
+        self.execute(self.controller.calibrated_unit.reference_move, argument=position)
 
     @command(category='Paramecium',
              description='Start tracking paramecium at mouse position')
