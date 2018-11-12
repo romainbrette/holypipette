@@ -42,9 +42,10 @@ class CalibratedUnitProxy(object):
 
 class ParameciumInterface(TaskInterface):
 
-    def __init__(self, pipette_interface):
+    def __init__(self, pipette_interface, camera):
         super(ParameciumInterface, self).__init__()
         self.config = ParameciumConfig(name='Paramecium')
+        self.camera = camera
         self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
         self.controller = ParameciumController(self.calibrated_unit,
                                                pipette_interface.microscope,
@@ -95,7 +96,11 @@ class ParameciumInterface(TaskInterface):
     def track_paramecium(self, frame):
         if not self.tracking:
             return
-        pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
+        # Use the size information stored in the camera, in case it exists
+        # (only the case for a "camera" that displays a pre-recorded video)
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
         result = where_is_paramecium(frame, pixel_per_um=pixel_per_um,
                                      previous_x=self.paramecium_position[0],
                                      previous_y=self.paramecium_position[1],

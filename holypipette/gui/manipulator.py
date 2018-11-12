@@ -58,9 +58,13 @@ class ManipulatorGui(CameraGui):
             raise ValueError('Automatic scaling of the bar without showing text '
                              'will not be very helpful...')
         stage = self.interface.calibrated_stage
-        if stage.calibrated:
+        camera_pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if stage.calibrated or camera_pixel_per_um:
             pen_width = 4
-            bar_length = stage.pixel_per_um()[0]
+            if camera_pixel_per_um is not None:
+                bar_length = camera_pixel_per_um
+            else:
+                bar_length = stage.pixel_per_um()[0]
             scale = 1.0 * self.camera.width / pixmap.size().width()
             scaled_length = bar_length/scale
             if autoscale:

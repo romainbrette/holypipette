@@ -22,7 +22,8 @@ class ParameciumGui(ManipulatorGui):
         super(ParameciumGui, self).__init__(camera,
                                             pipette_interface=pipette_interface,
                                             with_tracking=False)
-        self.paramecium_interface = ParameciumInterface(pipette_interface)
+        self.paramecium_interface = ParameciumInterface(pipette_interface,
+                                                        camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
         self.paramecium_position = (None, None, None, None, None)
@@ -56,7 +57,9 @@ class ParameciumGui(ManipulatorGui):
                 any(p is None for p in interface.paramecium_position)):
             return
         scale = 1.0 * self.camera.width / pixmap.size().width()
-        pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
         # print('pixel_per_um', pixel_per_um, 'scale', scale)
         painter = QtGui.QPainter(pixmap)
         pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
