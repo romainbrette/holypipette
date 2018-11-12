@@ -41,7 +41,7 @@ class ParameciumGui(ManipulatorGui):
                                    self.paramecium_interface.move_pipette_working_level)
         self.register_mouse_action(Qt.RightButton, Qt.ShiftModifier,
                                    self.paramecium_interface.start_tracking)
-        self.register_key_action(Qt.Key_D, None,
+        self.register_key_action(Qt.Key_Space, None,
                                  self.paramecium_interface.move_pipette_down)
         self.register_key_action(Qt.Key_T, None,
                                  self.paramecium_interface.toggle_tracking)

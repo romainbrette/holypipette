@@ -75,7 +75,7 @@ class ParameciumInterface(TaskInterface):
                      description='Move pipette vertically to floor level',
                      task_description='Move pipette vertically to floor level')
     def move_pipette_down(self):
-        x, y, _ = self.controller.calibrated_unit.position()
+        x, y, _ = self.controller.calibrated_unit.reference_position()
         position = np.array([x, y, self.controller.microscope.floor_Z])
         self.debug('asking for move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.reference_move, argument=position)
