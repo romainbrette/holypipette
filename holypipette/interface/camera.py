@@ -44,7 +44,7 @@ class CameraInterface(TaskInterface):
         self.signal_updated_exposure()
 
     @command(category='Camera',
-             description='Increase exposure time by {:.1f}ms',
+             description='Decrease exposure time by {:.1f}ms',
              default_arg=2.5)
     def decrease_exposure(self, increase):
         self.camera.change_exposure(-2.5)

@@ -112,9 +112,26 @@ class ManipulatorGui(CameraGui):
         # Commands to move the stage
         # Note that we do not use the automatic documentation mechanism here,
         # as we one entry for every possible keypress
-        for modifier, distance in [(Qt.NoModifier, 10),
-                                   (Qt.AltModifier, 2.5),
-                                   (Qt.ShiftModifier, 50)]:
+        modifiers = [Qt.NoModifier, Qt.AltModifier, Qt.ShiftModifier]
+        distances = [10., 2.5, 50.]
+        self.help_window.register_custom_action('Stage',  'Arrows',
+                                                'Move stage')
+        self.help_window.register_custom_action('Stage',
+                                                '/'.join(QtGui.QKeySequence(mod).toString()
+                                                             if mod is not Qt.NoModifier else 'No modifier'
+                                                         for mod in modifiers),
+                                                'Move stage by ' + '/'.join(str(x) for x in distances) + ' µm')
+        self.help_window.register_custom_action('Manipulators', 'A/S/W/D',
+                                                'Move pipette by in x/y direction')
+        self.help_window.register_custom_action('Manipulators', 'Q/E',
+                                                'Move pipette by in z direction')
+        self.help_window.register_custom_action('Manipulators',
+                                                '/'.join(QtGui.QKeySequence(mod).toString()
+                                                             if mod is not Qt.NoModifier else 'No modifier'
+                                                         for mod in modifiers),
+                                                'Move pipette by ' + '/'.join(str(x) for x in distances) + ' µm')
+
+        for modifier, distance in zip(modifiers, distances):
             self.register_key_action(Qt.Key_Up, modifier,
                                      self.interface.move_stage_vertical,
                                      argument=-distance, default_doc=False)
@@ -146,17 +163,8 @@ class ManipulatorGui(CameraGui):
                                      self.interface.move_pipette_z,
                                      argument=-distance, default_doc=False)
 
-            # Manually document all arrows at once
-            if modifier == Qt.NoModifier:
-                modifier_text = ''
-            else:
-                modifier_text = QtGui.QKeySequence(modifier).toString()
-            self.help_window.register_custom_action('Stage', modifier_text+'Arrows',
-                                                    'Move stage by %gum' % distance)
-            self.help_window.register_custom_action('Manipulators', modifier_text+'A/S/W/D',
-                                                    'Move pipette by %gum in x/y direction' % distance)
-            self.help_window.register_custom_action('Manipulators', modifier_text+'Q/E',
-                                                    'Move pipette by %gum in z direction' % distance)
+
+
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
@@ -177,7 +185,11 @@ class ManipulatorGui(CameraGui):
             key = QtGui.QKeySequence("%d" % (unit_number + 1))[0]
             self.register_key_action(key, None,
                                      self.interface.switch_manipulator,
-                                     argument=unit_number + 1)
+                                     argument=unit_number + 1,
+                                     default_doc=False)
+        options = '/'.join(str(x+1) for x in range(number_of_units))
+        self.help_window.register_custom_action('Manipulators', options,
+                                                'Switch to manipulator ' + options)
 
         self.register_key_action(Qt.Key_S, Qt.ControlModifier,
                                  self.interface.save_configuration)
@@ -189,10 +201,14 @@ class ManipulatorGui(CameraGui):
         # Microscope control
         self.register_key_action(Qt.Key_PageUp, None,
                                  self.interface.move_microscope,
-                                 argument=10)
+                                 argument=10, default_doc=False)
         self.register_key_action(Qt.Key_PageDown, None,
                                  self.interface.move_microscope,
-                                 argument=-10)
+                                 argument=-10, default_doc=False)
+        key_string = (QtGui.QKeySequence(Qt.Key_PageUp).toString() + '/' +
+                      QtGui.QKeySequence(Qt.Key_PageDown).toString())
+        self.help_window.register_custom_action('Microscope', key_string,
+                                                'Move microscope up/down by 10µm')
         self.register_key_action(Qt.Key_F, None,
                                  self.interface.set_floor)
         self.register_key_action(Qt.Key_G, None,
