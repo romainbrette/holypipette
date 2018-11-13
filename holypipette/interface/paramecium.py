@@ -93,6 +93,13 @@ class ParameciumInterface(TaskInterface):
     def toggle_tracking(self):
         self.tracking = not self.tracking
 
+    @command(category='Paramecium',
+             description='Display z position of manipulator relative to floor')
+    def display_z_manipulator(self):
+        position = self.controller.calibrated_unit.reference_position()[2]-self.controller.microscope.floor_Z
+        position = position * self.controller.microscope.up_direction # so that >0 means above
+        self.info('z position: {} um above floor'.format(position))
+
     def track_paramecium(self, frame):
         if not self.tracking:
             return
