@@ -115,6 +115,7 @@ class ParameciumInterface(TaskInterface):
     def toggle_tracking(self):
         self.tracking = not self.tracking
         if self.tracking:
+            self.paramecium_position = (None, None, None, None, None, None)
             self.position_list = [] # list of previous positions
 
     @command(category='Paramecium',
@@ -146,11 +147,12 @@ class ParameciumInterface(TaskInterface):
                                      config=self.config)
 
         # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost); 3) take into account stage)
-        if self.paramecium_position[0] is None:
-            self.paramecium_position = result
-        elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
-                <(self.config.max_displacement*pixel_per_um)**2:
-            self.paramecium_position = result
+        if result[0] is not None:
+            if self.paramecium_position[0] is None:
+                    self.paramecium_position = result
+            elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
+                    <(self.config.max_displacement*pixel_per_um)**2:
+                self.paramecium_position = result
 
         # Detect if it stops (TODO: analyze angle)
         # TODO: display median shape attributes (or even distribution)
@@ -169,9 +171,12 @@ class ParameciumInterface(TaskInterface):
                     self.tracking = False
 
         # Follow with the stage
-        if self.follow_paramecium:
+        if self.follow_paramecium and result[0] is not None:
             position = np.array(result[:2])
-            self.execute(self.controller.calibrated_stage.reference_move, argument=position)
+            w,h = self.camera.width, self.camera.height
+            move = np.zeros(3)
+            move[:2] = .5*(position - np.array([w/2,h/2]))
+            self.execute(self.controller.calibrated_stage.reference_relative_move, argument=-move)
 
     '''
     @command(category='Paramecium',
