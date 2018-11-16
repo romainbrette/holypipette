@@ -46,6 +46,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.move_pipette_down)
         self.register_key_action(Qt.Key_T, None,
                                  self.paramecium_interface.toggle_tracking)
+        self.register_key_action(Qt.Key_Return, None,
+                                 self.paramecium_interface.toggle_following)
         self.register_key_action(Qt.Key_P, None,
                                  self.paramecium_interface.display_z_manipulator)
 

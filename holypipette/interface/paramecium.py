@@ -53,6 +53,7 @@ class ParameciumInterface(TaskInterface):
                                                self.config)
         self.paramecium_position = (None, None, None, None, None, None)
         self.tracking = False
+        self.follow_paramecium = False
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at floor level',
@@ -94,6 +95,13 @@ class ParameciumInterface(TaskInterface):
         self.tracking = not self.tracking
 
     @command(category='Paramecium',
+             description='Toggle paramecium following')
+    def toggle_following(self):
+        self.follow_paramecium = not self.follow_paramecium
+        if self.follow_paramecium and not self.tracking:
+            self.tracking = True
+
+    @command(category='Paramecium',
              description='Display z position of manipulator relative to floor')
     def display_z_manipulator(self):
         position = self.controller.calibrated_unit.reference_position()[2]-self.controller.microscope.floor_Z
@@ -113,6 +121,10 @@ class ParameciumInterface(TaskInterface):
                                      previous_y=self.paramecium_position[1],
                                      config=self.config)
         self.paramecium_position = result
+
+        if self.follow_paramecium:
+            position = np.array(result[:2])
+            self.execute(self.controller.calibrated_stage.reference_move, argument=position)
 
     '''
     @command(category='Paramecium',
