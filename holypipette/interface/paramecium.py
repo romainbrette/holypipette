@@ -5,7 +5,7 @@ from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision.paramecium_tracking import where_is_paramecium
 
 import numpy as np
-
+import time
 
 class ParameciumConfig(Config):
     downsample = Number(3.37, bounds=(1, 32), doc='Downsampling factor for the image')
@@ -19,12 +19,18 @@ class ParameciumConfig(Config):
     max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
     max_displacement = NumberWithUnit(100, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
 
+    # Automatic experiment
+    minimum_stop_time = NumberWithUnit(300, bounds=(0, 5000), doc='Time before starting automation', unit='s')
+    stop_duration= NumberWithUnit(50, bounds=(0, 1000), doc='Stopping duration before detection', unit='frames')
+    stop_amplitude = NumberWithUnit(5, bounds=(0, 1000), doc='Movement threshold for detecting stop', unit='µm')
+
     # Vertical distance of pipettes above the coverslip
     working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
 
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
-                  ('Manipulation', ['working_distance'])]
+                  ('Manipulation', ['working_distance']),
+                  ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time'])]
 
 
 class CalibratedUnitProxy(object):
@@ -56,6 +62,7 @@ class ParameciumInterface(TaskInterface):
         self.paramecium_position = (None, None, None, None, None, None)
         self.tracking = False
         self.follow_paramecium = False
+        self.automate = False
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at floor level',
@@ -65,6 +72,18 @@ class ParameciumInterface(TaskInterface):
         position = np.array([x, y, self.controller.microscope.floor_Z])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+
+    @command(category='Paramecium',
+                     description='Perform automatic experiment')
+    def automatic_experiment(self):
+        self.automate = not self.automate
+        if self.automate:
+            self.debug('Automatic experiment')
+            self.tracking = True
+            self.position_list = []  # list of previous positions
+        else:
+            self.debug('Automatic experiment cancelled')
+        self.automate_t0 = time.time()
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at working distance level',
@@ -95,6 +114,8 @@ class ParameciumInterface(TaskInterface):
              description='Toggle paramecium tracking')
     def toggle_tracking(self):
         self.tracking = not self.tracking
+        if self.tracking:
+            self.position_list = [] # list of previous positions
 
     @command(category='Paramecium',
              description='Toggle paramecium following')
@@ -102,6 +123,7 @@ class ParameciumInterface(TaskInterface):
         self.follow_paramecium = not self.follow_paramecium
         if self.follow_paramecium and not self.tracking:
             self.tracking = True
+            self.position_list = []  # list of previous positions
 
     @command(category='Paramecium',
              description='Display z position of manipulator relative to floor')
@@ -122,13 +144,31 @@ class ParameciumInterface(TaskInterface):
                                      previous_x=self.paramecium_position[0],
                                      previous_y=self.paramecium_position[1],
                                      config=self.config)
-        # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost)
+
+        # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost); 3) take into account stage)
         if self.paramecium_position[0] is None:
             self.paramecium_position = result
         elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
                 <(self.config.max_displacement*pixel_per_um)**2:
             self.paramecium_position = result
 
+        # Detect if it stops (TODO: analyze angle)
+        # TODO: display median shape attributes (or even distribution)
+        self.position_list.append(np.array(self.paramecium_position[:2]))
+        if len(self.position_list)>self.config.stop_duration:
+            variation = np.sqrt(np.sum(np.std(self.position_list[-int(self.config.stop_duration):], axis=0)**2))
+            print result, variation
+            if (variation<self.config.stop_amplitude*pixel_per_um):
+                self.info("Paramecium stopped!")
+                if self.automate and (self.automate_t0>time.time()+self.config.minimum_stop_time):
+                    # Do the experiment
+                    position = np.median(self.position_list[-int(self.config.stop_duration):], axis=0)
+                    self.debug("Impaling")
+                    self.move_pipette_floor(position)
+                    self.automate = False
+                    self.tracking = False
+
+        # Follow with the stage
         if self.follow_paramecium:
             position = np.array(result[:2])
             self.execute(self.controller.calibrated_stage.reference_move, argument=position)

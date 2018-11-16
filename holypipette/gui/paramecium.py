@@ -50,6 +50,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.toggle_following)
         self.register_key_action(Qt.Key_P, None,
                                  self.paramecium_interface.display_z_manipulator)
+        self.register_key_action(Qt.Key_K, None,
+                                 self.paramecium_interface.automatic_experiment)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)
