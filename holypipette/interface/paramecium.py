@@ -17,12 +17,14 @@ class ParameciumConfig(Config):
     max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
     min_width = NumberWithUnit(5, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
     max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
+    max_displacement = NumberWithUnit(100, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
 
     # Vertical distance of pipettes above the coverslip
     working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
 
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
-                                'min_length', 'max_length', 'min_width', 'max_width'])]
+                                'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
+                  ('Manipulation', ['working_distance'])]
 
 
 class CalibratedUnitProxy(object):
@@ -120,7 +122,12 @@ class ParameciumInterface(TaskInterface):
                                      previous_x=self.paramecium_position[0],
                                      previous_y=self.paramecium_position[1],
                                      config=self.config)
-        self.paramecium_position = result
+        # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost)
+        if self.paramecium_position[0] is None:
+            self.paramecium_position = result
+        elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
+                <(self.config.max_displacement*pixel_per_um)**2:
+            self.paramecium_position = result
 
         if self.follow_paramecium:
             position = np.array(result[:2])
