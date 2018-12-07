@@ -12,11 +12,11 @@ class ParameciumConfig(Config):
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
     max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
     blur_size = NumberWithUnit(15, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
-    minimum_contour = NumberWithUnit(100, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
-    min_length = NumberWithUnit(50, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
+    minimum_contour = NumberWithUnit(200, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
+    min_length = NumberWithUnit(75, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
     max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
-    min_width = NumberWithUnit(5, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
-    max_width = NumberWithUnit(50, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
+    min_width = NumberWithUnit(40, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
+    max_width = NumberWithUnit(55, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
     max_displacement = NumberWithUnit(100, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
 
     # Automatic experiment
