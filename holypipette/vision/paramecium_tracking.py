@@ -157,7 +157,8 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x=None, previous_y=None
         ma_diff = np.abs(previous_ma - ellipses[:, 3])
         # TODO: It would be better to have not only the previous position, but
         # earlier positions as well
-        total_dist = MA_diff + ma_diff + ellipses[:, 5]
+        # total_dist = MA_diff + ma_diff + ellipses[:, 5]
+        total_dist = ellipses[:, 5]
         best = np.argmin(total_dist)
 
     if len(ellipses):
