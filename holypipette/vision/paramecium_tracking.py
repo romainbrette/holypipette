@@ -108,18 +108,7 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x=None, previous_y=None
     blur_size = int(config.blur_size * pixel_per_um)
     if blur_size % 2 == 0:
         blur_size+=1
-    filtered=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
-
-    # Filter background
-    background = None  # TODO: remove completely?
-    if background is not None:
-        resized_background = cv2.resize(background, (width / ratio, height / ratio))
-        filtered_background=cv2.GaussianBlur(resized_background, (blur_size, blur_size), 0)
-    else:
-        filtered_background = 0*filtered
-
-    # Remove background
-    img = filtered * 1. - filtered_background * 1.
+    img=cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
 
     # Normalize image
     normalized_img = zeros(img.shape)
@@ -151,7 +140,7 @@ def where_is_paramecium(frame, pixel_per_um=5., previous_x=None, previous_y=None
     ellipses = []
     for contour, hierarchy in zip(contours, hierarchies[0, :, :]):
         try:
-            if (contour.shape[0]>5): # at least 5 points
+            if (contour.shape[0]>5) and (cv2.arcLength(contour, True) > config.minimum_contour*pixel_per_um): # at least 5 points
                 (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(contour))
                 x, y = x*ratio, y*ratio
                 MA, ma = MA/pixel_per_um, ma/pixel_per_um
