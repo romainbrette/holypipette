@@ -60,6 +60,7 @@ class ParameciumInterface(TaskInterface):
                                                pipette_interface.calibrated_stage,
                                                self.config)
         self.paramecium_position = (None, None, None, None, None, None)
+        self.paramecium_info = None
         self.tracking = False
         self.follow_paramecium = False
         self.automate = False
@@ -146,10 +147,12 @@ class ParameciumInterface(TaskInterface):
         # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost); 3) take into account stage)
         if result[0] is not None:
             if self.paramecium_position[0] is None:
-                    self.paramecium_position = result
+                self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
+                self.paramecium_info = result.info
             elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
                     <(self.config.max_displacement*pixel_per_um)**2:
-                self.paramecium_position = result
+                self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
+                self.paramecium_info = result.info
 
         # Detect if it stops (TODO: analyze angle)
         # TODO: display median shape attributes (or even distribution)

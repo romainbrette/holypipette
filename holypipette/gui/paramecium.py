@@ -81,3 +81,15 @@ class ParameciumGui(ManipulatorGui):
         painter.drawEllipse(-width/2, -height/2, width, height)
         painter.drawPoint(0, 0)
         painter.end()
+
+        # Draw contours
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        contour = interface.paramecium_info['best_contour']
+        path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0])/scale)
+        for point in contour[1:]:
+            path.lineTo(QtCore.QPoint(*point[0])/scale)
+        painter.drawPath(path)
+        painter.end()

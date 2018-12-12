@@ -75,6 +75,10 @@ def where_is_droplet(frame, pixel_per_um = 5., ratio = None,
     return x,y,r
 
 
+TrackingResult = collections.namedtuple('TrackingResult',
+                                        ['x', 'y', 'MA', 'ma', 'angle', 'info'])
+
+
 class RecentPositions(collections.deque):
     def __getitem__(self, index):
             if isinstance(index, slice):
@@ -144,6 +148,8 @@ class ParameciumTracker(object):
         # Extract edges
         canny = cv2.Canny(normalized_img, min_grad, max_grad)
 
+        info = {}
+
         # Find contours
         ret = cv2.findContours(canny, 1, 2)
         contours, hierarchies = ret[-2], ret[-1] # for compatibility with opencv2 and 3
@@ -158,9 +164,16 @@ class ParameciumTracker(object):
         (previous_x, previous_y, previous_MA, previous_ma, previous_angle) = previous
 
         ellipses = []
+        info['all_contours'] = []
+        info['valid_contours'] = []
+        info['fitted_contours'] = []
         for contour, hierarchy in zip(contours, hierarchies[0, :, :]):
+            # Translate contour back to original pixel values
+            contour_pixel = np.array(contour)*ratio
+            info['all_contours'].append(contour_pixel)
             try:
                 if (contour.shape[0]>5) and (cv2.arcLength(contour, True) > self.config.minimum_contour*pixel_per_um): # at least 5 points
+                    info['valid_contours'].append(contour_pixel)
                     (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(contour))
                     x, y = x*ratio, y*ratio
                     MA, ma = MA/pixel_per_um, ma/pixel_per_um
@@ -168,6 +181,7 @@ class ParameciumTracker(object):
                     if (MA > self.config.min_length and ma > self.config.min_width and
                             MA < self.config.max_length and ma < self.config.max_width and
                             MA > 1.5*ma):
+                        info['fitted_contours'].append(contour_pixel)
                         angle = (theta+90)*pi/180.
                         ellipses.append((x, y, MA, ma, angle, dist))
             except cv2.error:
@@ -184,9 +198,11 @@ class ParameciumTracker(object):
             best = np.argmin(total_dist)
             result = ellipses[best, :5]
             self.previous.append(result)
-            return result
+            info['best_contour'] = info['fitted_contours'][best]
+            return TrackingResult(*result, info=info)
         else:
-            return None, None, None, None, None
+            info['best_contour'] = None
+            return TrackingResult(None, None, None, None, None, info=info)
 
     def has_stopped(self):
         if len(self.previous) > self.config.stop_duration:
