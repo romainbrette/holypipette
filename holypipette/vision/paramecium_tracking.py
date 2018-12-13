@@ -208,7 +208,6 @@ class ParameciumTracker(object):
         if len(self.previous) > self.config.stop_duration:
             positions = np.array(self.previous[-int(self.config.stop_duration):])
             variation = np.sqrt(np.sum(np.std(positions[:, :2], axis=0) ** 2))
-            print('variation: ', variation)
             if variation < self.config.stop_amplitude * self.pixel_per_um:
                 return True
         return False
