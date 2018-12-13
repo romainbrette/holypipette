@@ -82,10 +82,22 @@ class ParameciumGui(ManipulatorGui):
         painter.drawPoint(0, 0)
         painter.end()
 
-        # Draw contours
+        # Draw unused contours that were long enough/had enough points
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        for contour in interface.paramecium_info['valid_contours']:
+            path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
+            for point in contour[1:]:
+                path.lineTo(QtCore.QPoint(*point[0]) / scale)
+            painter.drawPath(path)
+        painter.end()
+
+        # Draw best contour
         painter = QtGui.QPainter(pixmap)
         pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
-        pen.setWidth(1)
+        pen.setWidth(2)
         painter.setPen(pen)
         contour = interface.paramecium_info['best_contour']
         path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0])/scale)
@@ -93,3 +105,4 @@ class ParameciumGui(ManipulatorGui):
             path.lineTo(QtCore.QPoint(*point[0])/scale)
         painter.drawPath(path)
         painter.end()
+
