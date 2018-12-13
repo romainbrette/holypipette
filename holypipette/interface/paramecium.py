@@ -28,7 +28,7 @@ class ParameciumConfig(Config):
     working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
 
     # For debugging
-    draw_contours = Boolean(False, doc='Whether to draw contours')
+    draw_contours = Boolean(False, doc='Draw contours?')
 
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
@@ -152,11 +152,10 @@ class ParameciumInterface(TaskInterface):
         if result[0] is not None:
             if self.paramecium_position[0] is None:
                 self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
-                self.paramecium_info = result.info
             elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
                     <(self.config.max_displacement*pixel_per_um)**2:
                 self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
-                self.paramecium_info = result.info
+        self.paramecium_info = result.info
 
         # Detect if it stops (TODO: analyze angle)
         # TODO: display median shape attributes (or even distribution)

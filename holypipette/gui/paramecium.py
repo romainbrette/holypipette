@@ -83,6 +83,18 @@ class ParameciumGui(ManipulatorGui):
         painter.end()
 
         if interface.config.draw_contours:
+            # Draw all contours
+            painter = QtGui.QPainter(pixmap)
+            pen = QtGui.QPen(QtGui.QColor(200, 200, 0, 125))
+            pen.setWidth(1)
+            painter.setPen(pen)
+            for contour in interface.paramecium_info['all_contours']:
+                path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
+                for point in contour[1:]:
+                    path.lineTo(QtCore.QPoint(*point[0]) / scale)
+                painter.drawPath(path)
+            painter.end()
+
             # Draw unused contours that were long enough/had enough points
             painter = QtGui.QPainter(pixmap)
             pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
@@ -101,9 +113,10 @@ class ParameciumGui(ManipulatorGui):
             pen.setWidth(2)
             painter.setPen(pen)
             contour = interface.paramecium_info['best_contour']
-            path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0])/scale)
-            for point in contour[1:]:
-                path.lineTo(QtCore.QPoint(*point[0])/scale)
-            painter.drawPath(path)
-            painter.end()
+            if contour is not None:
+                path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0])/scale)
+                for point in contour[1:]:
+                    path.lineTo(QtCore.QPoint(*point[0])/scale)
+                painter.drawPath(path)
+                painter.end()
 
