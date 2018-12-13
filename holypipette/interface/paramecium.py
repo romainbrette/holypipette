@@ -27,10 +27,14 @@ class ParameciumConfig(Config):
     # Vertical distance of pipettes above the coverslip
     working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
 
+    # For debugging
+    draw_contours = Boolean(False, doc='Whether to draw contours')
+
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
                   ('Manipulation', ['working_distance']),
-                  ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time'])]
+                  ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time']),
+                  ('Debugging', ['draw_contours'])]
 
 
 class CalibratedUnitProxy(object):
