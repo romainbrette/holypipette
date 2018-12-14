@@ -13,6 +13,53 @@ from holypipette.controller import TaskController
 from holypipette.interface.paramecium import ParameciumInterface
 from holypipette.gui.manipulator import ManipulatorGui
 
+
+# Helper functions for drawing
+def create_painter(pixmap, color, width=1):
+    """
+    Setup a ``QPainter`` with a `QPen` of a given color and width.
+
+    Parameters
+    ----------
+    pixmap : `.QPixMap`
+        The pixmap on which to draw.
+    color : tuple
+        The 4-element tuple defining the color (R, G, B, alpha).
+    width : int
+        The width in pixels.
+
+    Returns
+    -------
+    painter : `~.QtGui.QPainter`
+        The painter that can be used for drawing on the pixmap.
+    """
+    painter = QtGui.QPainter(pixmap)
+    pen = QtGui.QPen(QtGui.QColor(*color))
+    pen.setWidth(width)
+    painter.setPen(pen)
+    return painter
+
+
+def draw_contour(contour, painter, scale):
+    path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
+    for point in contour[1:]:
+        path.lineTo(QtCore.QPoint(*point[0]) / scale)
+    painter.drawPath(path)
+
+
+def draw_ellipse(painter, x, y, width, height, angle, pixel_per_um,
+                 scale):
+    width *= pixel_per_um / scale
+    height *= pixel_per_um / scale
+    rotate_by = angle * 180 / np.pi
+    painter.translate(x / scale, y / scale)
+    painter.rotate(rotate_by)
+    painter.drawEllipse(-width / 2, -height / 2, width, height)
+    painter.drawPoint(0, 0)
+    painter.rotate(-rotate_by)
+    painter.translate(-x / scale, -y / scale)
+
+
 class ParameciumGui(ManipulatorGui):
 
     paramecium_command_signal = QtCore.pyqtSignal(MethodType, object)
@@ -67,56 +114,43 @@ class ParameciumGui(ManipulatorGui):
         if pixel_per_um is None:
             pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
         # print('pixel_per_um', pixel_per_um, 'scale', scale)
-        painter = QtGui.QPainter(pixmap)
-        pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
-        pen.setWidth(3)
-        painter.setPen(pen)
+        painter = create_painter(pixmap, color=(0, 0, 200, 125), width=3)
         x, y, width, height, angle = interface.paramecium_position
-        width *= pixel_per_um/scale
-        height *= pixel_per_um/scale
-        rotate_by = angle*180/np.pi
-        painter.translate(x/scale, y/scale)
-        painter.rotate(rotate_by)
-
-        painter.drawEllipse(-width/2, -height/2, width, height)
-        painter.drawPoint(0, 0)
+        draw_ellipse(painter, x, y, width, height, angle, pixel_per_um, scale)
         painter.end()
+
+        if interface.config.draw_fitted_ellipses:
+            painter = create_painter(pixmap, color=(0, 200, 200, 125), width=2)
+            for ellipse in interface.paramecium_info['all_ellipses']:
+                x, y, width, height, angle = ellipse
+                draw_ellipse(painter, x, y, width, height, angle, pixel_per_um,
+                             scale)
+            painter.end()
+            painter = create_painter(pixmap, color=(200, 0, 200, 125), width=2)
+            for ellipse in interface.paramecium_info['good_ellipses']:
+                x, y, width, height, angle = ellipse
+                draw_ellipse(painter, x, y, width, height, angle, pixel_per_um,
+                             scale)
+            painter.end()
 
         if interface.config.draw_contours:
             # Draw all contours
-            painter = QtGui.QPainter(pixmap)
-            pen = QtGui.QPen(QtGui.QColor(200, 200, 0, 125))
-            pen.setWidth(1)
-            painter.setPen(pen)
+            painter = create_painter(pixmap, color=(200, 200, 0, 125))
             for contour in interface.paramecium_info['all_contours']:
-                path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
-                for point in contour[1:]:
-                    path.lineTo(QtCore.QPoint(*point[0]) / scale)
-                painter.drawPath(path)
+                draw_contour(contour, painter, scale)
             painter.end()
 
             # Draw unused contours that were long enough/had enough points
-            painter = QtGui.QPainter(pixmap)
-            pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-            pen.setWidth(1)
-            painter.setPen(pen)
+            painter = create_painter(pixmap, color=(200, 0, 0, 125))
             for contour in interface.paramecium_info['valid_contours']:
-                path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
-                for point in contour[1:]:
-                    path.lineTo(QtCore.QPoint(*point[0]) / scale)
-                painter.drawPath(path)
+                draw_contour(contour, painter, scale)
             painter.end()
 
             # Draw best contour
-            painter = QtGui.QPainter(pixmap)
-            pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
-            pen.setWidth(2)
-            painter.setPen(pen)
             contour = interface.paramecium_info['best_contour']
             if contour is not None:
-                path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0])/scale)
-                for point in contour[1:]:
-                    path.lineTo(QtCore.QPoint(*point[0])/scale)
-                painter.drawPath(path)
+                painter = create_painter(pixmap, color=(0, 200, 0, 125),
+                                         width=2)
+                draw_contour(contour, painter, scale)
                 painter.end()
 

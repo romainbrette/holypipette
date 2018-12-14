@@ -167,6 +167,8 @@ class ParameciumTracker(object):
         info['all_contours'] = []
         info['valid_contours'] = []
         info['fitted_contours'] = []
+        info['all_ellipses'] = []
+        info['good_ellipses'] = []
         for contour, hierarchy in zip(contours, hierarchies[0, :, :]):
             # Translate contour back to original pixel values
             contour_pixel = np.array(contour)*ratio
@@ -178,12 +180,14 @@ class ParameciumTracker(object):
                     x, y = x*ratio, y*ratio
                     MA, ma = MA/pixel_per_um, ma/pixel_per_um
                     dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
+                    angle = (theta + 90) * pi / 180.
+                    info['all_ellipses'].append((x, y, MA, ma, angle))
                     if (MA > self.config.min_length and ma > self.config.min_width and
                             MA < self.config.max_length and ma < self.config.max_width and
                             MA > 1.5*ma):
                         info['fitted_contours'].append(contour_pixel)
-                        angle = (theta+90)*pi/180.
                         ellipses.append((x, y, MA, ma, angle, dist))
+                        info['good_ellipses'].append((x, y, MA, ma, angle))
             except cv2.error:
                 continue
 

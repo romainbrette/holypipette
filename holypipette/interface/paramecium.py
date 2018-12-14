@@ -29,12 +29,13 @@ class ParameciumConfig(Config):
 
     # For debugging
     draw_contours = Boolean(False, doc='Draw contours?')
+    draw_fitted_ellipses = Boolean(False, doc='Draw fitted ellipses?')
 
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
                   ('Manipulation', ['working_distance']),
                   ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time']),
-                  ('Debugging', ['draw_contours'])]
+                  ('Debugging', ['draw_contours', 'draw_fitted_ellipses'])]
 
 
 class CalibratedUnitProxy(object):
