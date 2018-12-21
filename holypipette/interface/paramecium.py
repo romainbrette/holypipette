@@ -133,6 +133,29 @@ class ParameciumInterface(TaskInterface):
         position = position * self.controller.microscope.up_direction # so that >0 means above
         self.info('z position: {} um above floor'.format(position))
 
+    @command(category='Paramecium',
+             description='Detect contact with water')
+    def detect_contact(self):
+        '''
+        Detects contact of the pipette with water.
+        '''
+        # Region of interest = 20 x 20 um around pipette tip
+        x,y,_ = self.calibrated_unit.reference_position()
+        image = self.camera.snap()
+        height, width = image.shape[:2]
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
+        frame_width = 20*pixel_per_um
+        frame_height = 20*pixel_per_um
+        frame = image[int(y+height/2-frame_height/2):int(y+height/2+frame_height/2),
+                int(x+width/2-frame_width/2):int(x+width/2+frame_width/2)] # is there a third dimension?
+
+        # Mean intensity and contrast of the image
+        mean = frame.mean()
+        contrast = frame.std()/mean
+        self.info('Mean: {} ; Contrast: {}'.format(mean, contrast))
+
     def track_paramecium(self, frame):
         if not self.tracking:
             return

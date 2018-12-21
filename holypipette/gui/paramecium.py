@@ -26,6 +26,7 @@ class ParameciumGui(ManipulatorGui):
                                                         camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
+        self.display_edit_funcs.append(self.show_tip)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
@@ -52,6 +53,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.display_z_manipulator)
         self.register_key_action(Qt.Key_K, None,
                                  self.paramecium_interface.automatic_experiment)
+        self.register_key_action(Qt.Key_N, None,
+                                 self.paramecium_interface.detect_contact)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)
@@ -80,4 +83,26 @@ class ParameciumGui(ManipulatorGui):
 
         painter.drawEllipse(-width/2, -height/2, width, height)
         painter.drawPoint(0, 0)
+        painter.end()
+
+    def show_tip(self, pixmap):
+        # Show the tip of the electrode
+        scale = 1.0 * self.camera.width / pixmap.size().width()
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
+        pen.setWidth(3)
+        painter.setPen(pen)
+
+        interface = self.paramecium_interface
+        x, y, _ = interface.calibrated_unit.reference_position()
+        x+=self.camera.width/2
+        y+=self.camera.height/2
+        width = 20 * pixel_per_um / scale
+        height = 20 * pixel_per_um / scale
+        painter.translate(x / scale, y / scale)
+
+        painter.drawRect(-width / 2, -height / 2, width, height)
         painter.end()
