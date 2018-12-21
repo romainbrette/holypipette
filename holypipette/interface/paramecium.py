@@ -146,14 +146,14 @@ class ParameciumInterface(TaskInterface):
         pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
         if pixel_per_um is None:
             pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
-        frame_width = 20*pixel_per_um
-        frame_height = 20*pixel_per_um
+        frame_width = 50*pixel_per_um
+        frame_height = 50*pixel_per_um
         frame = image[int(y+height/2-frame_height/2):int(y+height/2+frame_height/2),
                 int(x+width/2-frame_width/2):int(x+width/2+frame_width/2)] # is there a third dimension?
 
         # Mean intensity and contrast of the image
         mean = frame.mean()
-        contrast = frame.std()/mean
+        contrast = frame.std()
         self.info('Mean: {} ; Contrast: {}'.format(mean, contrast))
 
     def track_paramecium(self, frame):

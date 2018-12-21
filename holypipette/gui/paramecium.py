@@ -87,6 +87,7 @@ class ParameciumGui(ManipulatorGui):
 
     def show_tip(self, pixmap):
         # Show the tip of the electrode
+        interface = self.paramecium_interface
         scale = 1.0 * self.camera.width / pixmap.size().width()
         pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
         if pixel_per_um is None:
@@ -96,7 +97,6 @@ class ParameciumGui(ManipulatorGui):
         pen.setWidth(3)
         painter.setPen(pen)
 
-        interface = self.paramecium_interface
         x, y, _ = interface.calibrated_unit.reference_position()
         x+=self.camera.width/2
         y+=self.camera.height/2
