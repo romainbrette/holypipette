@@ -55,6 +55,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.automatic_experiment)
         self.register_key_action(Qt.Key_N, None,
                                  self.paramecium_interface.detect_contact)
+        self.register_key_action(Qt.Key_U, None,
+                                 self.paramecium_interface.focus)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)

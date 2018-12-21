@@ -75,6 +75,12 @@ class ParameciumInterface(TaskInterface):
         self.execute(self.controller.calibrated_unit.safe_move, argument=position)
 
     @command(category='Paramecium',
+                     description='Focus on tip')
+    def focus(self):
+        z = self.calibrated_unit.reference_position()[2]
+        self.controller.microscope.absolute_move(z)
+
+    @command(category='Paramecium',
                      description='Perform automatic experiment')
     def automatic_experiment(self):
         self.automate = not self.automate
