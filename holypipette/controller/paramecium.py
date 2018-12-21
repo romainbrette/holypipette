@@ -1,5 +1,5 @@
 from .base import TaskController
-
+from time import sleep
 
 class ParameciumController(TaskController):
     def __init__(self, calibrated_unit, microscope,
@@ -33,26 +33,38 @@ class ParameciumController(TaskController):
         frame_width = 50*pixel_per_um
         frame_height = 50*pixel_per_um
 
+        # Refocus on tip
+        #z = self.calibrated_unit.reference_position()[2]
+        #self.microscope.absolute_move(z)
+        #self.microscope.wait_until_still()
+
         # Take image of ROI
         image = self.camera.snap()
         frame = image[int(y+height/2-frame_height/2):int(y+height/2+frame_height/2),
                 int(x+width/2-frame_width/2):int(x+width/2+frame_width/2)] # is there a third dimension?
         # Mean intensity and contrast of the image
         mean = mean0 = frame.mean()
-        std = frame.std()
+        std = std0 = frame.std()
 
         i = 0
-        while (abs(mean-mean0)<std) and (i<20):
+        while (std<std0*1.3) and (i<20):
+            mean0=mean
+            #z = self.calibrated_unit.reference_position()[2]
             self.calibrated_unit.relative_move(-step_size*self.calibrated_unit.up_direction[2], 2)
-            self.calibrated_unit.wait_until_still()
+            #self.microscope.absolute_move(z)
+            #self.calibrated_unit.wait_until_still(2)
+            sleep(0.2)
+            #self.microscope.wait_until_still()
             image = self.camera.snap()
             frame = image[int(y + height / 2 - frame_height / 2):int(y + height / 2 + frame_height / 2),
                     int(x + width / 2 - frame_width / 2):int(
                         x + width / 2 + frame_width / 2)]  # is there a third dimension?
             # Mean intensity and contrast of the image
             mean = frame.mean()
+            std = frame.std()
+            self.info('Mean = {}; Std = {}'.format(mean,std))
             i+=1
-        if abs(mean-mean0)<std:
+        if std>std0*1.5:
             self.info("Successful contact with water surface")
         else:
             self.info("Failed contact with water surface")

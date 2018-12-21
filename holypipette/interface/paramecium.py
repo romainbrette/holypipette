@@ -135,7 +135,8 @@ class ParameciumInterface(TaskInterface):
         self.info('z position: {} um above floor'.format(position))
 
     @blocking_command(category='Paramecium',
-             description='Detect contact with water')
+             description='Detect contact with water',
+            task_description='Detect contact with water')
     def detect_contact(self):
         '''
         Detects contact of the pipette with water.
