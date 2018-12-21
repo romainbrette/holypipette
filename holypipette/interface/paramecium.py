@@ -58,6 +58,7 @@ class ParameciumInterface(TaskInterface):
         self.controller = ParameciumController(self.calibrated_unit,
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
+                                               camera,
                                                self.config)
         self.paramecium_position = (None, None, None, None, None, None)
         self.tracking = False
@@ -133,12 +134,14 @@ class ParameciumInterface(TaskInterface):
         position = position * self.controller.microscope.up_direction # so that >0 means above
         self.info('z position: {} um above floor'.format(position))
 
-    @command(category='Paramecium',
+    @blocking_command(category='Paramecium',
              description='Detect contact with water')
     def detect_contact(self):
         '''
         Detects contact of the pipette with water.
         '''
+        self.execute(self.controller.contact_detection)
+        """
         # Region of interest = 20 x 20 um around pipette tip
         x,y,_ = self.calibrated_unit.reference_position()
         image = self.camera.snap()
@@ -155,6 +158,7 @@ class ParameciumInterface(TaskInterface):
         mean = frame.mean()
         contrast = frame.std()
         self.info('Mean: {} ; Contrast: {}'.format(mean, contrast))
+        """
 
     def track_paramecium(self, frame):
         if not self.tracking:

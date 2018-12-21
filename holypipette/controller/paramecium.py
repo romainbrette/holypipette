@@ -3,15 +3,62 @@ from .base import TaskController
 
 class ParameciumController(TaskController):
     def __init__(self, calibrated_unit, microscope,
-                 calibrated_stage, config):
+                 calibrated_stage, camera, config):
         super(ParameciumController, self).__init__()
         self.config = config
         self.calibrated_unit = calibrated_unit
         self.calibrated_stage = calibrated_stage
         self.microscope = microscope
+        self.camera = camera
         self.paramecium_tank_position = None
 
-    # Note: this is Hoang's code but we don't use for now
+    def contact_detection(self):
+        '''
+        Moves the pipette down until it touches water.
+
+        Algorithm: move down in steps of 5 um until mean intensity has changed by at least
+        one standard deviation.
+
+        Note that the focus is untouched (maybe it should follow the tip?).
+        '''
+        step_size = 5. # in um
+        self.info("Moving the pipette down until it touches water")
+
+        # Region of interest = 20 x 20 um around pipette tip
+        x,y,_ = self.calibrated_unit.reference_position()
+        width, height = self.camera.width, self.camera.height
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
+        frame_width = 50*pixel_per_um
+        frame_height = 50*pixel_per_um
+
+        # Take image of ROI
+        image = self.camera.snap()
+        frame = image[int(y+height/2-frame_height/2):int(y+height/2+frame_height/2),
+                int(x+width/2-frame_width/2):int(x+width/2+frame_width/2)] # is there a third dimension?
+        # Mean intensity and contrast of the image
+        mean = mean0 = frame.mean()
+        std = frame.std()
+
+        i = 0
+        while (abs(mean-mean0)<std) and (i<20):
+            self.calibrated_unit.relative_move(-step_size*self.calibrated_unit.up_direction[2], 2)
+            self.calibrated_unit.wait_until_still()
+            image = self.camera.snap()
+            frame = image[int(y + height / 2 - frame_height / 2):int(y + height / 2 + frame_height / 2),
+                    int(x + width / 2 - frame_width / 2):int(
+                        x + width / 2 + frame_width / 2)]  # is there a third dimension?
+            # Mean intensity and contrast of the image
+            mean = frame.mean()
+            i+=1
+        if abs(mean-mean0)<std:
+            self.info("Successful contact with water surface")
+        else:
+            self.info("Failed contact with water surface")
+
+
+    #### Note: this is Hoang's code but we don't use for now
 
     def microdroplet_making(self):
         if self.paramecium_tank_position is None:
