@@ -199,7 +199,8 @@ class ParameciumTracker(object):
             # earlier positions as well
             # total_dist = MA_diff + ma_diff + ellipses[:, 5]
             total_dist = ellipses[:, 5]
-            best = np.argmin(total_dist)
+            #best = np.argmin(total_dist)       # closest ellipse center
+            best = np.argmax(ellipses[:, 2])   # longest ellipse
             result = ellipses[best, :5]
             self.previous.append(result)
             info['best_contour'] = info['fitted_contours'][best]
