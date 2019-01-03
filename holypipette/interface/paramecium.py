@@ -138,6 +138,17 @@ class ParameciumInterface(TaskInterface):
         self.debug('asking for autocus at {}'.format(position))
         self.execute(self.controller.autofocus, argument=position)
 
+    @blocking_command(category='Paramecium',
+                     description='Autofocus on Paramecium',
+                     task_description='Autofocus on Paramecium')
+    def autofocus_paramecium(self):
+        if self.tracking:
+            x, y = self.paramecium_position[0], self.paramecium_position[1]
+            position = np.array([x, y, self.controller.microscope.floor_Z])
+            self.debug('asking for autocus at {}'.format(position))
+            self.execute(self.controller.autofocus, argument=position)
+        else:
+            raise StandardError('Paramecium tracking must be switched on first')
 
     @command(category='Paramecium',
              description='Toggle paramecium tracking')
