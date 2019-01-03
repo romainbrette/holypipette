@@ -33,7 +33,7 @@ class ParameciumController(TaskController):
             frame = image[int(y + height / 2 - size / 2):int(y + size / 2 + size / 2),
                     int(x + width / 2 - size / 2):int(
                         x + width / 2 + size / 2)]  # is there a third dimension?
-            return frame.var()
+            return -frame.var()
 
         z = golden(image_variance, brack = bracket, tol = 0.01)
         relative_z = (z-self.microscope.floor_Z)*self.microscope.up_direction
