@@ -117,6 +117,16 @@ class ParameciumInterface(TaskInterface):
         x, y = xy_position
         self.paramecium_position = (x, y, None, None, None, None)
 
+    @blocking_command(category='Paramecium',
+                     description='Autofocus',
+                     task_description='Autofocus')
+    def autofocus(self, xy_position):
+        x, y, _ = self.controller.calibrated_unit.reference_position()
+        position = np.array([x, y, self.controller.microscope.floor_Z])
+        self.debug('asking for autocus at {}'.format(position))
+        self.execute(self.controller.autofocus, argument=position)
+
+
     @command(category='Paramecium',
              description='Toggle paramecium tracking')
     def toggle_tracking(self):

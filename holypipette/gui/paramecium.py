@@ -26,7 +26,7 @@ class ParameciumGui(ManipulatorGui):
                                                         camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
-        self.display_edit_funcs.append(self.show_tip)
+        #self.display_edit_funcs.append(self.show_tip)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
@@ -43,6 +43,8 @@ class ParameciumGui(ManipulatorGui):
                                    self.paramecium_interface.move_pipette_working_level)
         self.register_mouse_action(Qt.RightButton, Qt.ShiftModifier,
                                    self.paramecium_interface.start_tracking)
+        self.register_mouse_action(Qt.RightButton, Qt.ControlModifier,
+                                   self.paramecium_interface.autofocus)
         self.register_key_action(Qt.Key_Space, None,
                                  self.paramecium_interface.move_pipette_down)
         self.register_key_action(Qt.Key_T, None,

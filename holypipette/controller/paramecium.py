@@ -12,6 +12,12 @@ class ParameciumController(TaskController):
         self.camera = camera
         self.paramecium_tank_position = None
 
+    def autofocus(self, position):
+        '''
+        Autofocus on cell at the clicked position
+        '''
+        pass
+
     def contact_detection(self):
         '''
         Moves the pipette down until it touches water.
