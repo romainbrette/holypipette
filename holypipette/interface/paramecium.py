@@ -8,18 +8,21 @@ import numpy as np
 import time
 
 class ParameciumConfig(Config):
-    downsample = Number(3.37, bounds=(1, 32), doc='Downsampling factor for the image')
+    downsample = Number(1, bounds=(1, 32), doc='Downsampling factor for the image')
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
     max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
-    blur_size = NumberWithUnit(15, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
-    minimum_contour = NumberWithUnit(200, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
-    min_length = NumberWithUnit(75, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
-    max_length = NumberWithUnit(150, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
-    min_width = NumberWithUnit(40, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
-    max_width = NumberWithUnit(55, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
-    max_displacement = NumberWithUnit(100, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
-    autofocus_size = NumberWithUnit(150, bounds=(0, 1000), doc='Size of bounding box for autofocus', unit='µm')
-    autofocus_sleep = NumberWithUnit(0.1, bounds=(0, 1), doc='Sleep time autofocus', unit='s')
+    blur_size = NumberWithUnit(5, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
+    minimum_contour = NumberWithUnit(100, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
+    min_length = NumberWithUnit(65, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
+    max_length = NumberWithUnit(170, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
+    min_width = NumberWithUnit(30, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
+    max_width = NumberWithUnit(60, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
+    max_displacement = NumberWithUnit(200, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
+    autofocus_size = NumberWithUnit(150, bounds=(0, 1000),
+                                    doc='Size of bounding box for autofocus',
+                                    unit='µm')
+    autofocus_sleep = NumberWithUnit(0.1, bounds=(0, 1),
+                                     doc='Sleep time autofocus', unit='s')
 
     # Automatic experiment
     minimum_stop_time = NumberWithUnit(300, bounds=(0, 5000), doc='Time before starting automation', unit='s')
