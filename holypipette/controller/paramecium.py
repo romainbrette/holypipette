@@ -1,6 +1,7 @@
 from .base import TaskController
 from time import sleep
-from scipy.optimize import golden
+from scipy.optimize import golden, minimize_scalar
+from numpy import array,arange
 
 class ParameciumController(TaskController):
     def __init__(self, calibrated_unit, microscope,
@@ -24,18 +25,29 @@ class ParameciumController(TaskController):
         width, height = self.camera.width, self.camera.height
 
         x, y, z = position
-        bracket = (z-200., z+200.) # 200 um around the current focus position
+        bracket = (z-100., z+100.) # 200 um around the current focus position
 
         def image_variance(z):
             self.microscope.absolute_move(z)
             sleep(self.config.autofocus_sleep) # more?
             image = self.camera.snap()
-            frame = image[int(y + height / 2 - size / 2):int(y + size / 2 + size / 2),
+            frame = image[int(y + height / 2 - size / 2):int(y + height / 2 + size / 2),
                     int(x + width / 2 - size / 2):int(
                         x + width / 2 + size / 2)]  # is there a third dimension?
-            return -frame.var()
+            variance = frame.var()
+            print z,variance
+            return -variance
 
-        z = golden(image_variance, brack = bracket, tol = 0.01)
+        z = golden(image_variance, brack = bracket, tol = 0.0001)
+        #z = minimize_scalar(image_variance, bounds=bracket, tol=0.01, method='bounded')
+        #zlist = arange(z-100., z+100.,20)
+        #variances = -array([image_variance(z0) for z0 in zlist])
+        #i = variances.argmax()
+        #z = zlist[i]
+        print z
+        self.microscope.absolute_move(z)
+        sleep(self.config.autofocus_sleep)
+
         relative_z = (z-self.microscope.floor_Z)*self.microscope.up_direction
 
         self.debug('Focused at position {} above floor'.format(relative_z))

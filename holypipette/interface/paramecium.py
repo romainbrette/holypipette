@@ -21,7 +21,7 @@ class ParameciumConfig(Config):
     autofocus_size = NumberWithUnit(150, bounds=(0, 1000),
                                     doc='Size of bounding box for autofocus',
                                     unit='µm')
-    autofocus_sleep = NumberWithUnit(0.1, bounds=(0, 1),
+    autofocus_sleep = NumberWithUnit(0.5, bounds=(0, 1),
                                      doc='Sleep time autofocus', unit='s')
 
     # Automatic experiment
@@ -133,8 +133,8 @@ class ParameciumInterface(TaskInterface):
                      description='Autofocus',
                      task_description='Autofocus')
     def autofocus(self, xy_position):
-        x, y, _ = self.controller.calibrated_unit.reference_position()
-        position = np.array([x, y, self.controller.microscope.floor_Z])
+        x, y = xy_position
+        position = np.array([x, y, self.controller.microscope.position()])
         self.debug('asking for autocus at {}'.format(position))
         self.execute(self.controller.autofocus, argument=position)
 
