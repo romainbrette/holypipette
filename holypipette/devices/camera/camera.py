@@ -163,20 +163,31 @@ class FakeCamera(Camera):
 
 
 class RecordedVideoCamera(Camera):
-    def __init__(self, file_name, pixel_per_um):
+    def __init__(self, file_name, pixel_per_um, slowdown=1):
         super(RecordedVideoCamera, self).__init__()
         self.file_name = file_name
         self.video = cv2.VideoCapture(file_name)
         self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.pixel_per_um = pixel_per_um
+        # counter to repeatedly return the same image in case of slowdown
+        self._counter = 0
+        self._frame = None
+        self.slowdon = slowdown
 
     def snap(self):
-        success, frame = self.video.read()
-        if not success:
-            # Reopen the file
-            self.video.open(self.file_name)
+        self._counter += 1
+        if self._frame is None or self._counter >= self.slowdon:
             success, frame = self.video.read()
+            self._frame = frame
+            self._counter = 0
             if not success:
-                raise ValueError('Cannot read from file %s.' % self.file_name)
+                # Reopen the file
+                self.video.open(self.file_name)
+                success, frame = self.video.read()
+                if not success:
+                    raise ValueError(
+                        'Cannot read from file %s.' % self.file_name)
+        else:
+            return self._frame
         return frame
