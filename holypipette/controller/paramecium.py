@@ -35,7 +35,6 @@ class ParameciumController(TaskController):
                     int(x + width / 2 - size / 2):int(
                         x + width / 2 + size / 2)]  # is there a third dimension?
             variance = frame.var()
-            print z,variance
             return -variance
 
         z = golden(image_variance, brack = bracket, tol = 0.0001)
@@ -44,7 +43,6 @@ class ParameciumController(TaskController):
         #variances = -array([image_variance(z0) for z0 in zlist])
         #i = variances.argmax()
         #z = zlist[i]
-        print z
         self.microscope.absolute_move(z)
         sleep(self.config.autofocus_sleep)
 
