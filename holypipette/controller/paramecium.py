@@ -1,5 +1,6 @@
 from .base import TaskController
 from time import sleep
+from scipy.optimize import golden
 
 class ParameciumController(TaskController):
     def __init__(self, calibrated_unit, microscope,
@@ -16,7 +17,28 @@ class ParameciumController(TaskController):
         '''
         Autofocus on cell at the clicked position
         '''
-        pass
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
+        size = self.config.autofocus_size * pixel_per_um
+        width, height = self.camera.width, self.camera.height
+
+        x, y, z = position
+        bracket = (z-200., z+200.) # 200 um around the current focus position
+
+        def image_variance(z):
+            self.microscope.absolute_move(z)
+            sleep(self.config.autofocus_sleep) # more?
+            image = self.camera.snap()
+            frame = image[int(y + height / 2 - size / 2):int(y + size / 2 + size / 2),
+                    int(x + width / 2 - size / 2):int(
+                        x + width / 2 + size / 2)]  # is there a third dimension?
+            return frame.var()
+
+        z = golden(image_variance, brack = bracket, tol = 0.01)
+        relative_z = (z-self.microscope.floor_Z)*self.microscope.up_direction
+
+        self.debug('Focused at position {} above floor'.format(relative_z))
 
     def contact_detection(self):
         '''

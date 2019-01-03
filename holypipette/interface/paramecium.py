@@ -18,6 +18,8 @@ class ParameciumConfig(Config):
     min_width = NumberWithUnit(40, bounds=(0, 1000), doc='Minimum width for ellipsis', unit='µm')
     max_width = NumberWithUnit(55, bounds=(0, 1000), doc='Maximum width for ellipsis', unit='µm')
     max_displacement = NumberWithUnit(100, bounds=(0, 1000), doc='Maximum displacement over one frame', unit='µm')
+    autofocus_size = NumberWithUnit(150, bounds=(0, 1000), doc='Size of bounding box for autofocus', unit='µm')
+    autofocus_sleep = NumberWithUnit(0.1, bounds=(0, 1), doc='Sleep time autofocus', unit='s')
 
     # Automatic experiment
     minimum_stop_time = NumberWithUnit(300, bounds=(0, 5000), doc='Time before starting automation', unit='s')
@@ -29,7 +31,7 @@ class ParameciumConfig(Config):
 
     categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
-                  ('Manipulation', ['working_distance']),
+                  ('Manipulation', ['working_distance','autofocus_size','autofocus_sleep']),
                   ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time'])]
 
 
