@@ -10,6 +10,7 @@ import collections
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from time import time
 
 from numpy import zeros,uint8,pi, uint16, around
 
@@ -103,6 +104,7 @@ class ParameciumTracker(object):
         self.config = config
         self.previous = RecentPositions(maxlen=history_size)
         self.pixel_per_um = None
+        self.min_grad = self.max_grad = None
 
     def locate(self, frame, pixel_per_um):
         '''
@@ -120,6 +122,27 @@ class ParameciumTracker(object):
         x, y, MA, ma, angle : Position and size of fitted ellipse
         '''
         self.pixel_per_um = pixel_per_um
+        height, width = frame.shape[:2]
+
+        # Previous position
+        if len(self.previous):
+            previous = self.previous[-1]
+            (previous_x, previous_y, previous_MA, previous_ma, previous_angle) = previous
+            # Crop
+            radius = int((self.config.max_displacement + self.config.max_length / 2) * pixel_per_um)
+            xmin = int(max(0, previous_x - radius))
+            ymin = int(max(0, previous_y - radius))
+            xmax = int(min(width - 1, previous_x + radius))
+            ymax = int(min(height - 1, previous_y + radius))
+            frame = frame[ymin:ymax, xmin:xmax]
+        else:
+            previous = (width / 2, height/2,
+                        (self.config.min_length + self.config.max_length)/2,
+                        (self.config.min_width + self.config.max_width)/2,
+                        0.0)
+            (previous_x, previous_y, previous_MA, previous_ma, previous_angle) = previous
+            xmin = ymin = 0
+
         # Resize
         height, width = frame.shape[:2]
         ratio = pixel_per_um / self.config.target_pixelperum
@@ -136,15 +159,20 @@ class ParameciumTracker(object):
         normalized_img = zeros(img.shape)
         normalized_img = cv2.normalize(img, normalized_img, 0, 255, cv2.NORM_MINMAX,
                                        dtype=cv2.CV_8UC1)
+
         # Get (simplified) intensity gradient, slightly redundant because Canny
         # algorithm will do the same thing, but having the distribution is useful to
         # use more robust quantiles instead of fixed values
-        sobel_x = cv2.Sobel(normalized_img, cv2.CV_64F, 1, 0)
-        sobel_y = cv2.Sobel(normalized_img, cv2.CV_64F, 0, 1)
-        intensity_grad = np.abs(sobel_x) + np.abs(sobel_y)
-        min_grad, max_grad = np.percentile(intensity_grad.flat,
-                                           [self.config.min_gradient,
-                                            self.config.max_gradient])
+        if self.min_grad is None:
+            # This is very time consuming so we only do it once
+            sobel_x = cv2.Sobel(normalized_img, cv2.CV_64F, 1, 0)
+            sobel_y = cv2.Sobel(normalized_img, cv2.CV_64F, 0, 1)
+            intensity_grad = np.abs(sobel_x) + np.abs(sobel_y)
+            self.min_grad, self.max_grad = np.percentile(intensity_grad.flat,
+                                               [self.config.min_gradient,
+                                                self.config.max_gradient])
+        min_grad, max_grad = self.min_grad, self.max_grad
+
         # Extract edges
         canny = cv2.Canny(normalized_img, min_grad, max_grad)
 
@@ -153,15 +181,6 @@ class ParameciumTracker(object):
         # Find contours
         ret = cv2.findContours(canny, 1, 2)
         contours, hierarchies = ret[-2], ret[-1] # for compatibility with opencv2 and 3
-
-        if len(self.previous):
-            previous = self.previous[-1]
-        else:
-            previous = (width / 2, height/2,
-                        (self.config.min_length + self.config.max_length)/2,
-                        (self.config.min_width + self.config.max_width)/2,
-                        0.0)
-        (previous_x, previous_y, previous_MA, previous_ma, previous_angle) = previous
 
         ellipses = []
         info['all_contours'] = []
@@ -177,9 +196,9 @@ class ParameciumTracker(object):
                 if (contour.shape[0]>5) and (cv2.arcLength(contour, True) > self.config.minimum_contour*pixel_per_um): # at least 5 points
                     info['valid_contours'].append(contour_pixel)
                     (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(contour))
-                    x, y = x*ratio, y*ratio
+                    x, y = x*ratio + xmin, y*ratio + ymin
                     MA, ma = MA/pixel_per_um, ma/pixel_per_um
-                    dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5
+                    dist = ((x - previous_x) ** 2 + (y - previous_y) ** 2) ** 0.5 / pixel_per_um
                     angle = (theta + 90) * pi / 180.
                     info['all_ellipses'].append((x, y, MA, ma, angle))
                     if (MA > self.config.min_length and ma > self.config.min_width and
@@ -224,6 +243,7 @@ class ParameciumTracker(object):
 
     def clear(self):
         self.previous.clear()
+        self.min_grad = self.max_grad = None
 
 
 def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previous_x = None, previous_y = None,
