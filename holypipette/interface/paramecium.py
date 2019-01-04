@@ -8,7 +8,8 @@ import numpy as np
 import time
 
 class ParameciumConfig(Config):
-    downsample = Number(1, bounds=(1, 32), doc='Downsampling factor for the image')
+    #downsample = Number(1, bounds=(1, 32), doc='Downsampling factor for the image')
+    target_pixelperum = Number(0.5, bounds=(0, 4), doc='Target number of pixel per um')
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
     max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
     blur_size = NumberWithUnit(5, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
@@ -36,7 +37,7 @@ class ParameciumConfig(Config):
     draw_contours = Boolean(False, doc='Draw contours?')
     draw_fitted_ellipses = Boolean(False, doc='Draw fitted ellipses?')
 
-    categories = [('Tracking', ['downsample','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
+    categories = [('Tracking', ['target_pixelperum','min_gradient', 'max_gradient', 'blur_size', 'minimum_contour',
                                 'min_length', 'max_length', 'min_width', 'max_width', 'max_displacement']),
                   ('Manipulation', ['working_distance','autofocus_size','autofocus_sleep']),
                   ('Automation', ['stop_duration', 'stop_amplitude', 'minimum_stop_time']),

@@ -122,7 +122,7 @@ class ParameciumTracker(object):
         self.pixel_per_um = pixel_per_um
         # Resize
         height, width = frame.shape[:2]
-        ratio = self.config.downsample
+        ratio = pixel_per_um / self.config.target_pixelperum
         resized = cv2.resize(frame, (int(width/ratio), int(height/ratio)))
         pixel_per_um = pixel_per_um/ratio
 
