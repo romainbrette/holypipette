@@ -149,18 +149,25 @@ class ParameciumInterface(TaskInterface):
                 pipette1 = right_pipette
                 pipette2 = left_pipette
 
-            # Move pipette 1
-            position = np.array([x1, y1, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 1 to {}'.format(position))
-            self.calibrated_units[pipette1].reference_move(position)
+            # Move pipette 1, except the x axis
+            position1 = np.array([x1, y1, self.controller.microscope.floor_Z])
+            self.debug('asking for direct move of pipette 1 to {}'.format(position1))
+            self.calibrated_units[pipette1].reference_move_not_X(position1)
 
-            # Move pipette 2
-            position = np.array([x2, y2, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 2 to {}'.format(position))
-            self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
+            # Move pipette 2, except the x axis
+            position2 = np.array([x2, y2, self.controller.microscope.floor_Z])
+            self.debug('asking for direct move of pipette 2 to {}'.format(position2))
+            self.calibrated_units[pipette2].reference_move_not_X(position2)
 
-            # Clearing history ; the manipulation can be done again
-            self.previous_shift_click = None
+            # Wait until motors are stopped
+            self.calibrated_units[pipette1].wait_until_still()
+            self.calibrated_units[pipette2].wait_until_still()
+
+            # Final movements
+            self.calibrated_units[pipette1].reference_move(position1)
+            self.calibrated_units[pipette2].reference_move(position2)
+
+            #self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
 
     @command(category='Paramecium',
                      description='Focus on tip')

@@ -143,6 +143,22 @@ class CalibratedUnit(ManipulatorUnit):
         u = self.position() # position vector in manipulator unit system
         return dot(self.M, u) + self.r0 + self.stage.reference_position()
 
+    def reference_move_not_X(self, r, safe = False):
+        '''
+        Moves the unit to position r in reference camera system, without moving the stage,
+        but without moving the X axis (so this can be done last).
+
+        Parameters
+        ----------
+        r : XYZ position vector in um
+        safe : if True, moves the Z axis first or last, so as to avoid touching the coverslip
+        '''
+        if not self.calibrated:
+            raise CalibrationError
+        u = dot(self.Minv, r-self.stage.reference_position()-self.r0)
+        u[0] = self.position(axis=0)
+        self.absolute_move(u)
+
     def reference_move(self, r, safe = False):
         '''
         Moves the unit to position r in reference camera system, without moving the stage.
