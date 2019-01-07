@@ -81,6 +81,7 @@ class ParameciumInterface(TaskInterface):
         self.automate = False
         self.paramecium_tracker = ParameciumTracker(self.config)
         self.previous_shift_click = None
+        self.shift_click_time = time.time()-1e6 # a long time ago
 
     @blocking_command(category='Paramecium',
                      description='Move pipettes to Paramecium',
@@ -122,28 +123,13 @@ class ParameciumInterface(TaskInterface):
                      description='Move pipettes to position at floor level',
                      task_description='Moving pipettes to position at floor level')
     def move_pipette_floor(self, xy_position):
-        if self.previous_shift_click is None:
+        t = time.time()
+        if t-self.shift_click_time > 5.: # 5 second time-out; could be in config
             self.previous_shift_click = xy_position
+            self.shift_click_time = t
             self.debug('Storing position {} for future movement'.format(xy_position))
             self.execute(self.controller.sleep, argument=0.1)
         else:
-            """
-            # Move pipette 1
-            x, y = self.previous_shift_click
-            position = np.array([x, y, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 1 to {}'.format(position))
-            #self.execute(self.calibrated_units[0].safe_move, argument=position)
-            self.calibrated_units[0].reference_move(position)
-
-            # Move pipette 2
-            x, y = xy_position
-            position = np.array([x, y, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 2 to {}'.format(position))
-            self.execute(self.calibrated_units[1].reference_move, argument=position)
-
-            # Clearing history ; the manipulation can be done again
-            self.previous_shift_click = None
-            """
             # Check which pipette is on the right
             orientation = [cardinal_points[self.calibrated_units[i].pipette_position][1] for i in [0, 1]]
             if orientation[0] == 2:  # east
