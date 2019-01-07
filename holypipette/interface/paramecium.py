@@ -6,6 +6,7 @@ from holypipette.vision.paramecium_tracking import ParameciumTracker
 
 import numpy as np
 import time
+from numpy import cos,sin
 
 class ParameciumConfig(Config):
     #downsample = Number(1, bounds=(1, 32), doc='Downsampling factor for the image')
@@ -77,15 +78,30 @@ class ParameciumInterface(TaskInterface):
         self.follow_paramecium = False
         self.automate = False
         self.paramecium_tracker = ParameciumTracker(self.config)
+        self.previous_shift_click = None
 
     @blocking_command(category='Paramecium',
-                     description='Move pipette down to position at floor level',
-                     task_description='Moving pipette to position at floor level')
+                     description='Move pipettes down to position at floor level',
+                     task_description='Moving pipettes to position at floor level')
     def move_pipette_floor(self, xy_position):
-        x, y = xy_position
-        position = np.array([x, y, self.controller.microscope.floor_Z])
-        self.debug('asking for safe move to {}'.format(position))
-        self.execute(self.controller.calibrated_unit.safe_move, argument=position)
+        if self.previous_shift_click is None:
+            self.previous_shift_click = xy_position
+            self.debug('Storing position {} for future movement'.format(xy_position))
+        else:
+            # Move pipette 1
+            x, y = self.previous_shift_click
+            position = np.array([x, y, self.controller.microscope.floor_Z])
+            self.debug('asking for safe move of pipette 1 to {}'.format(position))
+            self.execute(self.controller.calibrated_units[0].safe_move, argument=position)
+
+            # Move pipette 2
+            x, y = xy_position
+            position = np.array([x, y, self.controller.microscope.floor_Z])
+            self.debug('asking for safe move of pipette 2 to {}'.format(position))
+            self.execute(self.controller.calibrated_units[1].safe_move, argument=position)
+
+            # Clearing history ; the manipulation can be done again
+            self.previous_shift_click = None
 
     @command(category='Paramecium',
                      description='Focus on tip')
@@ -104,6 +120,15 @@ class ParameciumInterface(TaskInterface):
         else:
             self.debug('Automatic experiment cancelled')
         self.automate_t0 = time.time()
+
+    #@blocking_command(category='Manipulators',
+    #                 description='Move both pipettes to Paramecium',
+    #                 task_description='Move both pipettes to Paramecium')
+    #def move_pipettes_to_paramecium(self):
+    #    x, y = xy_position
+    #    position = np.array([x, y, self.microscope.position()])
+    #    self.debug('asking for safe move to {}'.format(position))
+    #    self.execute(self.calibrated_unit.safe_move, argument=position)
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at working distance level',
@@ -182,24 +207,6 @@ class ParameciumInterface(TaskInterface):
         Detects contact of the pipette with water.
         '''
         self.execute(self.controller.contact_detection)
-        """
-        # Region of interest = 20 x 20 um around pipette tip
-        x,y,_ = self.calibrated_unit.reference_position()
-        image = self.camera.snap()
-        height, width = image.shape[:2]
-        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
-        if pixel_per_um is None:
-            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
-        frame_width = 50*pixel_per_um
-        frame_height = 50*pixel_per_um
-        frame = image[int(y+height/2-frame_height/2):int(y+height/2+frame_height/2),
-                int(x+width/2-frame_width/2):int(x+width/2+frame_width/2)] # is there a third dimension?
-
-        # Mean intensity and contrast of the image
-        mean = frame.mean()
-        contrast = frame.std()
-        self.info('Mean: {} ; Contrast: {}'.format(mean, contrast))
-        """
 
     def track_paramecium(self, frame):
         if not self.tracking:
@@ -210,13 +217,12 @@ class ParameciumInterface(TaskInterface):
         if pixel_per_um is None:
             pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
         result = self.paramecium_tracker.locate(frame, pixel_per_um=pixel_per_um)
-        # Reject fast moves (TODO: 1) divide by dt; 2) time since Paramecium was lost); 3) take into account stage)
         if result[0] is not None:
-            if self.paramecium_position[0] is None:
-                self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
-            elif np.sum((np.array(result[:2])-np.array(self.paramecium_position[:2]))**2)\
-                    <(self.config.max_displacement*pixel_per_um)**2:
-                self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
+            # Center position
+            self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
+            # Position of second electrode
+            self.paramecium_tip2_position = (result.x+cos(result.angle)*result.MA*.15,
+                                             result.y+sin(result.angle)*result.MA*.15)
         self.paramecium_info = result.info
 
         # Detect if it stops (TODO: analyze angle)

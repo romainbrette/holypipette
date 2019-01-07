@@ -191,6 +191,8 @@ class ParameciumTracker(object):
         for contour, hierarchy in zip(contours, hierarchies[0, :, :]):
             # Translate contour back to original pixel values
             contour_pixel = np.array(contour)*ratio
+            contour_pixel[:,:,0]+=xmin
+            contour_pixel[:,:,1]+=ymin
             info['all_contours'].append(contour_pixel)
             try:
                 if (contour.shape[0]>5) and (cv2.arcLength(contour, True) > self.config.minimum_contour*pixel_per_um): # at least 5 points
@@ -202,8 +204,7 @@ class ParameciumTracker(object):
                     angle = (theta + 90) * pi / 180.
                     info['all_ellipses'].append((x, y, MA, ma, angle))
                     if (MA > self.config.min_length and ma > self.config.min_width and
-                            MA < self.config.max_length and ma < self.config.max_width and
-                            MA > 1.5*ma):
+                            MA < self.config.max_length and ma < self.config.max_width):
                         info['fitted_contours'].append(contour_pixel)
                         ellipses.append((x, y, MA, ma, angle, dist))
                         info['good_ellipses'].append((x, y, MA, ma, angle))
