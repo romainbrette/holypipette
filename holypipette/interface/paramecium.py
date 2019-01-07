@@ -67,6 +67,7 @@ class ParameciumInterface(TaskInterface):
         self.config = ParameciumConfig(name='Paramecium')
         self.camera = camera
         self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
+        self.calibrated_units = pipette_interface.calibrated_units
         self.controller = ParameciumController(self.calibrated_unit,
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
@@ -87,18 +88,20 @@ class ParameciumInterface(TaskInterface):
         if self.previous_shift_click is None:
             self.previous_shift_click = xy_position
             self.debug('Storing position {} for future movement'.format(xy_position))
+            self.execute(self.controller.sleep, argument=0.1)
         else:
             # Move pipette 1
             x, y = self.previous_shift_click
             position = np.array([x, y, self.controller.microscope.floor_Z])
             self.debug('asking for safe move of pipette 1 to {}'.format(position))
-            self.execute(self.controller.calibrated_units[0].safe_move, argument=position)
+            #self.execute(self.calibrated_units[0].safe_move, argument=position)
+            self.calibrated_units[0].safe_move(position)
 
             # Move pipette 2
             x, y = xy_position
             position = np.array([x, y, self.controller.microscope.floor_Z])
             self.debug('asking for safe move of pipette 2 to {}'.format(position))
-            self.execute(self.controller.calibrated_units[1].safe_move, argument=position)
+            self.execute(self.calibrated_units[1].safe_move, argument=position)
 
             # Clearing history ; the manipulation can be done again
             self.previous_shift_click = None
