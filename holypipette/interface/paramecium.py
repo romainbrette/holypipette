@@ -87,7 +87,7 @@ class ParameciumInterface(TaskInterface):
                      task_description='Moving pipettes to Paramecium')
     def move_pipettes_paramecium(self):
         # Check which pipette is on the right
-        orientation = [cardinal_points(self.calibrated_units[i].pipette_position)[1] for i in [0,1]]
+        orientation = [cardinal_points[self.calibrated_units[i].pipette_position][1] for i in [0,1]]
         if orientation[0] == 2: # east
             right_pipette = 0
             left_pipette = 1
@@ -145,7 +145,7 @@ class ParameciumInterface(TaskInterface):
             self.previous_shift_click = None
             """
             # Check which pipette is on the right
-            orientation = [cardinal_points(self.calibrated_units[i].pipette_position)[1] for i in [0, 1]]
+            orientation = [cardinal_points[self.calibrated_units[i].pipette_position][1] for i in [0, 1]]
             if orientation[0] == 2:  # east
                 right_pipette = 0
                 left_pipette = 1
@@ -154,7 +154,7 @@ class ParameciumInterface(TaskInterface):
                 left_pipette = 0
 
             x1, y1 = self.previous_shift_click
-            x2, y2 = self.xy_position
+            x2, y2 = xy_position
 
             if x1 < x2:
                 pipette1 = left_pipette
