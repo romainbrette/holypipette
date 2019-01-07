@@ -93,15 +93,15 @@ class ParameciumInterface(TaskInterface):
             # Move pipette 1
             x, y = self.previous_shift_click
             position = np.array([x, y, self.controller.microscope.floor_Z])
-            self.debug('asking for safe move of pipette 1 to {}'.format(position))
+            self.debug('asking for direct move of pipette 1 to {}'.format(position))
             #self.execute(self.calibrated_units[0].safe_move, argument=position)
-            self.calibrated_units[0].safe_move(position)
+            self.calibrated_units[0].reference_move(position)
 
             # Move pipette 2
             x, y = xy_position
             position = np.array([x, y, self.controller.microscope.floor_Z])
-            self.debug('asking for safe move of pipette 2 to {}'.format(position))
-            self.execute(self.calibrated_units[1].safe_move, argument=position)
+            self.debug('asking for direct move of pipette 2 to {}'.format(position))
+            self.execute(self.calibrated_units[1].reference_move, argument=position)
 
             # Clearing history ; the manipulation can be done again
             self.previous_shift_click = None
