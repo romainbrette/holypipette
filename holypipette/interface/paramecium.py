@@ -27,7 +27,7 @@ class ParameciumConfig(Config):
                                      doc='Sleep time autofocus', unit='s')
 
     # Automatic experiment
-    minimum_stop_time = NumberWithUnit(300, bounds=(0, 5000), doc='Time before starting automation', unit='s')
+    minimum_stop_time = NumberWithUnit(0, bounds=(0, 5000), doc='Time before starting automation', unit='s')
     stop_duration= NumberWithUnit(50, bounds=(0, 1000), doc='Stopping duration before detection', unit='frames')
     stop_amplitude = NumberWithUnit(5, bounds=(0, 1000), doc='Movement threshold for detecting stop', unit='µm')
 
@@ -85,6 +85,8 @@ class ParameciumInterface(TaskInterface):
                      description='Move pipettes to Paramecium',
                      task_description='Moving pipettes to Paramecium')
     def move_pipettes_paramecium(self):
+        ## TODO: check which pipette is on the right (pipette_position)
+        ##       then look at which point is on the right
         # Move pipette 1
         x, y = self.paramecium_position[:2]
         position = np.array([x, y, self.controller.microscope.floor_Z])
@@ -143,15 +145,6 @@ class ParameciumInterface(TaskInterface):
         else:
             self.debug('Automatic experiment cancelled')
         self.automate_t0 = time.time()
-
-    #@blocking_command(category='Manipulators',
-    #                 description='Move both pipettes to Paramecium',
-    #                 task_description='Move both pipettes to Paramecium')
-    #def move_pipettes_to_paramecium(self):
-    #    x, y = xy_position
-    #    position = np.array([x, y, self.microscope.position()])
-    #    self.debug('asking for safe move to {}'.format(position))
-    #    self.execute(self.calibrated_unit.safe_move, argument=position)
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at working distance level',
@@ -255,7 +248,7 @@ class ParameciumInterface(TaskInterface):
             if self.automate and (self.automate_t0 > time.time() + self.config.minimum_stop_time):
                 position = self.paramecium_tracker.median_position()
                 self.debug("Impaling")
-                self.move_pipette_floor(position)
+                self.move_pipettes_paramecium()
                 self.automate = False
                 self.tracking = False
 
