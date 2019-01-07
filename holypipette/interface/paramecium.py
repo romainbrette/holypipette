@@ -3,6 +3,7 @@ from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.controller.paramecium import ParameciumController
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision.paramecium_tracking import ParameciumTracker
+from holypipette.vision import cardinal_points
 
 import numpy as np
 import time
@@ -85,20 +86,34 @@ class ParameciumInterface(TaskInterface):
                      description='Move pipettes to Paramecium',
                      task_description='Moving pipettes to Paramecium')
     def move_pipettes_paramecium(self):
-        ## TODO: check which pipette is on the right (pipette_position)
-        ##       then look at which point is on the right
+        # Check which pipette is on the right
+        orientation = [cardinal_points(self.calibrated_units[i].pipette_position)[1] for i in [0,1]]
+        if orientation[0] == 2: # east
+            right_pipette = 0
+            left_pipette = 1
+        else: # assuming west
+            right_pipette = 1
+            left_pipette = 0
+
+        x1, y1 = self.paramecium_position[:2]
+        x2, y2 = self.paramecium_tip2_position
+
+        if x1<x2:
+            pipette1 = left_pipette
+            pipette2 = right_pipette
+        else:
+            pipette1 = right_pipette
+            pipette2 = left_pipette
+
         # Move pipette 1
-        x, y = self.paramecium_position[:2]
-        position = np.array([x, y, self.controller.microscope.floor_Z])
+        position = np.array([x1, y1, self.controller.microscope.floor_Z])
         self.debug('asking for direct move of pipette 1 to {}'.format(position))
-        # self.execute(self.calibrated_units[0].safe_move, argument=position)
-        self.calibrated_units[0].reference_move(position)
+        self.calibrated_units[pipette1].reference_move(position)
 
         # Move pipette 2
-        x, y = self.paramecium_tip2_position
-        position = np.array([x, y, self.controller.microscope.floor_Z])
+        position = np.array([x2, y2, self.controller.microscope.floor_Z])
         self.debug('asking for direct move of pipette 2 to {}'.format(position))
-        self.execute(self.calibrated_units[1].reference_move, argument=position)
+        self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
 
         # Clearing history ; the manipulation can be done again
         self.previous_shift_click = None
@@ -112,6 +127,7 @@ class ParameciumInterface(TaskInterface):
             self.debug('Storing position {} for future movement'.format(xy_position))
             self.execute(self.controller.sleep, argument=0.1)
         else:
+            """
             # Move pipette 1
             x, y = self.previous_shift_click
             position = np.array([x, y, self.controller.microscope.floor_Z])
@@ -124,6 +140,38 @@ class ParameciumInterface(TaskInterface):
             position = np.array([x, y, self.controller.microscope.floor_Z])
             self.debug('asking for direct move of pipette 2 to {}'.format(position))
             self.execute(self.calibrated_units[1].reference_move, argument=position)
+
+            # Clearing history ; the manipulation can be done again
+            self.previous_shift_click = None
+            """
+            # Check which pipette is on the right
+            orientation = [cardinal_points(self.calibrated_units[i].pipette_position)[1] for i in [0, 1]]
+            if orientation[0] == 2:  # east
+                right_pipette = 0
+                left_pipette = 1
+            else:  # assuming west
+                right_pipette = 1
+                left_pipette = 0
+
+            x1, y1 = self.previous_shift_click
+            x2, y2 = self.xy_position
+
+            if x1 < x2:
+                pipette1 = left_pipette
+                pipette2 = right_pipette
+            else:
+                pipette1 = right_pipette
+                pipette2 = left_pipette
+
+            # Move pipette 1
+            position = np.array([x1, y1, self.controller.microscope.floor_Z])
+            self.debug('asking for direct move of pipette 1 to {}'.format(position))
+            self.calibrated_units[pipette1].reference_move(position)
+
+            # Move pipette 2
+            position = np.array([x2, y2, self.controller.microscope.floor_Z])
+            self.debug('asking for direct move of pipette 2 to {}'.format(position))
+            self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
 
             # Clearing history ; the manipulation can be done again
             self.previous_shift_click = None
