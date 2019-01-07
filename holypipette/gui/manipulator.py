@@ -106,62 +106,63 @@ class ManipulatorGui(CameraGui):
                 painter.drawText(c_x, c_y + 20, position_text.format(x, y, z))
             painter.end()
 
-    def register_commands(self):
+    def register_commands(self, manipulator_keys = True):
         super(ManipulatorGui, self).register_commands()
 
-        # Commands to move the stage
-        # Note that we do not use the automatic documentation mechanism here,
-        # as we one entry for every possible keypress
-        modifiers = [Qt.NoModifier, Qt.AltModifier, Qt.ShiftModifier]
-        distances = [10., 2.5, 50.]
-        self.help_window.register_custom_action('Stage',  'Arrows',
-                                                'Move stage')
-        self.help_window.register_custom_action('Stage',
-                                                '/'.join(QtGui.QKeySequence(mod).toString()
-                                                             if mod is not Qt.NoModifier else 'No modifier'
-                                                         for mod in modifiers),
-                                                'Move stage by ' + '/'.join(str(x) for x in distances) + ' µm')
-        self.help_window.register_custom_action('Manipulators', 'A/S/W/D',
-                                                'Move pipette by in x/y direction')
-        self.help_window.register_custom_action('Manipulators', 'Q/E',
-                                                'Move pipette by in z direction')
-        self.help_window.register_custom_action('Manipulators',
-                                                '/'.join(QtGui.QKeySequence(mod).toString()
-                                                             if mod is not Qt.NoModifier else 'No modifier'
-                                                         for mod in modifiers),
-                                                'Move pipette by ' + '/'.join(str(x) for x in distances) + ' µm')
+        if manipulator_keys:
+            # Commands to move the stage
+            # Note that we do not use the automatic documentation mechanism here,
+            # as we one entry for every possible keypress
+            modifiers = [Qt.NoModifier, Qt.AltModifier, Qt.ShiftModifier]
+            distances = [10., 2.5, 50.]
+            self.help_window.register_custom_action('Stage',  'Arrows',
+                                                    'Move stage')
+            self.help_window.register_custom_action('Stage',
+                                                    '/'.join(QtGui.QKeySequence(mod).toString()
+                                                                 if mod is not Qt.NoModifier else 'No modifier'
+                                                             for mod in modifiers),
+                                                    'Move stage by ' + '/'.join(str(x) for x in distances) + ' µm')
+            self.help_window.register_custom_action('Manipulators', 'A/S/W/D',
+                                                    'Move pipette by in x/y direction')
+            self.help_window.register_custom_action('Manipulators', 'Q/E',
+                                                    'Move pipette by in z direction')
+            self.help_window.register_custom_action('Manipulators',
+                                                    '/'.join(QtGui.QKeySequence(mod).toString()
+                                                                 if mod is not Qt.NoModifier else 'No modifier'
+                                                             for mod in modifiers),
+                                                    'Move pipette by ' + '/'.join(str(x) for x in distances) + ' µm')
 
-        for modifier, distance in zip(modifiers, distances):
-            self.register_key_action(Qt.Key_Up, modifier,
-                                     self.interface.move_stage_vertical,
-                                     argument=-distance, default_doc=False)
-            self.register_key_action(Qt.Key_Down, modifier,
-                                     self.interface.move_stage_vertical,
-                                     argument=distance, default_doc=False)
-            self.register_key_action(Qt.Key_Left, modifier,
-                                     self.interface.move_stage_horizontal,
-                                     argument=-distance, default_doc=False)
-            self.register_key_action(Qt.Key_Right, modifier,
-                                     self.interface.move_stage_horizontal,
-                                     argument=distance, default_doc=False)
-            self.register_key_action(Qt.Key_W, modifier,
-                                     self.interface.move_pipette_y,
-                                     argument=distance, default_doc=False)
-            self.register_key_action(Qt.Key_S, modifier,
-                                     self.interface.move_pipette_y,
-                                     argument=-distance, default_doc=False)
-            self.register_key_action(Qt.Key_A, modifier,
-                                     self.interface.move_pipette_x,
-                                     argument=distance, default_doc=False)
-            self.register_key_action(Qt.Key_D, modifier,
-                                     self.interface.move_pipette_x,
-                                     argument=-distance, default_doc=False)
-            self.register_key_action(Qt.Key_Q, modifier,
-                                     self.interface.move_pipette_z,
-                                     argument=distance, default_doc=False)
-            self.register_key_action(Qt.Key_E, modifier,
-                                     self.interface.move_pipette_z,
-                                     argument=-distance, default_doc=False)
+            for modifier, distance in zip(modifiers, distances):
+                self.register_key_action(Qt.Key_Up, modifier,
+                                         self.interface.move_stage_vertical,
+                                         argument=-distance, default_doc=False)
+                self.register_key_action(Qt.Key_Down, modifier,
+                                         self.interface.move_stage_vertical,
+                                         argument=distance, default_doc=False)
+                self.register_key_action(Qt.Key_Left, modifier,
+                                         self.interface.move_stage_horizontal,
+                                         argument=-distance, default_doc=False)
+                self.register_key_action(Qt.Key_Right, modifier,
+                                         self.interface.move_stage_horizontal,
+                                         argument=distance, default_doc=False)
+                self.register_key_action(Qt.Key_W, modifier,
+                                         self.interface.move_pipette_y,
+                                         argument=distance, default_doc=False)
+                self.register_key_action(Qt.Key_S, modifier,
+                                         self.interface.move_pipette_y,
+                                         argument=-distance, default_doc=False)
+                self.register_key_action(Qt.Key_A, modifier,
+                                         self.interface.move_pipette_x,
+                                         argument=distance, default_doc=False)
+                self.register_key_action(Qt.Key_D, modifier,
+                                         self.interface.move_pipette_x,
+                                         argument=-distance, default_doc=False)
+                self.register_key_action(Qt.Key_Q, modifier,
+                                         self.interface.move_pipette_z,
+                                         argument=distance, default_doc=False)
+                self.register_key_action(Qt.Key_E, modifier,
+                                         self.interface.move_pipette_z,
+                                         argument=-distance, default_doc=False)
 
 
 

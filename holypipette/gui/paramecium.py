@@ -82,7 +82,7 @@ class ParameciumGui(ManipulatorGui):
         self.add_config_gui(self.paramecium_interface.config)
 
     def register_commands(self):
-        super(ParameciumGui, self).register_commands()
+        super(ParameciumGui, self).register_commands(manipulator_keys = False)
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
                                    self.paramecium_interface.move_pipette_floor)
@@ -108,6 +108,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.focus)
         self.register_key_action(Qt.Key_B, None,
                                  self.paramecium_interface.autofocus_paramecium)
+        self.register_key_action(Qt.Key_V, None,
+                                 self.paramecium_interface.move_pipettes_paramecium)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)

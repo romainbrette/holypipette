@@ -82,7 +82,27 @@ class ParameciumInterface(TaskInterface):
         self.previous_shift_click = None
 
     @blocking_command(category='Paramecium',
-                     description='Move pipettes down to position at floor level',
+                     description='Move pipettes to Paramecium',
+                     task_description='Moving pipettes to Paramecium')
+    def move_pipettes_paramecium(self):
+        # Move pipette 1
+        x, y = self.paramecium_position[:2]
+        position = np.array([x, y, self.controller.microscope.floor_Z])
+        self.debug('asking for direct move of pipette 1 to {}'.format(position))
+        # self.execute(self.calibrated_units[0].safe_move, argument=position)
+        self.calibrated_units[0].reference_move(position)
+
+        # Move pipette 2
+        x, y = self.paramecium_tip2_position
+        position = np.array([x, y, self.controller.microscope.floor_Z])
+        self.debug('asking for direct move of pipette 2 to {}'.format(position))
+        self.execute(self.calibrated_units[1].reference_move, argument=position)
+
+        # Clearing history ; the manipulation can be done again
+        self.previous_shift_click = None
+
+    @blocking_command(category='Paramecium',
+                     description='Move pipettes to position at floor level',
                      task_description='Moving pipettes to position at floor level')
     def move_pipette_floor(self, xy_position):
         if self.previous_shift_click is None:
