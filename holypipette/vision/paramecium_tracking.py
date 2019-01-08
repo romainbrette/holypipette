@@ -165,6 +165,7 @@ class ParameciumTracker(object):
         # use more robust quantiles instead of fixed values
         if self.min_grad is None:
             # This is very time consuming so we only do it once
+            print('Calculating intensity gradients')
             sobel_x = cv2.Sobel(normalized_img, cv2.CV_64F, 1, 0)
             sobel_y = cv2.Sobel(normalized_img, cv2.CV_64F, 0, 1)
             intensity_grad = np.abs(sobel_x) + np.abs(sobel_y)
