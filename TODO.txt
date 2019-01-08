@@ -1,9 +1,6 @@
-* Separate GUIs for Paramecium and patch
-** paramecium_gui, not "tracking"
 ** separate the methods (currently in AutoPatcher + TrackingPatchGui)
 
 -----
-
 
 *** Multiple calibrations (objective)
 

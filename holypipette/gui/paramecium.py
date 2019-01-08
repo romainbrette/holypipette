@@ -13,6 +13,8 @@ from holypipette.controller import TaskController
 from holypipette.interface.paramecium import ParameciumInterface
 from holypipette.gui.manipulator import ManipulatorGui
 
+import datetime
+from time import time
 
 # Helper functions for drawing
 def create_painter(pixmap, color, width=1):
@@ -73,7 +75,7 @@ class ParameciumGui(ManipulatorGui):
                                                         camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
-        #self.display_edit_funcs.append(self.show_tip)
+        self.display_edit_funcs.append(self.display_timer)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
@@ -110,6 +112,8 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.autofocus_paramecium)
         self.register_key_action(Qt.Key_V, None,
                                  self.paramecium_interface.move_pipettes_paramecium)
+        self.register_key_action(Qt.Key_0, None,
+                                 self.paramecium_interface.reset_timer)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)
@@ -185,4 +189,18 @@ class ParameciumGui(ManipulatorGui):
         painter.translate(x / scale, y / scale)
 
         painter.drawRect(-width / 2, -height / 2, width, height)
+        painter.end()
+
+    def display_timer(self, pixmap):
+        interface = self.paramecium_interface
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        c_x, c_y = pixmap.width() / 20, pixmap.height() / 20
+        t = int(time() - interface.timer_t0)
+        hours = t//3600
+        minutes = (t-hours*3600)//60
+        seconds = t-hours*3600-minutes*60
+        painter.drawText(c_x, c_y, '{}'.format(datetime.time(hours,minutes,seconds)))
         painter.end()
