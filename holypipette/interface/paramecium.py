@@ -151,21 +151,26 @@ class ParameciumInterface(TaskInterface):
 
             # Move pipette 1, except the x axis
             position1 = np.array([x1, y1, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 1 to {}'.format(position1))
+            self.debug('Moving pipette 1 to {}'.format(position1))
             self.calibrated_units[pipette1].reference_move_not_X(position1)
 
             # Move pipette 2, except the x axis
             position2 = np.array([x2, y2, self.controller.microscope.floor_Z])
-            self.debug('asking for direct move of pipette 2 to {}'.format(position2))
+            self.debug('Moving pipette 2 to {}'.format(position2))
             self.calibrated_units[pipette2].reference_move_not_X(position2)
 
             # Wait until motors are stopped
+            self.debug('Waiting for pipette 1 to stop')
             self.calibrated_units[pipette1].wait_until_still()
+            self.debug('Waiting for pipette 2 to stop')
             self.calibrated_units[pipette2].wait_until_still()
 
             # Final movements
+            self.debug('Moving pipette 1 along X axis')
+            self.execute(self.calibrated_units[pipette1].reference_move, argument=position1)
             self.calibrated_units[pipette1].reference_move(position1)
-            self.calibrated_units[pipette2].reference_move(position2)
+            self.debug('Moving pipette 2 along X axis')
+            self.execute(self.calibrated_units[pipette2].reference_move, argument=position2)
 
             #self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
 
