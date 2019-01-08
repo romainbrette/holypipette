@@ -14,7 +14,7 @@ class ParameciumConfig(Config):
     target_pixelperum = Number(1, bounds=(0, 4), doc='Target number of pixel per um')
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
     max_gradient = NumberWithUnit(98, bounds=(0, 100), doc='Maximum gradient quantile for edge detection', unit='%')
-    blur_size = NumberWithUnit(5, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
+    blur_size = NumberWithUnit(10, bounds=(0, 100), doc='Gaussian blurring size', unit='µm')
     minimum_contour = NumberWithUnit(100, bounds=(0, 1000), doc='Minimum contour length', unit='µm')
     min_length = NumberWithUnit(65, bounds=(0, 1000), doc='Minimum length ellipsis', unit='µm')
     max_length = NumberWithUnit(170, bounds=(0, 1000), doc='Maximum length for ellipsis', unit='µm')
