@@ -153,7 +153,8 @@ class ParameciumTracker(object):
         blur_size = int(self.config.blur_size * pixel_per_um)
         if blur_size % 2 == 0:
             blur_size += 1
-        img = cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
+        #img = cv2.GaussianBlur(resized, (blur_size, blur_size), 0)
+        img = cv2.bilateralFilter(resized, blur_size, 75, 75)
 
         # Normalize image
         normalized_img = zeros(img.shape)
