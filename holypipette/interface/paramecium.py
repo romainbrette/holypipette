@@ -256,6 +256,7 @@ class ParameciumInterface(TaskInterface):
              description='Toggle paramecium following')
     def toggle_following(self):
         self.follow_paramecium = not self.follow_paramecium
+        self.debug('Following Paramecium = {}'.format(self.follow_paramecium))
         if self.follow_paramecium and not self.tracking:
             self.tracking = True
             self.paramecium_tracker.clear()
