@@ -62,7 +62,10 @@ class uManagerCamera(Camera):
         while not self.new_frame():
             sleep(0.05)
             print("no image available, waiting for 5ms")
-        frame = self.cam.getLastImage()  # What happens if there is no new frame?
+        metadata = MMCorePy.Metadata()
+        frame = self.cam.getLastImageMD(metadata)  # What happens if there is no new frame?
+        print(dir(metadata))
+        print('Keys: %s' % metadata.GetKeys())
         self.lock.release()
 
         # Check that the image is not frozen
