@@ -15,7 +15,8 @@ import numpy as np
 
 from .camera import *
 
-sys.path.append('C:\\Program Files\\Micro-Manager-1.4')
+#sys.path.append('C:\\Program Files\\Micro-Manager-1.4')
+sys.path.append('C:\\Program Files\\Micro-Manager-2.0')
 try:
     import MMCorePy
 except ImportError:
