@@ -5,7 +5,7 @@ import numpy as np
 dll_path = r'C:\Users\inters\PycharmProjects\holypipette\holypipette\devices\manipulator'
 UMP_LIB = ctypes.WinDLL(os.path.join(dll_path, 'ump.dll'))
 
-#from .manipulator import Manipulator
+from .manipulator import Manipulator
 
 __all__ = ['UMP', 'PollThread', 'UMPError']
 
@@ -83,8 +83,7 @@ class UMPError(Exception):
         self.errno = errno
         self.oserrno = oserrno
 
-
-class UMP(object):
+class UMP(Manipulator):
     _single = None
     @classmethod
     def get_ump(cls):
@@ -185,7 +184,15 @@ class UMP(object):
         timeout = ctypes.c_int(timeout)
         r = self.call('get_positions_ext', ctypes.c_int(dev), timeout, *[ctypes.byref(x) for x in xyzwe])
         n_axes = self.axis_count(dev)
-        return [x.value for x in xyzwe[:n_axes]]
+        return [(x.value)/1000 for x in xyzwe[:n_axes]]
+
+    def goto_pos(self, dev, pos, speed, block=False, simultaneous=True):
+        pos = list(pos) + [0] * (4 - len(pos))
+        mode = int(bool(simultaneous))  # all axes move simultaneously
+        args = [ctypes.c_int(int(x)) for x in [dev] + pos + [speed, mode]]
+        with self.lock:
+            self.call('goto_position_ext', *args)
+            self.handle.contents.last_status[dev] = 1  # mark this manipulator as busy
 
     def position(self, axis, timeout=None):
         (dev, axis) = axis_to_devid(axis)
@@ -198,10 +205,12 @@ class UMP(object):
             axes4[i] = self.position(axis = axes[i])
         return np.array(axes4[:len(axes)])
 
-    def absolute_move(self, x, axis, speed = 100, simultaneous=True):
+    def absolute_move(self, x, axis, speed = 10000, simultaneous=True):
         (dev, axis) = axis_to_devid(axis)
         pos = self.get_pos(dev = dev)
-        pos[axis] = x
+        for i in range (len(pos)):
+            pos[i] = pos[i]*1000
+        pos[axis] = x*1000
         pos = list(pos) + [0] * (4 - len(pos))
         mode = int(bool(simultaneous))  # all axes move simultaneously
         args = [ctypes.c_int(int(x)) for x in [dev] + pos + [speed, mode]]
@@ -209,14 +218,16 @@ class UMP(object):
             self.call('goto_position_ext', *args)
             self.handle.contents.last_status[dev] = 1  # mark this manipulator as busy
 
-    def absolute_move_group(self, x, axes, speed = 100):
+    def absolute_move_group(self, x, axes, speed = 10000):
         for i in range(len(axes)):
-            self.absolute_move(x = x[i], axis = axes[i], speed = speed)
+            self.absolute_move(1000, axis = 1, speed = speed)
             self.wait_until_still()
 
-    def relative_move(self, x, axis, speed = 100, simultaneous=True):
+    def relative_move(self, x, axis, speed = 10000, simultaneous=True):
         (dev, axis) = axis_to_devid(axis)
         pos = self.get_pos(dev = dev)
+        for i in range(len(pos)):
+            pos[i] = pos[i]*1000
         pos[axis] = pos[axis] + x
         pos = list(pos) + [0] * (4 - len(pos))
         mode = int(bool(simultaneous))  # all axes move simultaneously
@@ -335,10 +346,11 @@ class PollThread(threading.Thread):
 
 if __name__ == '__main__':
      ump = UMP.get_ump()
-     print(ump.position(axis = 1))
-     ump.absolute_move(12000000,axis = 1)
+     #print(ump.get_pos(1))
+     ump.absolute_move(x = 1000, axis = 1)
+     #ump.absolute_move_group([2500,2500,2500],[1,2,3])
      ump.wait_until_still()
-     print(ump.position(axis=1))
+     print(ump.get_pos(1))
 
 #     pos = ump.get_pos(dev = 1)
 #     print("Testing 1: ", pos)
