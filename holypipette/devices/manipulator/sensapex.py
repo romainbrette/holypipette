@@ -220,7 +220,7 @@ class UMP(Manipulator):
 
     def absolute_move_group(self, x, axes, speed = 10000):
         for i in range(len(axes)):
-            self.absolute_move(1000, axis = 1, speed = speed)
+            self.absolute_move(x[i], axes[i], speed = speed)
             self.wait_until_still()
 
     def relative_move(self, x, axis, speed = 10000, simultaneous=True):
@@ -346,16 +346,3 @@ class PollThread(threading.Thread):
 
 if __name__ == '__main__':
      ump = UMP.get_ump()
-     #print(ump.get_pos(1))
-     ump.absolute_move(x = 1000, axis = 1)
-     #ump.absolute_move_group([2500,2500,2500],[1,2,3])
-     ump.wait_until_still()
-     print(ump.get_pos(1))
-
-#     pos = ump.get_pos(dev = 1)
-#     print("Testing 1: ", pos)
-#     pos[0] -= 10000  # add 10 um to x axis
-#     ump.goto_pos(dev = 1, pos = pos, speed = 10)
-#     time.sleep(5)
-#     pos = ump.get_pos(dev = 1)
-#     print("Testing 2: ", pos)
