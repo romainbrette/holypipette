@@ -96,9 +96,9 @@ class TestGui(QtWidgets.QMainWindow):
             elif event.key() == Qt.Key_Down:
                 stage.relative_move(distance, 1)
             elif event.key() == Qt.Key_PageUp:
-                microscope.relative_move(distance)
+                microscope.relative_move(500)
             elif event.key() == Qt.Key_PageDown:
-                microscope.relative_move(-distance)
+                microscope.relative_move(-500)
             # Changing camera exposure
             elif event.key() == Qt.Key_Plus:
                 self.camera.change_exposure(2.5)

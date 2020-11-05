@@ -32,8 +32,9 @@ class PatchGui(ManipulatorGui):
         self.pressure_timer.start(50)
 
     def display_pressure(self):
-        pressure = self.patch_interface.pressure.get_pressure()
-        self.set_status_message('pressure', 'Pressure: {:.0f} mbar'.format(pressure))
+        pass
+        #pressure = self.patch_interface.pressure.get_pressure()
+        #self.set_status_message('pressure', 'Pressure: {:.0f} mbar'.format(pressure))
 
     def register_commands(self):
         super(PatchGui, self).register_commands()

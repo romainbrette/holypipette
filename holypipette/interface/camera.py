@@ -26,9 +26,10 @@ class CameraInterface(TaskInterface):
         self.updated_exposure.connect(main_gui.set_status_message)
         self.signal_updated_exposure()
         if self.with_tracking:
-            main_gui.image_edit_funcs.append(self.show_tracked_objects)
-            main_gui.image_edit_funcs.append(self.show_tracked_paramecium)
-            main_gui.image_edit_funcs.append(self.pipette_contact_detection)
+            pass
+            #main_gui.image_edit_funcs.append(self.show_tracked_objects)
+            #main_gui.image_edit_funcs.append(self.show_tracked_paramecium)
+            #main_gui.image_edit_funcs.append(self.pipette_contact_detection)
 
     def signal_updated_exposure(self):
         # Should be called by subclasses that actually support setting the exposure
@@ -121,8 +122,9 @@ class CameraInterface(TaskInterface):
         #framelet = cv2.cvtColor(framelet, cv2.COLOR_BGR2GRAY)
         otsu, _ = cv2.threshold(framelet, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         ret, thresh = cv2.threshold(framelet, otsu, 255, cv2.THRESH_BINARY_INV)
-        _, contours, _ = cv2.findContours(thresh, 1, 2)
-        cnt = contours[0]
+        contours, _ = cv2.findContours(thresh, 1, 2)
+        if contours[0] != None:
+            cnt = contours[0]
         x, y, w, h = cv2.boundingRect(cnt)
         if (w >= 1.8 * size) and (movingList.contact == False):
             movingList.contact = True

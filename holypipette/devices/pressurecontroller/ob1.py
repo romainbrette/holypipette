@@ -9,16 +9,14 @@ import os
 import sys
 from ctypes import *
 import warnings
+
 from .pressurecontroller import *
 
 # We add both versions to the path, adding a non-existing directory does not do any harm...
 sys.path.append(os.path.expanduser(r'~\Elveflow SDK V3_01_11\python_64').encode('utf-8'))
 sys.path.append(os.path.expanduser(r'~\Elveflow SDK V3_01_04\python_64').encode('utf-8'))
 
-try:
-    from Elveflow64 import *
-except ImportError:
-    warnings.warn('Cannot use Elveflow OB1')
+from holypipette.devices.pressurecontroller.Elveflow64 import *
 
 __all__ = ['OB1']
 
