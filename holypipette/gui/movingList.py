@@ -9,3 +9,5 @@ contact = True
 black_area = []
 paramecium_z = None
 template = []
+detect_paramecium = False
+paramecium_position = None

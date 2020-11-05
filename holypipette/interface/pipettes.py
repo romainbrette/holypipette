@@ -1,9 +1,13 @@
 # coding=utf-8
 import pickle
 import os
-
+import time
 import numpy as np
 from PyQt5 import QtCore
+from clampy import *
+import nidaqmx
+task = nidaqmx.Task()
+task.ai_channels.add_ai_voltage_chan("Dev1/ai0")
 
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage, CalibrationConfig
@@ -106,9 +110,42 @@ class PipetteInterface(TaskInterface):
     def move_pipette_z(self, distance):
         self.calibrated_unit.relative_move(distance, axis=2)
 
+    @command(category='Manipulators',
+             description='Hoang Testing',
+             default_arg=10)
+    def hoang_testing(self, distance):
+        print("SSSSS")
+        t =time.time()
+        memPotential = []
+        data = task.read(number_of_samples_per_channel=300)
+        memPotential.append(sum(data)/len(data))
+        for i in range(0, 200):
+            self.calibrated_unit.relative_move(2, axis = 2)
+            self.calibrated_unit.wait_until_still()
+            data = task.read(number_of_samples_per_channel=300)
+            print("Membrane potential (mV): ", (sum(data) / len(data))*100)
+            if (memPotential[-1] - (sum(data)/len(data)))> 0.2:
+                print("Pipette inside cell")
+                print(data)
+                break
+        memPotential.append(sum(data) / len(data))
+        print("Time: ", time.time() - t)
+
+    @command(category='Manipulators',
+             description='Hoang Testing 2',
+             default_arg=10)
+    def hoang_testing2(self, distance):
+        from holypipette.gui import movingList
+        movingList.detect_paramecium = True
+        while (movingList.detect_paramecium == True):
+            pass
+        #self.move_pipette_working_level()
+        self.move_pipette_down()
+
+
     @command(category='Microscope',
              description='Move microscope by {:.0f}μm',
-             default_arg=10)
+             default_arg=100)
     def move_microscope(self, distance):
         self.microscope.relative_move(distance)
 
@@ -185,12 +222,14 @@ class PipetteInterface(TaskInterface):
         self.debug('asking for recalibration at {}'.format(xy_position))
         self.execute(self.calibrated_unit.recalibrate, argument=xy_position)
 
+
+
     @blocking_command(category='Manipulators',
                      description='Move pipette to position',
                      task_description='Moving to position with safe approach')
     def move_pipette(self, xy_position):
         x, y = xy_position
-        position = np.array([x, y, self.microscope.position()])
+        position = np.array([x, y, self.microscope.position()-30])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.calibrated_unit.safe_move, argument=position)
 
@@ -228,4 +267,35 @@ class PipetteInterface(TaskInterface):
             for i, cfg_unit in enumerate(cfg_units):
                 self.calibrated_units[i].load_configuration(cfg_unit)
             self.calibrated_unit.analyze_calibration()
+
+    @blocking_command(category='Paramecium',
+                      description='Move pipette down to position at working distance level',
+                      task_description='Moving pipette to position at working distance level')
+    def move_pipette_working_level(self, xy_position):
+        from holypipette.gui import movingList
+        x, y = movingList.paramecium_position
+        position = np.array([x, y, self.microscope.position() - 30])
+        self.debug('asking for safe move to {}'.format(position))
+        self.execute(self.calibrated_unit.safe_move, argument=position)
+
+    @blocking_command(category='Paramecium',
+                      description='Move pipette vertically to the paramecium',
+                      task_description='Move pipette vertically to the paramecium')
+    def move_pipette_down(self):
+        t = time.time()
+        memPotential = []
+        data = task.read(number_of_samples_per_channel=300)
+        memPotential.append(sum(data) / len(data))
+        for i in range(0, 200):
+            self.calibrated_unit.relative_move(2, axis=2)
+            self.calibrated_unit.wait_until_still()
+            data = task.read(number_of_samples_per_channel=300)
+            print("Membrane potential (mV): ", (sum(data) / len(data)) * 100)
+            if (memPotential[-1] - (sum(data) / len(data))) > 0.2:
+                print("Pipette inside cell")
+                print(data)
+                break
+        memPotential.append(sum(data) / len(data))
+        print("Time: ", time.time() - t)
+
 

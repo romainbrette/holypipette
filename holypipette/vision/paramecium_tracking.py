@@ -271,7 +271,7 @@ def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previou
     frame1 = cv2.morphologyEx(frame1, cv2.MORPH_CLOSE, kernel)
     frame1 = cv2.morphologyEx(frame1, cv2.MORPH_OPEN, kernel)
 
-    _, cnts, _ = cv2.findContours(frame1,cv2.RETR_CCOMP, 2)
+    cnts, hierarchy = cv2.findContours(frame1,cv2.RETR_CCOMP, 2)
 
     mask_use = np.ones(frame1.shape, np.uint8) * 255
     for cnt in cnts:
@@ -295,7 +295,7 @@ def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previou
 
 
     ret, mask_use = cv2.threshold(mask_use, 50, 255, cv2.THRESH_BINARY_INV)
-    _, cnts, _ = cv2.findContours(mask_use, cv2.RETR_CCOMP, 2)
+    cnts, _ = cv2.findContours(mask_use, cv2.RETR_CCOMP, 2)
 
     for cnt in cnts:
         length = cv2.arcLength(cnt, True) / pixel_per_um
@@ -311,7 +311,7 @@ def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previou
 
     mask_use = cv2.resize(mask_use, (width, height))
     frame = cv2.resize(frame, (width, height))
-    _, cnts, _ = cv2.findContours(mask_use, cv2.RETR_CCOMP, 2)
+    cnts, _ = cv2.findContours(mask_use, cv2.RETR_CCOMP, 2)
     cv2.drawContours(frame, cnts, -1, (255, 255, 255), 3)
 
     i = 0.2
@@ -329,8 +329,8 @@ def where_is_paramecium2(frame, pixel_per_um = 5., return_angle = False, previou
                     movingList.template[1] = cnt
                     found = True
                     break
-
-    cv2.drawContours(frame, [movingList.template[1]], 0, (0, 0, 0), 3)
+    if movingList.template[1] != None:
+        cv2.drawContours(frame, [movingList.template[1]], 0, (0, 0, 0), 3)
     (xmin, ymin), (MA, ma), theta = cv2.fitEllipse(movingList.template[1])
     angle = (theta + 90) * pi / 180.
 

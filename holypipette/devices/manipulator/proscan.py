@@ -70,8 +70,8 @@ class Prior(Manipulator):
 if __name__ == '__main__':
     prior = Prior()
     print(prior.position(axis = 1))
-    #prior.relative_move(50,axis =1)
-    #prior.wait_until_still()
+    prior.relative_move(500,axis =1)
+    prior.wait_until_still()
     print(prior.position(axis=1))
 
 

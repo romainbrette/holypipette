@@ -168,8 +168,6 @@ class ManipulatorGui(CameraGui):
                                          argument=-distance, default_doc=False)
 
 
-
-
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
                                  self.interface.calibrate_stage)
@@ -183,6 +181,8 @@ class ManipulatorGui(CameraGui):
                                    self.interface.recalibrate_manipulator_on_click)
         self.register_key_action(Qt.Key_M, Qt.NoModifier,
                                  self.measure_ranges)
+
+
         # Pipette selection
         number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):
@@ -202,13 +202,19 @@ class ManipulatorGui(CameraGui):
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
                                    self.interface.move_pipette)
 
+        self.register_key_action(Qt.Key_Z, Qt.NoModifier,
+                                 self.interface.hoang_testing)
+        self.register_key_action(Qt.Key_X, Qt.NoModifier,
+                                 self.interface.hoang_testing2)
+
+
         # Microscope control
         self.register_key_action(Qt.Key_PageUp, None,
                                  self.interface.move_microscope,
-                                 argument=10, default_doc=False)
+                                 argument=100, default_doc=False)
         self.register_key_action(Qt.Key_PageDown, None,
                                  self.interface.move_microscope,
-                                 argument=-10, default_doc=False)
+                                 argument=-100, default_doc=False)
         key_string = (QtGui.QKeySequence(Qt.Key_PageUp).toString() + '/' +
                       QtGui.QKeySequence(Qt.Key_PageDown).toString())
         self.help_window.register_custom_action('Microscope', key_string,

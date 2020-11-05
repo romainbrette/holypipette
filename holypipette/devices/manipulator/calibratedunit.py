@@ -15,7 +15,7 @@ from numpy import (array, zeros, dot, arange, vstack, sign, pi, arcsin,
                    mean, std, isnan)
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
-
+import time
 
 __all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage']
 
@@ -26,7 +26,7 @@ from holypipette.config import Config, NumberWithUnit, Number
 
 
 class CalibrationConfig(Config):
-    position_tolerance = NumberWithUnit(0.5, unit='μm',
+    position_tolerance = NumberWithUnit(2.5, unit='μm',
                                         doc='Position tolerance',
                                         bounds=(0, 10))
     sleep_time = NumberWithUnit(1., unit='s',
@@ -293,7 +293,7 @@ class CalibratedUnit(ManipulatorUnit):
         if rig == 1:
             self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
         else:
-            distance = 100
+            distance = -100
             self.relative_move(distance, 0)
             self.wait_until_still(0)
             self.sleep(0.1)
@@ -432,8 +432,9 @@ class CalibratedUnit(ManipulatorUnit):
 
         x0, y0 = self.photo_x0, self.photo_y0
         if threshold is None:
-            threshold = 1-(1-self.min_photo_match)*2
-
+            #threshold = 1-(1-self.min_photo_match)*2
+            #####HOANG
+            threshold = 0.8
         image = self.camera.snap()
 
         # Error margins for position estimation
@@ -462,7 +463,8 @@ class CalibratedUnit(ManipulatorUnit):
 
         self.debug('Correlation=' + str(valmax))
         if valmax < threshold:
-            raise CalibrationError('Matching error: the pipette is absent or not focused')
+
+                   raise CalibrationError('Matching error: the pipette is absent or not focused')
 
         self.info('Pipette identified at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
 
@@ -474,17 +476,17 @@ class CalibratedUnit(ManipulatorUnit):
     def move_and_track(self, distance, axis, M, move_stage=False):
         '''
         Moves along one axis and track the pipette with microscope and optionally the stage.
-
         Arguments
         ---------
         distance : distance to move
         axis : axis number
-
         Returns
         -------
         x,y,z: pipette position on screen and focal plane
         '''
         self.relative_move(distance, axis)
+        #self.wait_until_still(axis)
+        print(self.position(axis))
         self.abort_if_requested()
         # Estimate movement on screen
         estimate = M[:, axis]*distance
@@ -519,6 +521,7 @@ class CalibratedUnit(ManipulatorUnit):
         x, y, z = self.locate_pipette()
 
         return x, y, z
+
 
     def move_back(self, z0, u0, us0=None):
         '''

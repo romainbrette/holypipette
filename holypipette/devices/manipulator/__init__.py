@@ -8,3 +8,4 @@ from .manipulatorunit import *
 from .calibratedunit import *
 from .microscope import *
 from .sensapex import *
+from .proscan import *

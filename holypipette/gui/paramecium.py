@@ -88,22 +88,16 @@ class ParameciumGui(ManipulatorGui):
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
                                    self.paramecium_interface.move_pipette_floor)
-        self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
-                                   self.paramecium_interface.move_pipette_working_level)
         self.register_mouse_action(Qt.RightButton, Qt.ShiftModifier,
                                    self.paramecium_interface.start_tracking)
         self.register_mouse_action(Qt.RightButton, Qt.ControlModifier,
                                    self.paramecium_interface.autofocus)
-        self.register_key_action(Qt.Key_Space, None,
-                                 self.paramecium_interface.move_pipette_down)
         self.register_key_action(Qt.Key_T, None,
                                  self.paramecium_interface.toggle_tracking)
         self.register_key_action(Qt.Key_Return, None,
                                  self.paramecium_interface.toggle_following)
         self.register_key_action(Qt.Key_P, None,
                                  self.paramecium_interface.display_z_manipulator)
-        self.register_key_action(Qt.Key_K, None,
-                                 self.paramecium_interface.automatic_experiment)
         self.register_key_action(Qt.Key_N, None,
                                  self.paramecium_interface.detect_contact)
         self.register_key_action(Qt.Key_U, None,

@@ -102,7 +102,7 @@ class Microscope(Manipulator):
             img = preprocessing(camera.snap())
             images.append(img)
             if save is not None:
-                cv2.imwrite('./screenshots/'+save+'{}.jpg'.format(k), img)
+                cv2.imwrite('C:/Users/inters/Desktop/test/'+save+'{}.jpg'.format(k), img)
             k+=1
         self.absolute_move(position)
         self.wait_until_still()
@@ -123,3 +123,4 @@ class Microscope(Manipulator):
         '''
         self.up_direction = config.get('up_direction', self.up_direction)
         self.floor_Z = config.get('floor_Z', self.floor_Z)
+

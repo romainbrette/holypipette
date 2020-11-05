@@ -5,6 +5,11 @@ from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision.paramecium_tracking import ParameciumTracker
 from holypipette.vision import cardinal_points
 
+import nidaqmx
+task = nidaqmx.Task()
+task.ai_channels.add_ai_voltage_chan("Dev1/ai0")
+
+import cv2
 import numpy as np
 import time
 from numpy import cos,sin
@@ -33,7 +38,7 @@ class ParameciumConfig(Config):
     stop_amplitude = NumberWithUnit(5, bounds=(0, 1000), doc='Movement threshold for detecting stop', unit='µm')
 
     # Vertical distance of pipettes above the coverslip
-    working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
+    working_distance = NumberWithUnit(50, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
 
     # For debugging
     draw_contours = Boolean(False, doc='Draw contours?')
@@ -83,6 +88,10 @@ class ParameciumInterface(TaskInterface):
         self.previous_shift_click = None
         self.shift_click_time = time.time()-1e6 # a long time ago
         self.timer_t0 = time.time()
+        self.found = False
+        self.binary_image = []
+        #self.fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
+        self.fgbg = cv2.createBackgroundSubtractorKNN()
 
     @blocking_command(category='Paramecium',
                      description='Move pipettes to Paramecium',
@@ -186,35 +195,6 @@ class ParameciumInterface(TaskInterface):
         z = self.calibrated_unit.reference_position()[2]
         self.controller.microscope.absolute_move(z)
 
-    @command(category='Paramecium',
-                     description='Perform automatic experiment')
-    def automatic_experiment(self):
-        self.automate = not self.automate
-        if self.automate:
-            self.debug('Automatic experiment')
-            self.tracking = True
-            self.position_list = []  # list of previous positions
-        else:
-            self.debug('Automatic experiment cancelled')
-        self.automate_t0 = time.time()
-
-    @blocking_command(category='Paramecium',
-                     description='Move pipette down to position at working distance level',
-                     task_description='Moving pipette to position at working distance level')
-    def move_pipette_working_level(self, xy_position):
-        x, y = xy_position
-        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.working_distance*self.controller.microscope.up_direction])
-        self.debug('asking for safe move to {}'.format(position))
-        self.execute(self.controller.calibrated_unit.safe_move, argument=position)
-
-    @blocking_command(category='Paramecium',
-                     description='Move pipette vertically to floor level',
-                     task_description='Move pipette vertically to floor level')
-    def move_pipette_down(self):
-        x, y, _ = self.controller.calibrated_unit.reference_position()
-        position = np.array([x, y, self.controller.microscope.floor_Z])
-        self.debug('asking for move to {}'.format(position))
-        self.execute(self.controller.calibrated_unit.reference_move, argument=position)
 
     @command(category='Paramecium',
              description='Start tracking paramecium at mouse position')
@@ -277,41 +257,54 @@ class ParameciumInterface(TaskInterface):
         '''
         self.execute(self.controller.contact_detection)
 
+
     def track_paramecium(self, frame):
-        if not self.tracking:
+        from holypipette.gui import movingList
+        if not movingList.detect_paramecium:
             return
-        # Use the size information stored in the camera, in case it exists
-        # (only the case for a "camera" that displays a pre-recorded video)
-        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
-        if pixel_per_um is None:
-            pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
-        result = self.paramecium_tracker.locate(frame, pixel_per_um=pixel_per_um)
-        if result[0] is not None:
-            # Center position
-            self.paramecium_position = (result.x, result.y, result.MA, result.ma, result.angle)
-            # Position of second electrode
-            self.paramecium_tip2_position = (result.x+cos(result.angle)*result.MA*.15,
-                                             result.y+sin(result.angle)*result.MA*.15)
-        self.paramecium_info = result.info
+        pixel_per_um = self.calibrated_unit.stage.pixel_per_um()[0]
+        kernel1 = np.ones((2, 2), np.uint8)
+        kernel2 = np.ones((5, 5), np.uint8)
+        kernel3 = np.ones((11, 11), np.uint8)
+        if self.found == False:
+            gray1 = self.fgbg.apply(frame)
+        else:
+            gray1 = self.fgbg.apply(frame, learningRate=0)
+        #gray1 = cv2.medianBlur(gray1,5)
+        gray1 = cv2.GaussianBlur(gray1, (7, 7), 0)
+        ret, otsu = cv2.threshold(gray1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        opening = cv2.morphologyEx(otsu, cv2.MORPH_OPEN, kernel1)
+        closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel1)
+        dilation = cv2.dilate(closing, kernel2, iterations=10)
+        erosion = cv2.erode(dilation, kernel2, iterations=10)
+        final_closing = cv2.morphologyEx(erosion, cv2.MORPH_CLOSE, kernel3)
 
-        # Detect if it stops (TODO: analyze angle)
-        # TODO: display median shape attributes (or even distribution)
-        if self.paramecium_tracker.has_stopped():
-            self.info("Paramecium stopped!")
-            if self.automate and (self.automate_t0 > time.time() + self.config.minimum_stop_time):
-                position = self.paramecium_tracker.median_position()
-                self.debug("Impaling")
-                self.move_pipettes_paramecium()
-                self.automate = False
-                self.tracking = False
+        still_time = 1
 
-        # Follow with the stage
-        if self.follow_paramecium and result[0] is not None:
-            position = np.array(result[:2])
-            w,h = self.camera.width, self.camera.height
-            move = np.zeros(3)
-            move[:2] = .5*(position - np.array([w/2,h/2]))
-            self.execute(self.controller.calibrated_stage.reference_relative_move, argument=-move)
+        self.binary_image.append(final_closing)
+        if (len(self.binary_image) > still_time*30):
+            compare_matrix = self.binary_image[-still_time*30:]
+            bit_and = self.binary_image[-still_time*30]
+            for c in range(1-still_time*30, -1):
+                bit_and = cv2.bitwise_and(bit_and, compare_matrix[c])
+            cv2.imshow("TESTING", bit_and)
+            contours, hierarchy = cv2.findContours(bit_and, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            for cnt in contours:
+                if (cv2.arcLength(cnt, True) > self.config.minimum_contour * pixel_per_um) and(len(cnt) >= 5):
+                    (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(cnt))
+                    MA, ma = MA / pixel_per_um, ma / pixel_per_um
+                    if (MA > self.config.max_length or ma > self.config.max_width):
+                        self.found = False
+                        break
+                    if (MA > self.config.min_length and ma > self.config.min_width and MA < self.config.max_length and ma < self.config.max_width):
+                        M = cv2.moments(cnt)
+                        cX = int(M["m10"] / M["m00"])
+                        cY = int(M["m01"] / M["m00"])
+                        cv2.circle(frame, (cX, cY), 5, (255, 255, 255), -1)
+                        movingList.detect_paramecium = False
+                        movingList.paramecium_position = cX, cY
+                        cv2.imwrite('C:/Users/inters/Desktop/test1/test.jpg', frame)
+                        print("HOANG TEST DONE")
 
     '''
     @command(category='Paramecium',
