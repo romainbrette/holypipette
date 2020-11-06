@@ -15,9 +15,9 @@ import traceback
 camera = OpenCVCamera()
 controller1 = UMP.get_ump()
 controller2 = Prior()
-stage = ManipulatorUnit(controller2, [0, 1])
+stage = ManipulatorUnit(controller1, [0, 1])
 #microscope = Microscope(controller2, 2)
-microscope = Microscope(controller1,5)
+microscope = Microscope(controller1,2)
 calibrated_stage = CalibratedStage(stage, None, microscope, camera=camera)
 #units = [ManipulatorUnit(controller1, [0, 1, 2]), ManipulatorUnit(controller1, [3, 4, 5])]
 units = [ManipulatorUnit(controller1, [3, 4, 5])]

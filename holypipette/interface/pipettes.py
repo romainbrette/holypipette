@@ -114,22 +114,7 @@ class PipetteInterface(TaskInterface):
              description='Hoang Testing',
              default_arg=10)
     def hoang_testing(self, distance):
-        print("SSSSS")
-        t =time.time()
-        memPotential = []
-        data = task.read(number_of_samples_per_channel=300)
-        memPotential.append(sum(data)/len(data))
-        for i in range(0, 200):
-            self.calibrated_unit.relative_move(2, axis = 2)
-            self.calibrated_unit.wait_until_still()
-            data = task.read(number_of_samples_per_channel=300)
-            print("Membrane potential (mV): ", (sum(data) / len(data))*100)
-            if (memPotential[-1] - (sum(data)/len(data)))> 0.2:
-                print("Pipette inside cell")
-                print(data)
-                break
-        memPotential.append(sum(data) / len(data))
-        print("Time: ", time.time() - t)
+        self.move_pipette_working_level()
 
     @command(category='Manipulators',
              description='Hoang Testing 2',
@@ -139,7 +124,8 @@ class PipetteInterface(TaskInterface):
         movingList.detect_paramecium = True
         while (movingList.detect_paramecium == True):
             pass
-        #self.move_pipette_working_level()
+        self.move_pipette_working_level()
+        self.calibrated_unit.wait_until_still()
         self.move_pipette_down()
 
 
@@ -229,7 +215,8 @@ class PipetteInterface(TaskInterface):
                      task_description='Moving to position with safe approach')
     def move_pipette(self, xy_position):
         x, y = xy_position
-        position = np.array([x, y, self.microscope.position()-30])
+        print(xy_position)
+        position = np.array([x, y, self.microscope.position()])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.calibrated_unit.safe_move, argument=position)
 
@@ -271,10 +258,10 @@ class PipetteInterface(TaskInterface):
     @blocking_command(category='Paramecium',
                       description='Move pipette down to position at working distance level',
                       task_description='Moving pipette to position at working distance level')
-    def move_pipette_working_level(self, xy_position):
+    def move_pipette_working_level(self):
         from holypipette.gui import movingList
-        x, y = movingList.paramecium_position
-        position = np.array([x, y, self.microscope.position() - 30])
+        x, y = movingList.pipette_position
+        position = np.array([x, y, self.microscope.position()-30])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.calibrated_unit.safe_move, argument=position)
 

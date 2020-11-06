@@ -90,8 +90,8 @@ class ParameciumInterface(TaskInterface):
         self.timer_t0 = time.time()
         self.found = False
         self.binary_image = []
-        #self.fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
-        self.fgbg = cv2.createBackgroundSubtractorKNN()
+        self.fgbg = cv2.bgsegm.createBackgroundSubtractorMOG()
+        #self.fgbg = cv2.createBackgroundSubtractorKNN()
 
     @blocking_command(category='Paramecium',
                      description='Move pipettes to Paramecium',
@@ -259,6 +259,7 @@ class ParameciumInterface(TaskInterface):
 
 
     def track_paramecium(self, frame):
+
         from holypipette.gui import movingList
         if not movingList.detect_paramecium:
             return
@@ -271,40 +272,57 @@ class ParameciumInterface(TaskInterface):
         else:
             gray1 = self.fgbg.apply(frame, learningRate=0)
         #gray1 = cv2.medianBlur(gray1,5)
-        gray1 = cv2.GaussianBlur(gray1, (7, 7), 0)
+        gray1 = cv2.GaussianBlur(gray1, (3, 3), 0)
         ret, otsu = cv2.threshold(gray1, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         opening = cv2.morphologyEx(otsu, cv2.MORPH_OPEN, kernel1)
         closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel1)
         dilation = cv2.dilate(closing, kernel2, iterations=10)
         erosion = cv2.erode(dilation, kernel2, iterations=10)
         final_closing = cv2.morphologyEx(erosion, cv2.MORPH_CLOSE, kernel3)
+        print(self.found)
+        still_time = 1.5
+        frame_time = int(still_time*30)
 
-        still_time = 1
+        contours, hierarchy = cv2.findContours(final_closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        self.found = False
+        for cnt in contours:
+            if (cv2.arcLength(cnt, True) > self.config.minimum_contour * pixel_per_um) and (len(cnt) >= 5):
+                (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(cnt))
+                MA, ma = MA / pixel_per_um, ma / pixel_per_um
+                if (MA > 1.5*self.config.max_length or ma > 1.5*self.config.max_width):
+                    self.found = False
+                    break
+                if (MA > self.config.min_length and ma > self.config.min_width and MA < self.config.max_length and ma < self.config.max_width):
+                    self.found = True
 
         self.binary_image.append(final_closing)
-        if (len(self.binary_image) > still_time*30):
-            compare_matrix = self.binary_image[-still_time*30:]
-            bit_and = self.binary_image[-still_time*30]
-            for c in range(1-still_time*30, -1):
+        if (len(self.binary_image) > frame_time):
+            compare_matrix = self.binary_image[-frame_time:]
+            bit_and = cv2.bitwise_and(compare_matrix[0], compare_matrix[1])
+            for c in range(2, frame_time):
                 bit_and = cv2.bitwise_and(bit_and, compare_matrix[c])
-            cv2.imshow("TESTING", bit_and)
+
             contours, hierarchy = cv2.findContours(bit_and, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             for cnt in contours:
                 if (cv2.arcLength(cnt, True) > self.config.minimum_contour * pixel_per_um) and(len(cnt) >= 5):
                     (x, y), (ma, MA), theta = cv2.fitEllipse(np.squeeze(cnt))
                     MA, ma = MA / pixel_per_um, ma / pixel_per_um
-                    if (MA > self.config.max_length or ma > self.config.max_width):
-                        self.found = False
-                        break
-                    if (MA > self.config.min_length and ma > self.config.min_width and MA < self.config.max_length and ma < self.config.max_width):
+
+                    if (MA > 0.7*self.config.min_length and ma > 0.7*self.config.min_width and MA < self.config.max_length and ma < self.config.max_width):
                         M = cv2.moments(cnt)
                         cX = int(M["m10"] / M["m00"])
                         cY = int(M["m01"] / M["m00"])
                         cv2.circle(frame, (cX, cY), 5, (255, 255, 255), -1)
                         movingList.detect_paramecium = False
+                        height, width = frame.shape[:2]
+                        X = cX - width / 2
+                        Y = cY - height / 2
                         movingList.paramecium_position = cX, cY
+                        movingList.pipette_position = X, Y
                         cv2.imwrite('C:/Users/inters/Desktop/test1/test.jpg', frame)
                         print("HOANG TEST DONE")
+
+
 
     '''
     @command(category='Paramecium',

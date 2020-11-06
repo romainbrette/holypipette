@@ -11,3 +11,4 @@ paramecium_z = None
 template = []
 detect_paramecium = False
 paramecium_position = None
+pipette_position = None

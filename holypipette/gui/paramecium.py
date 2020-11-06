@@ -8,6 +8,7 @@ from types import MethodType
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
 import numpy as np
+import cv2
 
 from holypipette.controller import TaskController
 from holypipette.interface.paramecium import ParameciumInterface
@@ -110,7 +111,10 @@ class ParameciumGui(ManipulatorGui):
                                  self.paramecium_interface.reset_timer)
 
     def track_paramecium(self, frame):
+        from holypipette.gui import movingList
         self.paramecium_interface.track_paramecium(frame)
+        if movingList.paramecium_position is not None:
+            cv2.circle(frame, (movingList.paramecium_position), 5, (255, 255, 255), -1)
         return frame
 
     def show_paramecium(self, pixmap):
