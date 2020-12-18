@@ -7,7 +7,7 @@ import warnings
 from .microscope import *
 import sys
 import time
-sys.path.append('C:\\Program Files\\Micro-Manager-1.4') # This is not good!
+sys.path.append('C:\\Program Files\\Micro-Manager-2.0gamma')
 try:
     import MMCorePy
 except ImportError: # Micromanager not installed
