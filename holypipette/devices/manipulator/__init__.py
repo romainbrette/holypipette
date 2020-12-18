@@ -7,4 +7,9 @@ from .luigsneumann_SM5 import *
 from .manipulatorunit import *
 from .calibratedunit import *
 from .microscope import *
-from .sensapex import *
+import warnings
+
+try:
+    from .sensapex import *
+except AttributeError:
+    warnings.warn('Sensapex driver could not be loaded')
