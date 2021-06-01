@@ -13,9 +13,6 @@ from holypipette.controller import TaskController
 from holypipette.interface.paramecium import ParameciumInterface
 from holypipette.gui.manipulator import ManipulatorGui
 
-import datetime
-from time import time
-
 # Helper functions for drawing
 def create_painter(pixmap, color, width=1):
     """
@@ -41,7 +38,6 @@ def create_painter(pixmap, color, width=1):
     painter.setPen(pen)
     return painter
 
-
 def draw_contour(contour, painter, scale):
     path = QtGui.QPainterPath(QtCore.QPoint(*contour[0][0]) / scale)
     for point in contour[1:]:
@@ -62,29 +58,34 @@ def draw_ellipse(painter, x, y, width, height, angle, pixel_per_um,
     painter.translate(-x / scale, -y / scale)
 
 
-class ParameciumGui(ManipulatorGui):
+#################################################
+# Paramecium experiment with the droplet method #
+#################################################
+class ParameciumDropletGui(ManipulatorGui):
 
     paramecium_command_signal = QtCore.pyqtSignal(MethodType, object)
     paramecium_reset_signal = QtCore.pyqtSignal(TaskController)
 
     def __init__(self, camera, pipette_interface):
-        super(ParameciumGui, self).__init__(camera,
+        super(ParameciumDropletGui, self).__init__(camera,
                                             pipette_interface=pipette_interface,
                                             with_tracking=False)
+        self.pipette_interface = pipette_interface
         self.paramecium_interface = ParameciumInterface(pipette_interface,
                                                         camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
         self.display_edit_funcs.append(self.display_timer)
+        self.display_edit_funcs.append(self.show_tip)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
                                                              self.paramecium_reset_signal)
-        self.setWindowTitle("Paramecium GUI")
+        self.setWindowTitle("Paramecium droplet GUI")
         self.add_config_gui(self.paramecium_interface.config)
 
     def register_commands(self):
-        super(ParameciumGui, self).register_commands(manipulator_keys = False)
+        super(ParameciumDropletGui, self).register_commands(manipulator_keys = False)
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
                                    self.paramecium_interface.move_pipette_floor)
@@ -113,7 +114,7 @@ class ParameciumGui(ManipulatorGui):
         self.register_key_action(Qt.Key_V, None,
                                  self.paramecium_interface.move_pipettes_paramecium)
         self.register_key_action(Qt.Key_0, None,
-                                 self.paramecium_interface.reset_timer)
+                                 self.pipette_interface.reset_timer)
 
     def track_paramecium(self, frame):
         self.paramecium_interface.track_paramecium(frame)
@@ -169,38 +170,48 @@ class ParameciumGui(ManipulatorGui):
                 draw_contour(contour, painter, scale)
                 painter.end()
 
-    def show_tip(self, pixmap):
-        # Show the tip of the electrode
-        interface = self.paramecium_interface
-        scale = 1.0 * self.camera.width / pixmap.size().width()
-        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
-        if pixel_per_um is None:
-            pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
-        painter = QtGui.QPainter(pixmap)
-        pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
-        pen.setWidth(3)
-        painter.setPen(pen)
 
-        x, y, _ = interface.calibrated_unit.reference_position()
-        x+=self.camera.width/2
-        y+=self.camera.height/2
-        width = 20 * pixel_per_um / scale
-        height = 20 * pixel_per_um / scale
-        painter.translate(x / scale, y / scale)
 
-        painter.drawRect(-width / 2, -height / 2, width, height)
-        painter.end()
+#################################################
+# Paramecium experiment with the device method #
+#################################################
+class ParameciumDeviceGui(ManipulatorGui):
 
-    def display_timer(self, pixmap):
-        interface = self.paramecium_interface
-        painter = QtGui.QPainter(pixmap)
-        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-        pen.setWidth(1)
-        painter.setPen(pen)
-        c_x, c_y = pixmap.width() / 20, pixmap.height() / 20
-        t = int(time() - interface.timer_t0)
-        hours = t//3600
-        minutes = (t-hours*3600)//60
-        seconds = t-hours*3600-minutes*60
-        painter.drawText(c_x, c_y, '{}'.format(datetime.time(hours,minutes,seconds)))
-        painter.end()
+    paramecium_command_signal = QtCore.pyqtSignal(MethodType, object)
+    paramecium_reset_signal = QtCore.pyqtSignal(TaskController)
+
+    def __init__(self, camera, pipette_interface):
+        super(ParameciumDeviceGui, self).__init__(camera,
+                                            pipette_interface=pipette_interface,
+                                            with_tracking=False)
+        self.pipette_interface = pipette_interface
+        self.paramecium_interface = ParameciumInterface(pipette_interface,
+                                                        camera)
+        self.display_edit_funcs.append(self.display_timer)
+        self.display_edit_funcs.append(self.show_tip)
+        self.paramecium_position = (None, None, None, None, None)
+        self.paramecium_interface.moveToThread(pipette_interface.thread())
+        self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
+                                                             self.paramecium_reset_signal)
+        self.setWindowTitle("Paramecium device GUI")
+        self.add_config_gui(self.paramecium_interface.config)
+
+    def register_commands(self):
+        super(ParameciumDeviceGui, self).register_commands(manipulator_keys = False)
+
+        self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
+                                   self.paramecium_interface.move_pipette_floor) # move to floor level, x axis last
+        self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
+                                   self.paramecium_interface.move_pipette_working_level) # move 200 um above clicked position
+        self.register_mouse_action(Qt.RightButton, Qt.ControlModifier,
+                                   self.paramecium_interface.autofocus)
+        self.register_key_action(Qt.Key_Space, None,
+                                 self.paramecium_interface.move_pipette_down) # move to floor level
+        self.register_key_action(Qt.Key_P, None,
+                                 self.paramecium_interface.display_z_manipulator)
+        self.register_key_action(Qt.Key_U, None,
+                                 self.paramecium_interface.focus) # focus on tip
+        #self.register_key_action(Qt.Key_V, None,
+        #                         self.paramecium_interface.move_pipettes_paramecium)
+        self.register_key_action(Qt.Key_0, None,
+                                 self.pipette_interface.reset_timer)

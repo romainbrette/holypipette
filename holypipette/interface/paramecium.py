@@ -82,7 +82,6 @@ class ParameciumInterface(TaskInterface):
         self.paramecium_tracker = ParameciumTracker(self.config)
         self.previous_shift_click = None
         self.shift_click_time = time.time()-1e6 # a long time ago
-        self.timer_t0 = time.time()
 
     @blocking_command(category='Paramecium',
                      description='Move pipettes to Paramecium',
@@ -174,11 +173,6 @@ class ParameciumInterface(TaskInterface):
             self.execute(self.calibrated_units[pipette2].reference_move, argument=position2)
 
             #self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
-
-    @command(category='Paramecium',
-                     description='Reset timer')
-    def reset_timer(self):
-        self.timer_t0 = time.time()
 
     @command(category='Paramecium',
                      description='Focus on tip')

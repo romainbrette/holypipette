@@ -9,7 +9,9 @@ import numpy as np
 from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
 from holypipette.interface import command
-
+from holypipette.devices.manipulator.calibratedunit import CalibrationError
+from time import time
+import datetime
 
 class ManipulatorGui(CameraGui):
 
@@ -226,3 +228,41 @@ class ManipulatorGui(CameraGui):
         self.register_key_action(Qt.Key_O, None,
                                  self.toggle_overlay)
 
+    def show_tip(self, pixmap):
+        # Show the tip of the electrode
+        interface = self.interface
+        scale = 1.0 * self.camera.width / pixmap.size().width()
+        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+        if pixel_per_um is None:
+            pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
+        pen.setWidth(3)
+        painter.setPen(pen)
+
+        try:
+            x, y, _ = interface.calibrated_unit.reference_position()
+        except CalibrationError: # not yet calibrated
+            return
+        x+=self.camera.width/2
+        y+=self.camera.height/2
+        width = 20 * pixel_per_um / scale
+        height = 20 * pixel_per_um / scale
+        painter.translate(x / scale, y / scale)
+
+        painter.drawRect(-width / 2, -height / 2, width, height)
+        painter.end()
+
+    def display_timer(self, pixmap):
+        interface = self.interface
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        pen.setWidth(1)
+        painter.setPen(pen)
+        c_x, c_y = pixmap.width() / 20, pixmap.height() / 20
+        t = int(time() - interface.timer_t0)
+        hours = t//3600
+        minutes = (t-hours*3600)//60
+        seconds = t-hours*3600-minutes*60
+        painter.drawText(c_x, c_y, '{}'.format(datetime.time(hours,minutes,seconds)))
+        painter.end()
