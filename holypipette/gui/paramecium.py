@@ -197,6 +197,7 @@ class ParameciumDeviceGui(ManipulatorGui):
         self.add_config_gui(self.paramecium_interface.config)
 
     def register_commands(self):
+        # We have all the commandes of the pipettes interface
         super(ParameciumDeviceGui, self).register_commands(manipulator_keys = False)
 
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,

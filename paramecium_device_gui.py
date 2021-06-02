@@ -15,7 +15,7 @@ from setup_script import *
 console_logger()  # Log to the standard console as well
 
 app = QtWidgets.QApplication(sys.argv)
-pipette_interface = PipetteInterface(stage, microscope, camera, units)
+pipette_interface = PipetteInterface(stage, microscope, camera, units, config_filename='paramecium_device.cfg')
 gui = ParameciumDeviceGui(camera, pipette_interface)
 gui.initialize()
 gui.show()

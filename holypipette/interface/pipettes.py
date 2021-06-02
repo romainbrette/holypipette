@@ -32,8 +32,12 @@ class PipetteInterface(TaskInterface):
                                                 config=self.calibration_config)
                                  for unit in units]
 
+        # This should be refactored (in TaskInterface?)
+        config_folder = os.path.join(os.path.expanduser('~'),'holypipette')
+        if not os.path.exists(config_folder):
+            os.mkdir(config_folder)
         if config_filename is None:
-            config_filename = os.path.join(os.path.expanduser('~'),
+            config_filename = os.path.join(config_folder,
                                            'config_manipulator.cfg')
         self.config_filename = config_filename
         self.current_unit = 0
@@ -53,6 +57,10 @@ class PipetteInterface(TaskInterface):
     @command(category='Manipulators',
              description='Measure manipulator ranges')
     def measure_ranges(self):
+        '''
+        This is called every 500 ms when measuring ranges.
+        It updates the min and max on each axis.
+        '''
         for calibrated_unit in self.calibrated_units:
             position = calibrated_unit.position()
             calibrated_unit.min = np.array([position,calibrated_unit.min]).min(axis=0)
@@ -221,14 +229,17 @@ class PipetteInterface(TaskInterface):
     def load_configuration(self):
         # Loads configuration
         self.info("Loading configuration")
-        with open(self.config_filename, "rb") as f:
-            cfg = pickle.load(f)
-            self.microscope.load_configuration(cfg['microscope'])
-            self.calibrated_stage.load_configuration(cfg['stage'])
-            cfg_units = cfg['units']
-            for i, cfg_unit in enumerate(cfg_units):
-                self.calibrated_units[i].load_configuration(cfg_unit)
-            self.calibrated_unit.analyze_calibration()
+        if os.path.exists(self.config_filename):
+            with open(self.config_filename, "rb") as f:
+                cfg = pickle.load(f)
+                self.microscope.load_configuration(cfg['microscope'])
+                self.calibrated_stage.load_configuration(cfg['stage'])
+                cfg_units = cfg['units']
+                for i, cfg_unit in enumerate(cfg_units):
+                    self.calibrated_units[i].load_configuration(cfg_unit)
+                self.calibrated_unit.analyze_calibration()
+        else:
+            self.debug('Configuration file {} not found'.format(self.config_filename))
 
     @command(category='Manipulators',
                      description='Reset timer')
