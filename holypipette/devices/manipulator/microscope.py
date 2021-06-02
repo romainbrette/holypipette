@@ -96,7 +96,7 @@ class Microscope(Manipulator):
         current_z = position
         for k,zi in enumerate(z):
             #self.absolute_move(zi)
-            self.step_move(zi-current_z)
+            self.relative_move(zi-current_z)
             current_z = zi
             self.wait_until_still()
             #time.sleep(1) # is this necessary?
