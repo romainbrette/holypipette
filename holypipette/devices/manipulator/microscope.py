@@ -93,9 +93,11 @@ class Microscope(Manipulator):
         '''
         position = self.position()
         images = []
-        k = 0
-        for zi in z:
-            self.absolute_move(zi)
+        current_z = position
+        for k,zi in enumerate(z):
+            #self.absolute_move(zi)
+            self.step_move(zi-current_z)
+            current_z = zi
             self.wait_until_still()
             #time.sleep(1) # is this necessary?
             time.sleep(.1) # Just make sure the camera is in sync
@@ -103,7 +105,6 @@ class Microscope(Manipulator):
             images.append(img)
             if save is not None:
                 cv2.imwrite('./screenshots/'+save+'{}.jpg'.format(k), img)
-            k+=1
         self.absolute_move(position)
         self.wait_until_still()
         return images

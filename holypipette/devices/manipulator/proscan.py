@@ -3,7 +3,7 @@ Prior Proscan III Stage control.
 """
 from __future__ import print_function
 import warnings
-from manipulator import Manipulator
+from .manipulator import Manipulator
 #from manipulator import Manipulator
 import sys
 import time
