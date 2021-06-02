@@ -223,7 +223,10 @@ sys.modules.update((mod_name, mock.Mock()) for mod_name in MOCK_MODULES)
 
 # Run sphinx-apidoc automatically
 def run_apidoc(_):
-    import sphinx.apidoc as apidoc
+    try:
+        import sphinx.apidoc as apidoc
+    except ImportError:
+        import sphinx.ext.apidoc as apidoc  # newer Sphinx versions
     holypipette_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                    '..', 'holypipette'))
     reference_dir = os.path.abspath(os.path.join(os.path.dirname(__file__),
