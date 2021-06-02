@@ -11,5 +11,7 @@ import warnings
 
 try:
     from .sensapex import *
-except AttributeError:
+except:
     warnings.warn('Sensapex driver could not be loaded')
+
+#from .sensapex import *

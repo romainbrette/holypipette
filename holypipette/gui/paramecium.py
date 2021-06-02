@@ -76,7 +76,8 @@ class ParameciumDropletGui(ManipulatorGui):
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
         self.display_edit_funcs.append(self.display_timer)
-        self.display_edit_funcs.append(self.show_tip)
+        # show_tip seems to interfere with movements
+        #self.display_edit_funcs.append(self.show_tip)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
@@ -188,7 +189,8 @@ class ParameciumDeviceGui(ManipulatorGui):
         self.paramecium_interface = ParameciumInterface(pipette_interface,
                                                         camera)
         self.display_edit_funcs.append(self.display_timer)
-        self.display_edit_funcs.append(self.show_tip)
+        # show_tip seems to interfere with movements
+        #self.display_edit_funcs.append(self.show_tip)
         self.paramecium_position = (None, None, None, None, None)
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,

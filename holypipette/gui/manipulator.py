@@ -10,7 +10,6 @@ from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
 from holypipette.interface import command
 from holypipette.devices.manipulator.calibratedunit import CalibrationError
-from time import time
 import datetime
 
 class ManipulatorGui(CameraGui):
@@ -44,11 +43,13 @@ class ManipulatorGui(CameraGui):
              description='Measure manipulator ranges')
     def measure_ranges(self):
         if self.position_measurement is False:
+            self.interface.info('Measuring manipulator ranges')
             self.position_measurement = True
             # Reset ranges
             self.interface.reset_ranges()
             self.position_timer.start(500)
         else:
+            self.interface.info('Stopped measuring manipulator ranges')
             self.position_measurement = False
             self.position_timer.stop()
             # Check whether all positions have been updated
@@ -260,7 +261,7 @@ class ManipulatorGui(CameraGui):
         pen.setWidth(1)
         painter.setPen(pen)
         c_x, c_y = pixmap.width() / 20, pixmap.height() / 20
-        t = int(time() - interface.timer_t0)
+        t = int(time.time() - interface.timer_t0)
         hours = t//3600
         minutes = (t-hours*3600)//60
         seconds = t-hours*3600-minutes*60

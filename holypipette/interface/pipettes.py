@@ -37,8 +37,9 @@ class PipetteInterface(TaskInterface):
         if not os.path.exists(config_folder):
             os.mkdir(config_folder)
         if config_filename is None:
-            config_filename = os.path.join(config_folder,
-                                           'config_manipulator.cfg')
+            config_filename = 'config_manipulator.cfg'
+        config_filename = os.path.join(config_folder,config_filename)
+
         self.config_filename = config_filename
         self.current_unit = 0
         self.calibrated_unit = None
@@ -61,16 +62,21 @@ class PipetteInterface(TaskInterface):
         This is called every 500 ms when measuring ranges.
         It updates the min and max on each axis.
         '''
-        for calibrated_unit in self.calibrated_units:
+        for i,calibrated_unit in enumerate(self.calibrated_units):
             position = calibrated_unit.position()
             calibrated_unit.min = np.array([position,calibrated_unit.min]).min(axis=0)
             calibrated_unit.max = np.array([position,calibrated_unit.max]).max(axis=0)
+            self.info('Unit {} min = {}, max={}'.format(i,list(calibrated_unit.min),list(calibrated_unit.max)))
+
         position = self.calibrated_stage.position()
         self.calibrated_stage.min = np.array([position, self.calibrated_stage.min]).min(axis=0)
         self.calibrated_stage.max = np.array([position, self.calibrated_stage.max]).max(axis=0)
+        self.info('Stage min = {}, max={}'.format(list(self.calibrated_stage.min), list(self.calibrated_stage.max)))
+
         position = self.microscope.position()
         self.microscope.min = min(self.microscope.min, position)
         self.microscope.max = max(self.microscope.max, position)
+        self.info('Microscope min = {}, max={}'.format(self.microscope.min, self.microscope.max))
 
     @command(category='Manipulators',
              description='Reset manipulator ranges')

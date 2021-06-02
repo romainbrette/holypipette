@@ -27,8 +27,8 @@ class CameraInterface(TaskInterface):
         self.signal_updated_exposure()
         if self.with_tracking:
             main_gui.image_edit_funcs.append(self.show_tracked_objects)
-            main_gui.image_edit_funcs.append(self.show_tracked_paramecium)
-            main_gui.image_edit_funcs.append(self.pipette_contact_detection)
+            #main_gui.image_edit_funcs.append(self.show_tracked_paramecium)
+            #main_gui.image_edit_funcs.append(self.pipette_contact_detection)
 
     def signal_updated_exposure(self):
         # Should be called by subclasses that actually support setting the exposure

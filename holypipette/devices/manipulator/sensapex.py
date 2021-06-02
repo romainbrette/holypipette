@@ -2,8 +2,9 @@ from __future__ import print_function
 import os, sys, ctypes, atexit, time, threading
 import numpy as np
 import warnings
+from os.path import expanduser
 
-dll_path = r'C:\Users\inters\PycharmProjects\holypipette\holypipette\devices\manipulator' # WTF
+dll_path = expanduser(r'~\PycharmProjects\holypipette\holypipette\devices\manipulator') # WTF
 UMP_LIB = ctypes.WinDLL(os.path.join(dll_path, 'ump.dll'))
 
 #from .manipulator import Manipulator
