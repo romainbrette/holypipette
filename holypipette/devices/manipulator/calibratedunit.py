@@ -492,6 +492,7 @@ class CalibratedUnit(ManipulatorUnit):
         # Move the stage to compensate
         if move_stage:
             self.abort_if_requested()
+            self.debug('Compensatory movement: {}'.format(list(estimate)))
             self.stage.reference_relative_move(-estimate)
             self.stage.wait_until_still()
 
@@ -608,6 +609,8 @@ class CalibratedUnit(ManipulatorUnit):
         right_border = (width/2-(template_width*3)/4)
         top_border = -(height/2-(template_height*3)/4)
         bottom_border = (height/2-(template_height*3)/4)
+
+        self.debug('Borders L/R/T/B : {} {} {} {}'.format(left_border,right_border,top_border,bottom_border))
 
         # *** Store initial position ***
         z0 = self.microscope.position()

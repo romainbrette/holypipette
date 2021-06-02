@@ -7,6 +7,7 @@ Alternatively, one might use skimage.feature.match_template
 """
 
 import cv2
+#from skimage.registration import 2
 
 __all__ = ['templatematching','MatchingError']
 

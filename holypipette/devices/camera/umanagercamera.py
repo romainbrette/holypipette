@@ -63,7 +63,12 @@ class uManagerCamera(Camera):
         while not self.new_frame():
             sleep(0.05)
             print("no image available, waiting for 5ms")
-        frame = self.cam.getLastImage()  # What happens if there is no new frame?
+        try:
+            frame = self.cam.getLastImage()  # What happens if there is no new frame?
+        except:
+            self.lock.release()
+            return None
+
         self.lock.release()
 
         # Check that the image is not frozen
