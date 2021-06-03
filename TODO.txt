@@ -1,3 +1,6 @@
+- Test shift click (reference move of stage: maybe we need to revert)
+- Test axis normalization (check pixel_per_um)
+
 In calibratedunit.CalibratedStage.calibrate():
     Maybe we keep the previous M. We calculate the error. ?
 

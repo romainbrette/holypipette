@@ -209,6 +209,15 @@ class PipetteInterface(TaskInterface):
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.calibrated_unit.safe_move, argument=position)
 
+    @blocking_command(category='Manipulators',
+                     description='Move stage to position',
+                     task_description='Moving stage to position')
+    def move_stage(self, xy_position):
+        x, y = xy_position
+        position = np.array([x, y])
+        self.debug('asking for reference move to {}'.format(position))
+        self.execute(self.calibrated_stage.reference_move, argument=-position) # compensatory move
+
     @blocking_command(category='Microscope',
                       description='Go to the floor (cover slip)',
                       task_description='Go to the floor (cover slip)')
@@ -218,7 +227,7 @@ class PipetteInterface(TaskInterface):
 
     # TODO: Make the configuration system more general/clean
     @command(category='Manipulators',
-             description='Save the calibration information for the current manipulator',
+             description='Save the calibration information',
              success_message='Calibration information stored')
     def save_configuration(self):
         # Saves configuration
@@ -230,7 +239,7 @@ class PipetteInterface(TaskInterface):
             pickle.dump(cfg, f)
 
     @command(category='Manipulators',
-             description='Load the calibration information for the current manipulator',
+             description='Load the calibration information',
              success_message='Calibration information loaded')
     def load_configuration(self):
         # Loads configuration

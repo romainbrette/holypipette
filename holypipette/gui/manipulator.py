@@ -205,6 +205,10 @@ class ManipulatorGui(CameraGui):
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
                                    self.interface.move_pipette)
 
+        # Move stage by clicking
+        self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
+                                   self.interface.move_stage)
+
         # Microscope control
         self.register_key_action(Qt.Key_PageUp, None,
                                  self.interface.move_microscope,
