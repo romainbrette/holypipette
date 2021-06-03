@@ -345,6 +345,8 @@ class CalibratedUnit(ManipulatorUnit):
     def equalize_matrix(self, M=None):
         '''
         Equalizes the length of columns in a matrix, by default the current transformation matrix
+
+        ** This is not correct for the moment, because the third component is in um, not pixel. **
         '''
         if M is None:
             return_M = True
@@ -353,9 +355,6 @@ class CalibratedUnit(ManipulatorUnit):
         # We compute the quadratic mean
         pixel_per_um = self.pixel_per_um(M)
         mean_pixel_per_um = mean(pixel_per_um ** 2) ** .5
-        # Should be equivalent to:
-        # pixel_per_um = (sum(M**2)/len(self.axes))**.5
-        self.debug('Mean pixel per um: {}, {}'.format(mean_pixel_per_um, (sum(M ** 2) / len(self.axes)) ** .5))
         for axis in range(len(self.axes)):
             M[:, axis] = M[:, axis] * mean_pixel_per_um / pixel_per_um[axis]
         if return_M:
@@ -1060,9 +1059,9 @@ class CalibratedStage(CalibratedUnit):
             self.debug('Matrix column:' + str(M[:, axis]))
             x0, y0 = x, y # this is the position before the next move
 
-        # Equalize axes (same displacement in each direction)
-        if self.config.equalize_axes:
-            M = self.equalize_matrix(M)
+        # Equalize axes (same displacement in each direction); for the movement it's not done
+        #if self.config.equalize_axes:
+        #    M = self.equalize_matrix(M)
 
         # Compute the (pseudo-)inverse
         self.M = M
@@ -1095,7 +1094,8 @@ class CalibratedStage(CalibratedUnit):
             self.sleep(self.config.sleep_time)
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
-            self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+            self.debug('Camera x,y = {},{}'.format(str(x - x0),str(y - y0))) # should be relative the the initial (x0,y0)
+            #self.debug('Camera x,y = {},{} ; Expected x,y = {},{}'.format(str(x - x0),str(y - y0),str(ex),str()))
             r.append(array([x,y]))
             u.append(self.position())
         rx = r[1]-r[0]
