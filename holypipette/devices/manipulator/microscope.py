@@ -80,7 +80,7 @@ class Microscope(Manipulator):
         self.dev.wait_until_still([self.axis])
         self.sleep(.05)
 
-    def stack(self, camera, z, preprocessing=lambda img:img, save = None):
+    def stack(self, camera, z, preprocessing=lambda img:img, save = None, pause = 0.3):
         '''
         Take a stack of images at the positions given in the z list
 
@@ -90,6 +90,7 @@ class Microscope(Manipulator):
         z : A list of z positions
         preprocessing : a function that processes the images (optional)
         save : saves images to disk if True
+        pause : pause in second after each movement
         '''
         position = self.position()
         images = []
@@ -100,7 +101,7 @@ class Microscope(Manipulator):
             current_z = zi
             self.wait_until_still()
             # We wait a little bit because there might be mechanical oscillations
-            time.sleep(.3) # also make sure the camera is in sync
+            time.sleep(pause) # also make sure the camera is in sync
             img = preprocessing(camera.snap())
             images.append(img)
             if save is not None:
