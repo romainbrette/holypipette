@@ -22,7 +22,7 @@ __all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage']
 verbose = True
 
 ##### Calibration parameters #####
-from holypipette.config import Config, NumberWithUnit, Number
+from holypipette.config import Config, NumberWithUnit, Number, Boolean
 
 
 class CalibrationConfig(Config):
@@ -39,6 +39,7 @@ class CalibrationConfig(Config):
     position_update = NumberWithUnit(1000, unit='ms',
                                      doc='Update displayed position every',
                                      bounds=(0, 10000))
+    equalize_axes = Boolean(False, doc='Equalize axes')
     categories = [('Calibration', ['sleep_time', 'position_tolerance',
                                    'stack_depth', 'calibration_moves']),
                   ('Display', ['position_update'])]
@@ -329,14 +330,38 @@ class CalibratedUnit(ManipulatorUnit):
         self.photo_x0 = x0
         self.photo_y0 = y0
 
-    def pixel_per_um(self):
+    def pixel_per_um(self, M=None):
         '''
         Returns the objective magnification in pixel per um, calculated for each manipulator axis.
         '''
+        if M is None:
+            M = self.M
         p = []
         for axis in range(len(self.axes)):
-            p.append(((self.M[0,axis]**2 + self.M[1,axis]**2)/(1-self.M[2,axis]**2))**.5)
+            # I'm puzzled by this formula now
+            p.append(((M[0,axis]**2 + M[1,axis]**2)/(1-M[2,axis]**2))**.5)
         return p
+
+    def equalize_matrix(self, M=None):
+        '''
+        Equalizes the length of columns in a matrix, by default the current transformation matrix
+        '''
+        if M is None:
+            return_M = True
+        else:
+            return_M = False
+        # We compute the quadratic mean
+        pixel_per_um = self.pixel_per_um(M)
+        mean_pixel_per_um = mean(pixel_per_um ** 2) ** .5
+        # Should be equivalent to:
+        # pixel_per_um = (sum(M**2)/len(self.axes))**.5
+        self.debug('Mean pixel per um: {}, {}'.format(mean_pixel_per_um, (sum(M ** 2) / len(self.axes)) ** .5))
+        for axis in range(len(self.axes)):
+            M[:, axis] = M[:, axis] * mean_pixel_per_um / pixel_per_um[axis]
+        if return_M:
+            return M
+        else:
+            self.M = M
 
     def analyze_calibration(self):
         '''
@@ -590,8 +615,9 @@ class CalibratedUnit(ManipulatorUnit):
         Starts without moving the stage, then moves the stage (unless it is fixed).
         '''
         # *** Calibrate the stage ***
-        self.info('Calibrating stage first')
-        self.stage.calibrate()
+        if not self.stage.calibrated:
+            self.info('Calibrating stage first')
+            self.stage.calibrate()
         self.abort_if_requested()
         # *** Take photos ***
         # Take a stack of photos on different focal planes, spaced by 1 um
@@ -1017,7 +1043,7 @@ class CalibratedStage(CalibratedUnit):
         # Store current position
         u0 = self.position()
         self.info('Small movements for each axis')
-        # 1) Move each axis by a small displacement (50 um)
+        # 1) Move each axis by a small displacement (40 um)
         distance = 40. # in um
         for axis in range(len(self.axes)):  # normally just two axes
             self.abort_if_requested()
@@ -1034,13 +1060,17 @@ class CalibratedStage(CalibratedUnit):
             self.debug('Matrix column:' + str(M[:, axis]))
             x0, y0 = x, y # this is the position before the next move
 
+        # Equalize axes (same displacement in each direction)
+        if self.config.equalize_axes:
+            M = self.equalize_matrix(M)
+
         # Compute the (pseudo-)inverse
+        self.M = M
         Minv = pinv(M)
         # Offset is such that the initial position is zero in the reference system
         r0 = -dot(M, u0)
 
         # Store the results
-        self.M = M
         self.Minv = Minv
         self.r0 = r0
         self.calibrated = True
@@ -1077,6 +1107,8 @@ class CalibratedStage(CalibratedUnit):
         self.debug('r: '+str(r))
         self.debug('u: '+str(u))
         M[:2, :] = dot(r, inv(u))
+        if self.config.equalize_axes:
+            M = self.equalize_matrix(M)
         self.debug('Matrix: ' + str(M))
 
         # 4) Recompute the matrix and the (pseudo) inverse

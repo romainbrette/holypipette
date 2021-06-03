@@ -1,4 +1,5 @@
-
+In calibratedunit.CalibratedStage.calibrate():
+    Maybe we keep the previous M. We calculate the error. ?
 
 -----
 

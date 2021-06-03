@@ -4,8 +4,6 @@ Manipulator class for the Luigs and Neumann SM-10 manipulator controller.
 Adapted from Michael Graupner's LandNSM5 class.
 
 Not all commands are implemented.
-
-TODO: group commands
 """
 from __future__ import absolute_import
 from __future__ import print_function
