@@ -173,8 +173,8 @@ class PipetteInterface(TaskInterface):
 
 
     @blocking_command(category='Manipulators',
-                      description='Calibrate stage and manipulator',
-                      task_description='Calibrating stage and manipulator')
+                      description='Calibrate manipulator',
+                      task_description='Calibrating manipulator')
     def calibrate_manipulator(self):
         self.execute([self.calibrated_unit.calibrate,
                       self.calibrated_unit.analyze_calibration])

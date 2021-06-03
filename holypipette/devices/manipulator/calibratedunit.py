@@ -39,11 +39,11 @@ class CalibrationConfig(Config):
     position_update = NumberWithUnit(1000, unit='ms',
                                      doc='Update displayed position every',
                                      bounds=(0, 10000))
-    equalize_axes = Boolean(False, doc='Equalize axes')
-    pause_in_stack = NumberWithUnit(1., unit='s',
+    equalize_axes = Boolean(True, doc='Normalize stage axes')
+    pause_in_stack = NumberWithUnit(0.3, unit='s',
                                 doc='Pause between pictures of a z-stack',
                                 bounds=(0, 2))
-    stage_refine_steps = Number(0, doc='Number of refinement steps for stage calibration',
+    stage_refine_steps = Number(2, doc='Number of refinement steps for stage calibration',
                                bounds=(0, 20))
     categories = [('Calibration', ['sleep_time', 'position_tolerance',
                                    'stack_depth', 'calibration_moves', 'equalize_axes', 'pause_in_stack',
@@ -1069,11 +1069,13 @@ class CalibratedStage(CalibratedUnit):
         Equalizes the length of columns in a matrix, by default the current transformation matrix
         '''
         if M is None:
-            return_M = True
-        else:
             return_M = False
+            M = self.M
+        else:
+            return_M = True
         # We compute the quadratic mean
-        pixel_per_um = ((M**2).mean(axis=0))**.5 # Assuming it is a 2D matrix (the third component is 0)
+        pixel_per_um = ((M**2).sum(axis=0))**.5 # Assuming it is a 2D matrix (the third component is 0)
+        self.debug('{} pixels per um'.format(pixel_per_um))
         mean_pixel_per_um = ((pixel_per_um**2).mean())**.5 # quadratic mean
         for axis in range(len(self.axes)):
             M[:, axis] = M[:, axis] * mean_pixel_per_um / pixel_per_um[axis]
@@ -1093,7 +1095,7 @@ class CalibratedStage(CalibratedUnit):
 
         self.info('Preparing stage calibration')
         # Take a photo of the pipette or coverslip
-        template = crop_center(self.camera.snap())
+        template = crop_center(self.camera.snap(), ratio=64)
 
         # Calculate the location of the template in the image
         self.sleep(self.config.sleep_time)
@@ -1138,37 +1140,40 @@ class CalibratedStage(CalibratedUnit):
         self.r0 = r0
         self.calibrated = True
 
-        self.info('Moving back')
-
-        # Move back
-        self.absolute_move(u0)
-        self.wait_until_still()
-
-        # Fix any residual error (due to motor unreliability)
-        image = self.camera.snap()
-        x, y, _ = templatematching(image, template)
-        self.debug('Camera x,y =' + str(x - previousx) + ',' + str(y - previousy))
-
-        # Recenter
-        self.reference_relative_move(-array([x, y]))
-        self.wait_until_still()
-        u0 = self.position()
-        self.r0 = -dot(M, u0)
-
         self.info('Large displacements')
+        # More accurate calibration:
+        # 3) Move to three corners using the computed matrix
+        scale = 0.9  # This is to avoid the black corners
+        width, height = int(self.camera.width * scale), int(self.camera.height * scale)
+        theight, twidth = template.shape  # template dimensions
+        # List of corners, reference coordinates
+        # We use a margin of 1/4 of the template
+        rtarget = [array([-(width / 2 - twidth * 3. / 4), -(height / 2 - theight * 3. / 4)]),
+                   array([(width / 2 - twidth * 3. / 4), -(height / 2 - theight * 3. / 4)]),
+                   array([-(width / 2 - twidth * 3. / 4), (height / 2 - theight * 3. / 4)])]
+
 
         best_error = 1e6
         best_M, best_Minv = M, Minv
-        for _ in range(self.config.stage_refine_steps+1):
-            # More accurate calibration:
-            # 3) Move to three corners using the computed matrix
-            width, height = self.camera.width, self.camera.height
-            theight, twidth = template.shape # template dimensions
-            # List of corners, reference coordinates
-            # We use a margin of 1/4 of the template
-            rtarget = [array([-(width/2-twidth*3./4),-(height/2-theight*3./4)]),
-                array([(width/2-twidth*3./4),-(height/2-theight*3./4)]),
-                array([-(width/2-twidth*3./4),(height/2-theight*3./4)])]
+        for _ in range(int(self.config.stage_refine_steps)+1):
+            self.info('Moving back')
+
+            # Move back
+            self.absolute_move(u0)
+            self.wait_until_still()
+            self.sleep(self.config.sleep_time)
+
+            # Fix any residual error (due to motor unreliability)
+            image = self.camera.snap()
+            x, y, _ = templatematching(image, template)
+            self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+
+            # Recenter
+            self.reference_relative_move(-array([x - x0, y - y0]))
+            self.wait_until_still()
+            u0 = self.position()
+            self.r0 = -dot(M, u0)
+
             u = []
             r = []
             for ri in rtarget:
@@ -1181,11 +1186,11 @@ class CalibratedStage(CalibratedUnit):
                 x, y, _ = templatematching(image, template)
                 # Error calculation
                 self.debug('Camera x,y = {},{}'.format(x - x0,y - y0))
-                r.append(array([x,y]))
+                r.append(array([x-x0,y-y0]))
                 u.append(self.position())
             # Error
             quadratic_error = array([(rtarget[i] - r[i])**2 for i in range(3)]).mean()
-            self.debug('Error = {} pixels'.format(quadratic_error))
+            self.debug('Error = {} pixels'.format(quadratic_error**.5))
 
             # Is it better than previously?
             if quadratic_error<best_error:
@@ -1219,22 +1224,27 @@ class CalibratedStage(CalibratedUnit):
             self.r0 = r0
 
         # Select the best one
-        self.M = best_M
-        self.Minf = best_Minv
+        if (int(self.config.stage_refine_steps)>0):
+            self.M = best_M
+            self.Minf = best_Minv
 
         # Move back and recenter
         self.info('Moving back')
         self.absolute_move(u0)
         self.wait_until_still()
+        self.sleep(self.config.sleep_time)
 
         image = self.camera.snap()
         x, y, _ = templatematching(image, template)
-        self.debug('Camera x,y =' + str(x - previousx) + ',' + str(y - previousy))
+        self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
 
-        self.reference_relative_move(-array([x, y]))
+        self.reference_relative_move(-array([x-x0, y-y0]))
         self.r0 = -dot(M, u0)
 
         self.info('Stage calibration done')
+        if (int(self.config.stage_refine_steps)>0): # otherwise it's not measurable
+            self.info('Error = {} pixels = {} %'.format(best_error**.5,
+                                                        100*(best_error**.5)/max([width,height])))
 
     def mosaic(self, width = None, height = None):
         '''
