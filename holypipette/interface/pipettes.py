@@ -216,7 +216,7 @@ class PipetteInterface(TaskInterface):
         x, y = xy_position
         position = np.array([x, y])
         self.debug('asking for reference move to {}'.format(position))
-        self.execute(self.calibrated_stage.reference_move, argument=-position) # compensatory move
+        self.execute(self.calibrated_stage.reference_relative_move, argument=-position) # compensatory move
 
     @blocking_command(category='Microscope',
                       description='Go to the floor (cover slip)',

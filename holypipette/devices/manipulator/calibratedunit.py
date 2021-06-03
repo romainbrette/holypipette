@@ -1020,6 +1020,14 @@ class CalibratedStage(CalibratedUnit):
             r3D = r
         CalibratedUnit.reference_move(self, r3D) # Third coordinate is ignored
 
+    def reference_relative_move(self, r):
+        if len(r)==2: # Third coordinate is actually not useful
+            r3D = zeros(3)
+            r3D[:2] = r
+        else:
+            r3D = r
+        CalibratedUnit.reference_relative_move(self, r3D) # Third coordinate is ignored
+
     def calibrate(self):
         '''
         Automatic calibration for a horizontal XY stage
