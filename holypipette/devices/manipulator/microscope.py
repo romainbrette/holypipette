@@ -99,8 +99,8 @@ class Microscope(Manipulator):
             self.relative_move(zi-current_z)
             current_z = zi
             self.wait_until_still()
-            #time.sleep(1) # is this necessary?
-            time.sleep(.1) # Just make sure the camera is in sync
+            # We wait a little bit because there might be mechanical oscillations
+            time.sleep(.3) # also make sure the camera is in sync
             img = preprocessing(camera.snap())
             images.append(img)
             if save is not None:
@@ -123,4 +123,4 @@ class Microscope(Manipulator):
         Variables not present in the dictionary are untouched.
         '''
         self.up_direction = config.get('up_direction', self.up_direction)
-        self.floor_Z = config.get('floor_Z', self.floor_Z)
+        #self.floor_Z = config.get('floor_Z', self.floor_Z)

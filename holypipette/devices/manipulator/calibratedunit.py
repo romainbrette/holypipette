@@ -985,8 +985,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.photos = config.get('photos', self.photos)
         self.photo_x0 = config.get('photo_x0', self.photo_x0)
         self.photo_y0 = config.get('photo_y0', self.photo_y0)
-        self.min = config.get('min', self.min)
-        self.max = config.get('max', self.max)
+        #self.min = config.get('min', self.min)
+        #self.max = config.get('max', self.max)
 
 
 class CalibratedStage(CalibratedUnit):
@@ -1044,6 +1044,7 @@ class CalibratedStage(CalibratedUnit):
         self.sleep(self.config.sleep_time)
         image = self.camera.snap()
         x0, y0, _ = templatematching(image, template)
+        previousx, previousy = x0, y0
 
         M = zeros((3, len(self.axes)))
 
@@ -1060,12 +1061,12 @@ class CalibratedStage(CalibratedUnit):
             self.abort_if_requested()
             image = self.camera.snap()
             x, y, _ = templatematching(image, template)
-            self.debug('Camera x,y =' + str(x - x0) + ',' + str(y - y0))
+            self.debug('Camera x,y =' + str(x - previousx) + ',' + str(y - previousy))
 
             # 2) Compute the matrix from unit to camera (first in pixels)
-            M[:,axis] = array([x-x0, y-y0, 0])/distance
+            M[:,axis] = array([x-previousx, y-previousy, 0])/distance
             self.debug('Matrix column:' + str(M[:, axis]))
-            x0, y0 = x, y # this is the position before the next move
+            previousx, previousy = x, y # this is the position before the next move
 
         # Equalize axes (same displacement in each direction); for the movement it's not done
         #if self.config.equalize_axes:
@@ -1083,6 +1084,7 @@ class CalibratedStage(CalibratedUnit):
         self.calibrated = True
 
         self.info('Large displacements')
+        # Maybe move back and recalibrate
 
         # More accurate calibration:
         # 3) Move to three corners using the computed matrix
@@ -1101,9 +1103,13 @@ class CalibratedStage(CalibratedUnit):
             self.wait_until_still()
             self.sleep(self.config.sleep_time)
             image = self.camera.snap()
+            # Template matching could be reduced to the expected region
             x, y, _ = templatematching(image, template)
-            self.debug('Camera x,y = {},{}'.format(str(x - x0),str(y - y0))) # should be relative the the initial (x0,y0)
-            #self.debug('Camera x,y = {},{} ; Expected x,y = {},{}'.format(str(x - x0),str(y - y0),str(ex),str()))
+            # Error calculation
+            relative_error = [1-(x - x0)/ri[0], 1-(y-y0)/ri[1]]
+            self.debug('Camera x,y = {},{} ; Error = {}%, {}%'.format(x - x0,y - y0,
+                                                                      relative_error[0]*100,
+                                                                      relative_error[1]*100))
             r.append(array([x,y]))
             u.append(self.position())
         rx = r[1]-r[0]

@@ -188,8 +188,8 @@ class PipetteInterface(TaskInterface):
                      argument=[2, None])
 
     @blocking_command(category='Manipulators',
-                      description='Recalibrate stage and manipulator',
-                      task_description='Recalibrating stage and manipulator')
+                      description='Recalibrate manipulator',
+                      task_description='Recalibrating manipulator')
     def recalibrate_manipulator(self):
         self.execute(self.calibrated_unit.recalibrate)
 
