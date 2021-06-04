@@ -4,11 +4,12 @@ import time
 
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 import numpy as np
 
 from holypipette.controller import TaskController
 from holypipette.gui import CameraGui
-from holypipette.interface import command
+from holypipette.interface import command, blocking_command
 from holypipette.devices.manipulator.calibratedunit import CalibrationError
 import datetime
 
@@ -28,7 +29,13 @@ class ManipulatorGui(CameraGui):
         self.interface_signals[self.interface] = (self.pipette_command_signal,
                                                   self.pipette_reset_signal)
         self.display_edit_funcs.append(self.draw_scale_bar)
+        self.display_edit_funcs.append(self.display_manipulator)
+        self.display_edit_funcs.append(self.show_tip)
         self.add_config_gui(self.interface.calibration_config)
+
+        self.show_tip_on = False
+        self.tip_x, self.tip_y = None, None
+        self.tip_t0 = None
 
         # Measure manipulator positions (range measurement)
         self.position_timer = QtCore.QTimer()
@@ -54,6 +61,17 @@ class ManipulatorGui(CameraGui):
             self.position_timer.stop()
             # Check whether all positions have been updated
             self.interface.check_ranges()
+
+    def display_manipulator(self, pixmap):
+        '''
+        Displays the number of the selected manipulator.
+        '''
+        painter = QtGui.QPainter(pixmap)
+        pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        painter.setPen(pen)
+        painter.setFont(QFont("Arial", int(pixmap.height()/20)))
+        c_x, c_y = pixmap.width() *19.0 / 20, pixmap.height() * 19.0 / 20
+        painter.drawText(c_x, c_y, str(self.interface.current_unit+1))
 
     def draw_scale_bar(self, pixmap, text=True, autoscale=True,
                        position=True):
@@ -170,8 +188,9 @@ class ManipulatorGui(CameraGui):
                                          self.interface.move_pipette_z,
                                          argument=-distance, default_doc=False)
 
-
-
+        # Show the tip
+        self.register_key_action(Qt.Key_Space, Qt.NoModifier,
+                                 self.show_tip_switch)
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
@@ -233,30 +252,44 @@ class ManipulatorGui(CameraGui):
         self.register_key_action(Qt.Key_O, None,
                                  self.toggle_overlay)
 
+    @command(category='Manipulators',
+             description='Show the tip of selected manipulator')
+    def show_tip_switch(self):
+        try:
+            self.tip_x, tip_y, _ = self.interface.calibrated_unit.reference_position()
+            self.tip_t0 = time.time()
+            self.show_tip_on = True
+        except CalibrationError:  # not yet calibrated
+            return
+
     def show_tip(self, pixmap):
         # Show the tip of the electrode
-        interface = self.interface
-        scale = 1.0 * self.camera.width / pixmap.size().width()
-        pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
-        if pixel_per_um is None:
-            pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
-        painter = QtGui.QPainter(pixmap)
-        pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
-        pen.setWidth(3)
-        painter.setPen(pen)
+        if self.show_tip_on:
+            interface = self.interface
+            scale = 1.0 * self.camera.width / pixmap.size().width()
+            pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
+            if pixel_per_um is None:
+                pixel_per_um = interface.calibrated_unit.stage.pixel_per_um()[0]
+            painter = QtGui.QPainter(pixmap)
+            pen = QtGui.QPen(QtGui.QColor(0, 0, 200, 125))
+            pen.setWidth(3)
+            painter.setPen(pen)
 
-        try:
-            x, y, _ = interface.calibrated_unit.reference_position()
-        except CalibrationError: # not yet calibrated
-            return
-        x+=self.camera.width/2
-        y+=self.camera.height/2
-        width = 20 * pixel_per_um / scale
-        height = 20 * pixel_per_um / scale
-        painter.translate(x / scale, y / scale)
+            x, y = self.tip_x, self.tip_y
 
-        painter.drawRect(-width / 2, -height / 2, width, height)
-        painter.end()
+            if x is not None:
+                x+=self.camera.width/2
+                y+=self.camera.height/2
+                width = 20 * pixel_per_um / scale
+                height = 20 * pixel_per_um / scale
+                painter.translate(x / scale, y / scale)
+
+                painter.drawRect(-width / 2, -height / 2, width, height)
+            painter.end()
+
+            # Display for just one second
+            if time.time()>self.tip_t0+1.:
+                self.show_tip_on = False
 
     def display_timer(self, pixmap):
         interface = self.interface

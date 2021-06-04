@@ -160,8 +160,8 @@ class PipetteInterface(TaskInterface):
         '''
         self.current_unit = unit_number - 1
         self.calibrated_unit = self.calibrated_units[self.current_unit]
-        self.manipulator_switched.emit('Manipulators',
-                                       'Manipulator: %d' % unit_number)
+        #self.manipulator_switched.emit('Manipulators',
+        #                               'Manipulator: %d' % unit_number)
 
 
     @blocking_command(category='Stage',
