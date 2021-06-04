@@ -14,8 +14,10 @@ class ParameciumDeviceConfig(Config):
     impalement_level = NumberWithUnit(10, bounds=(0, 100), doc='Impalement level', unit='µm')
     withdraw_distance = NumberWithUnit(1000, bounds=(0, 3000), doc='Withdraw distance', unit='µm')
     pipette_distance = NumberWithUnit(250, bounds=(0, 2000), doc='Pipette distance from center', unit='µm')
+    short_withdraw_distance = NumberWithUnit(20, bounds=(0, 100), doc='Withdraw before impalement', unit='µm')
 
-    categories = [('Manipulation', ['working_level', 'calibration_level', 'impalement_level', 'withdraw_distance', 'pipette_distance'])]
+    categories = [('Manipulation', ['working_level', 'calibration_level', 'impalement_level', 'withdraw_distance', 'pipette_distance',
+                                    'short_withdraw_distance'])]
 
 
 class CalibratedUnitProxy(object):
@@ -143,34 +145,29 @@ class ParameciumDeviceInterface(TaskInterface):
             #self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
 
     @command(category='Paramecium',
-                     description='Focus on tip')
-    def focus(self):
-        z = self.calibrated_unit.reference_position()[2]
-        self.controller.microscope.absolute_move(z)
+                     description='Focus on working level')
+    def focus_working_level(self):
+        self.controller.microscope.absolute_move(self.controller.microscope.floor_Z + self.config.working_level*self.controller.microscope.up_direction)
+
+    @command(category='Paramecium',
+                     description='Focus on calibration level')
+    def focus_calibration_level(self):
+        self.controller.microscope.absolute_move(self.controller.microscope.floor_Z + self.config.calibration_level*self.controller.microscope.up_direction)
 
     @blocking_command(category='Paramecium',
                      description='Move pipette down to position at working distance level',
                      task_description='Moving pipette to position at working distance level')
     def move_pipette_working_level(self, xy_position):
         x, y = xy_position
-        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.working_distance*self.controller.microscope.up_direction])
+        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.working_level*self.controller.microscope.up_direction])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.safe_move, argument=position)
 
     @blocking_command(category='Paramecium',
-                     description='Move pipette vertically to floor level',
-                     task_description='Move pipette vertically to floor level')
+                     description='Move pipette vertically to impalement level',
+                     task_description='Move pipette vertically to impalement level')
     def move_pipette_down(self):
         x, y, _ = self.controller.calibrated_unit.reference_position()
         position = np.array([x, y, self.controller.microscope.floor_Z + self.config.impalement_level*self.controller.microscope.up_direction])
         self.debug('asking for move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.reference_move, argument=position)
-
-    @blocking_command(category='Paramecium',
-                     description='Autofocus',
-                     task_description='Autofocus')
-    def autofocus(self, xy_position):
-        x, y = xy_position
-        position = np.array([x, y, self.controller.microscope.position()])
-        self.debug('asking for autocus at {}'.format(position))
-        self.execute(self.controller.autofocus, argument=position)

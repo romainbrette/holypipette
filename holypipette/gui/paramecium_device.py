@@ -42,12 +42,19 @@ class ParameciumDeviceGui(ManipulatorGui):
         self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
                                    self.paramecium_interface.move_pipette_floor) # move to floor level, x axis last
         self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
-                                   self.paramecium_interface.move_pipette_working_level) # move 200 um above clicked position
-        self.register_mouse_action(Qt.RightButton, Qt.ControlModifier,
-                                   self.paramecium_interface.autofocus)
+                                   self.paramecium_interface.move_pipette_working_level) # move above clicked position
+
         self.register_key_action(Qt.Key_Space, None,
-                                 self.paramecium_interface.move_pipette_down) # move to floor level
-        self.register_key_action(Qt.Key_U, None,
-                                 self.paramecium_interface.focus) # focus on tip
+                                 self.paramecium_interface.move_pipette_down) # move to impalement level
         self.register_key_action(Qt.Key_0, None,
                                  self.pipette_interface.reset_timer)
+        self.register_key_action(Qt.Key_Less, None,
+                                 self.paramecium_interface.focus_working_level)
+        self.register_key_action(Qt.Key_Greater, None,
+                                 self.paramecium_interface.focus_calibration_level)
+        #self.register_key_action(Qt.Key_At, None,
+        #                         self.paramecium_interface.set_center)
+        #self.register_key_action(Qt.Key_Home, None,
+        #                         self.paramecium_interface.move_to_center)
+        #self.register_key_action(Qt.Key_Return, None,
+        #                         self.paramecium_interface.move_pipette_in)
