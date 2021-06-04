@@ -7,7 +7,7 @@ from PyQt5 import QtWidgets
 
 from holypipette.log_utils import console_logger
 from holypipette.interface.pipettes import PipetteInterface
-from holypipette.interface.paramecium import ParameciumInterface
+from holypipette.interface.paramecium_device import ParameciumDeviceInterface
 from holypipette.gui import ParameciumDeviceGui
 
 from setup_script import *

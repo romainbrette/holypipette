@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt
 import numpy as np
 
 from holypipette.controller import TaskController
-from holypipette.interface.paramecium import ParameciumInterface
+from holypipette.interface.paramecium_droplet import ParameciumDropletInterface
 from holypipette.gui.manipulator import ManipulatorGui
 
 # Helper functions for drawing
@@ -71,7 +71,7 @@ class ParameciumDropletGui(ManipulatorGui):
                                             pipette_interface=pipette_interface,
                                             with_tracking=False)
         self.pipette_interface = pipette_interface
-        self.paramecium_interface = ParameciumInterface(pipette_interface,
+        self.paramecium_interface = ParameciumDropletInterface(pipette_interface,
                                                         camera)
         self.image_edit_funcs.append(self.track_paramecium)
         self.display_edit_funcs.append(self.show_paramecium)
@@ -171,50 +171,3 @@ class ParameciumDropletGui(ManipulatorGui):
                 draw_contour(contour, painter, scale)
                 painter.end()
 
-
-
-#################################################
-# Paramecium experiment with the device method #
-#################################################
-class ParameciumDeviceGui(ManipulatorGui):
-
-    paramecium_command_signal = QtCore.pyqtSignal(MethodType, object)
-    paramecium_reset_signal = QtCore.pyqtSignal(TaskController)
-
-    def __init__(self, camera, pipette_interface):
-        super(ParameciumDeviceGui, self).__init__(camera,
-                                            pipette_interface=pipette_interface,
-                                            with_tracking=False)
-        self.pipette_interface = pipette_interface
-        self.paramecium_interface = ParameciumInterface(pipette_interface,
-                                                        camera)
-        self.display_edit_funcs.append(self.display_timer)
-        # show_tip seems to interfere with movements
-        #self.display_edit_funcs.append(self.show_tip)
-        self.paramecium_position = (None, None, None, None, None)
-        self.paramecium_interface.moveToThread(pipette_interface.thread())
-        self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
-                                                             self.paramecium_reset_signal)
-        self.setWindowTitle("Paramecium device GUI")
-        self.add_config_gui(self.paramecium_interface.config)
-
-    def register_commands(self):
-        # We have all the commandes of the pipettes interface
-        super(ParameciumDeviceGui, self).register_commands(manipulator_keys = False)
-
-        self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
-                                   self.paramecium_interface.move_pipette_floor) # move to floor level, x axis last
-        self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
-                                   self.paramecium_interface.move_pipette_working_level) # move 200 um above clicked position
-        self.register_mouse_action(Qt.RightButton, Qt.ControlModifier,
-                                   self.paramecium_interface.autofocus)
-        self.register_key_action(Qt.Key_Space, None,
-                                 self.paramecium_interface.move_pipette_down) # move to floor level
-        self.register_key_action(Qt.Key_P, None,
-                                 self.paramecium_interface.display_z_manipulator)
-        self.register_key_action(Qt.Key_U, None,
-                                 self.paramecium_interface.focus) # focus on tip
-        #self.register_key_action(Qt.Key_V, None,
-        #                         self.paramecium_interface.move_pipettes_paramecium)
-        self.register_key_action(Qt.Key_0, None,
-                                 self.pipette_interface.reset_timer)

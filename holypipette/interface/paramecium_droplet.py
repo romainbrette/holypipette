@@ -9,7 +9,7 @@ import numpy as np
 import time
 from numpy import cos,sin
 
-class ParameciumConfig(Config):
+class ParameciumDropletConfig(Config):
     #downsample = Number(1, bounds=(1, 32), doc='Downsampling factor for the image')
     target_pixelperum = Number(1, bounds=(0, 4), doc='Target number of pixel per um')
     min_gradient = NumberWithUnit(75, bounds=(0, 100), doc='Minimum gradient quantile for edge detection', unit='%')
@@ -61,11 +61,11 @@ class CalibratedUnitProxy(object):
         return getattr(self._pipette_interface.calibrated_unit, item)
 
 
-class ParameciumInterface(TaskInterface):
+class ParameciumDropletInterface(TaskInterface):
 
     def __init__(self, pipette_interface, camera):
-        super(ParameciumInterface, self).__init__()
-        self.config = ParameciumConfig(name='Paramecium')
+        super(ParameciumDropletInterface, self).__init__()
+        self.config = ParameciumDropletConfig(name='Paramecium')
         self.camera = camera
         self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
         self.calibrated_units = pipette_interface.calibrated_units

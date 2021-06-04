@@ -99,7 +99,7 @@ class ParameciumTracker(object):
     def __init__(self, config=None, history_size=100):
         if config is None:
             # Avoid circular imports
-            from holypipette.interface.paramecium import ParameciumConfig
+            from holypipette.interface.paramecium_droplet import ParameciumConfig
             config = ParameciumConfig()
         self.config = config
         self.previous = RecentPositions(maxlen=history_size)

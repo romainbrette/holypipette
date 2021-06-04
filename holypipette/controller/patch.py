@@ -1,8 +1,6 @@
 import time
 
 import numpy as np
-from numpy import array
-import cv2
 
 from .base import TaskController
 
