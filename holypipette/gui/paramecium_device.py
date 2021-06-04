@@ -32,7 +32,7 @@ class ParameciumDeviceGui(ManipulatorGui):
         self.paramecium_interface.moveToThread(pipette_interface.thread())
         self.interface_signals[self.paramecium_interface] = (self.paramecium_command_signal,
                                                              self.paramecium_reset_signal)
-        self.setWindowTitle("Paramecium device GUI")
+        self.setWindowTitle("Paramecium device")
         self.add_config_gui(self.paramecium_interface.config)
 
     def register_commands(self):
@@ -47,8 +47,6 @@ class ParameciumDeviceGui(ManipulatorGui):
                                    self.paramecium_interface.autofocus)
         self.register_key_action(Qt.Key_Space, None,
                                  self.paramecium_interface.move_pipette_down) # move to floor level
-        self.register_key_action(Qt.Key_P, None,
-                                 self.paramecium_interface.display_z_manipulator)
         self.register_key_action(Qt.Key_U, None,
                                  self.paramecium_interface.focus) # focus on tip
         self.register_key_action(Qt.Key_0, None,

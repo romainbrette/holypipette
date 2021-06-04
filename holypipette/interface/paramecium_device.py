@@ -2,15 +2,20 @@
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision import cardinal_points
+from holypipette.controller.paramecium_device import ParameciumDeviceController
 
 import numpy as np
 import time
 
 class ParameciumDeviceConfig(Config):
     # Vertical distance of pipettes above the coverslip
-    working_distance = NumberWithUnit(200, bounds=(0, 1000), doc='Working distance for pipettes', unit='µm')
+    working_level = NumberWithUnit(50, bounds=(0, 500), doc='Working level', unit='µm')
+    calibration_level = NumberWithUnit(200, bounds=(0, 1000), doc='Calibration level', unit='µm')
+    impalement_level = NumberWithUnit(10, bounds=(0, 100), doc='Impalement level', unit='µm')
+    withdraw_distance = NumberWithUnit(1000, bounds=(0, 3000), doc='Withdraw distance', unit='µm')
+    pipette_distance = NumberWithUnit(250, bounds=(0, 2000), doc='Pipette distance from center', unit='µm')
 
-    categories = [('Manipulation', ['working_distance'])]
+    categories = [('Manipulation', ['working_level', 'calibration_level', 'impalement_level', 'withdraw_distance', 'pipette_distance'])]
 
 
 class CalibratedUnitProxy(object):
@@ -38,6 +43,13 @@ class ParameciumDeviceInterface(TaskInterface):
         self.calibrated_units = pipette_interface.calibrated_units
         self.previous_shift_click = None
         self.shift_click_time = time.time()-1e6 # a long time ago
+
+        self.controller = ParameciumDeviceController(self.calibrated_unit,
+                                               pipette_interface.microscope,
+                                               pipette_interface.calibrated_stage,
+                                               camera,
+                                               self.config)
+
 
     @blocking_command(category='Paramecium',
                      description='Move pipettes to Paramecium',
@@ -150,7 +162,7 @@ class ParameciumDeviceInterface(TaskInterface):
                      task_description='Move pipette vertically to floor level')
     def move_pipette_down(self):
         x, y, _ = self.controller.calibrated_unit.reference_position()
-        position = np.array([x, y, self.controller.microscope.floor_Z])
+        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.impalement_level*self.controller.microscope.up_direction])
         self.debug('asking for move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.reference_move, argument=position)
 
@@ -162,10 +174,3 @@ class ParameciumDeviceInterface(TaskInterface):
         position = np.array([x, y, self.controller.microscope.position()])
         self.debug('asking for autocus at {}'.format(position))
         self.execute(self.controller.autofocus, argument=position)
-
-    @command(category='Paramecium',
-             description='Display z position of manipulator relative to floor')
-    def display_z_manipulator(self):
-        position = self.controller.calibrated_unit.reference_position()[2]-self.controller.microscope.floor_Z
-        position = position * self.controller.microscope.up_direction # so that >0 means above
-        self.info('z position: {} um above floor'.format(position))

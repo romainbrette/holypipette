@@ -1,6 +1,6 @@
 # coding=utf-8
 from holypipette.config import Config, NumberWithUnit, Number, Boolean
-from holypipette.controller.paramecium import ParameciumController
+from holypipette.controller.paramecium_droplet import ParameciumDropletController
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision.paramecium_tracking import ParameciumTracker
 from holypipette.vision import cardinal_points
@@ -69,7 +69,7 @@ class ParameciumDropletInterface(TaskInterface):
         self.camera = camera
         self.calibrated_unit = CalibratedUnitProxy(pipette_interface)
         self.calibrated_units = pipette_interface.calibrated_units
-        self.controller = ParameciumController(self.calibrated_unit,
+        self.controller = ParameciumDropletController(self.calibrated_unit,
                                                pipette_interface.microscope,
                                                pipette_interface.calibrated_stage,
                                                camera,

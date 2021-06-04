@@ -189,7 +189,7 @@ class ManipulatorGui(CameraGui):
                                          argument=-distance, default_doc=False)
 
         # Show the tip
-        self.register_key_action(Qt.Key_Space, Qt.NoModifier,
+        self.register_key_action(Qt.Key_T, Qt.NoModifier,
                                  self.show_tip_switch)
 
         # Calibration commands
