@@ -256,7 +256,7 @@ class ManipulatorGui(CameraGui):
              description='Show the tip of selected manipulator')
     def show_tip_switch(self):
         try:
-            self.tip_x, tip_y, _ = self.interface.calibrated_unit.reference_position()
+            self.tip_x, self.tip_y, _ = self.interface.calibrated_unit.reference_position()
             self.tip_t0 = time.time()
             self.show_tip_on = True
         except CalibrationError:  # not yet calibrated
