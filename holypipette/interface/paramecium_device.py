@@ -83,21 +83,14 @@ class ParameciumDeviceInterface(TaskInterface):
     @blocking_command(category='Paramecium',
                       description='Partially withdraw the pipette',
                       task_description='Withdrawing the pipette')
-    def move_partial_withdraw(self):
-        self.execute(self.controller.calibrated_unit.relative_move, argument=[self.config.withdraw_distance*self.calibrated_unit.up_direction,0])
+    def partial_withdraw(self):
+        self.execute(self.controller.partial_withdraw)
 
     @blocking_command(category='Paramecium',
                       description='Move pipette to impalement level by a side move',
                       task_description='Moving pipette to impalement level by a side move')
     def move_pipette_in(self):
-        # move out
-        self.execute(self.controller.calibrated_unit.relative_move, argument=[self.config.short_withdraw_distance*self.calibrated_unit.up_direction[0],0])
-        # move down
-        x, y, _ = self.controller.calibrated_unit.reference_position()
-        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.impalement_level*self.controller.microscope.up_direction])
-        self.execute(self.controller.calibrated_unit.reference_move, argument=position)
-        # move in
-        self.execute(self.controller.calibrated_unit.relative_move, argument=[-self.config.short_withdraw_distance*self.calibrated_unit.up_direction,0])
+        self.execute(self.controller.move_pipette_in)
 
     #@blocking_command(category='Paramecium',
     #                  description='Partially withdraw the pipette',

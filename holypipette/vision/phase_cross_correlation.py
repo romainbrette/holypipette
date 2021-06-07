@@ -98,7 +98,7 @@ def _compute_error(cross_correlation_max, src_amp, target_amp):
         (src_amp * target_amp)
     return np.sqrt(np.abs(error))
 
-def phase_cross_correlation(reference_image, moving_image, *,
+def phase_cross_correlation(reference_image, moving_image,
                             upsample_factor=1, space="real",
                             return_error=True, overlap_ratio=0.3):
     """Efficient subpixel image translation registration by cross-correlation.
