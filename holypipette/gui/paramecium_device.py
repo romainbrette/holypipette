@@ -39,10 +39,10 @@ class ParameciumDeviceGui(ManipulatorGui):
         # We have all the commandes of the pipettes interface
         super(ParameciumDeviceGui, self).register_commands(manipulator_keys = False)
 
-        self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
-                                   self.paramecium_interface.move_pipette_floor) # move to floor level, x axis last
-        self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
-                                   self.paramecium_interface.move_pipette_working_level) # move above clicked position
+        #self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
+        #                           self.paramecium_interface.move_pipette_floor) # move to floor level, x axis last
+        #self.register_mouse_action(Qt.LeftButton, Qt.ControlModifier,
+        #                           self.paramecium_interface.move_pipette_working_level) # move above clicked position
 
         self.register_key_action(Qt.Key_Space, None,
                                  self.paramecium_interface.move_pipette_down) # move to impalement level
@@ -56,5 +56,7 @@ class ParameciumDeviceGui(ManipulatorGui):
         #                         self.paramecium_interface.set_center)
         #self.register_key_action(Qt.Key_Home, None,
         #                         self.paramecium_interface.move_to_center)
-        #self.register_key_action(Qt.Key_Return, None,
-        #                         self.paramecium_interface.move_pipette_in)
+        self.register_key_action(Qt.Key_Return, None,
+                                 self.paramecium_interface.move_pipette_in)
+        self.register_key_action(Qt.Key_W, None,
+                                 self.paramecium_interface.partial_withdraw)

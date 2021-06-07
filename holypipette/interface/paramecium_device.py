@@ -52,98 +52,6 @@ class ParameciumDeviceInterface(TaskInterface):
                                                camera,
                                                self.config)
 
-
-    @blocking_command(category='Paramecium',
-                     description='Move pipettes to Paramecium',
-                     task_description='Moving pipettes to Paramecium')
-    def move_pipettes_paramecium(self):
-        # Check which pipette is on the right
-        orientation = [cardinal_points[self.calibrated_units[i].pipette_position][1] for i in [0,1]]
-        if orientation[0] == 2: # east
-            right_pipette = 0
-            left_pipette = 1
-        else: # assuming west
-            right_pipette = 1
-            left_pipette = 0
-
-        x1, y1 = self.paramecium_position[:2]
-        x2, y2 = self.paramecium_tip2_position
-
-        if x1<x2:
-            pipette1 = left_pipette
-            pipette2 = right_pipette
-        else:
-            pipette1 = right_pipette
-            pipette2 = left_pipette
-
-        # Move pipette 1
-        position = np.array([x1, y1, self.controller.microscope.floor_Z])
-        self.debug('asking for direct move of pipette 1 to {}'.format(position))
-        self.calibrated_units[pipette1].reference_move(position)
-
-        # Move pipette 2
-        position = np.array([x2, y2, self.controller.microscope.floor_Z])
-        self.debug('asking for direct move of pipette 2 to {}'.format(position))
-        self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
-
-        # Clearing history ; the manipulation can be done again
-        self.previous_shift_click = None
-
-    @blocking_command(category='Paramecium',
-                     description='Move pipettes to position at floor level',
-                     task_description='Moving pipettes to position at floor level')
-    def move_pipette_floor(self, xy_position):
-        t = time.time()
-        if t-self.shift_click_time > 5.: # 5 second time-out; could be in config
-            self.previous_shift_click = xy_position
-            self.shift_click_time = t
-            self.debug('Storing position {} for future movement'.format(xy_position))
-            self.execute(self.controller.sleep, argument=0.1)
-        else:
-            # Check which pipette is on the right
-            orientation = [cardinal_points[self.calibrated_units[i].pipette_position][1] for i in [0, 1]]
-            if orientation[0] == 2:  # east
-                right_pipette = 0
-                left_pipette = 1
-            else:  # assuming west
-                right_pipette = 1
-                left_pipette = 0
-
-            x1, y1 = self.previous_shift_click
-            x2, y2 = xy_position
-
-            if x1 < x2:
-                pipette1 = left_pipette
-                pipette2 = right_pipette
-            else:
-                pipette1 = right_pipette
-                pipette2 = left_pipette
-
-            # Move pipette 1, except the x axis
-            position1 = np.array([x1, y1, self.controller.microscope.floor_Z])
-            self.debug('Moving pipette 1 to {}'.format(position1))
-            self.calibrated_units[pipette1].reference_move_not_Z(position1)
-
-            # Move pipette 2, except the x axis
-            position2 = np.array([x2, y2, self.controller.microscope.floor_Z])
-            self.debug('Moving pipette 2 to {}'.format(position2))
-            self.calibrated_units[pipette2].reference_move_not_Z(position2)
-
-            # Wait until motors are stopped
-            self.debug('Waiting for pipette 1 to stop')
-            self.calibrated_units[pipette1].wait_until_still()
-            self.debug('Waiting for pipette 2 to stop')
-            self.calibrated_units[pipette2].wait_until_still()
-
-            # Final movements
-            self.debug('Moving pipette 1 along X axis')
-            self.execute(self.calibrated_units[pipette1].reference_move, argument=position1)
-            self.calibrated_units[pipette1].reference_move(position1)
-            self.debug('Moving pipette 2 along X axis')
-            self.execute(self.calibrated_units[pipette2].reference_move, argument=position2)
-
-            #self.execute(self.calibrated_units[pipette2].reference_move, argument=position)
-
     @command(category='Paramecium',
                      description='Focus on working level')
     def focus_working_level(self):
@@ -165,9 +73,39 @@ class ParameciumDeviceInterface(TaskInterface):
 
     @blocking_command(category='Paramecium',
                      description='Move pipette vertically to impalement level',
-                     task_description='Move pipette vertically to impalement level')
+                     task_description='Moving pipette vertically to impalement level')
     def move_pipette_down(self):
         x, y, _ = self.controller.calibrated_unit.reference_position()
         position = np.array([x, y, self.controller.microscope.floor_Z + self.config.impalement_level*self.controller.microscope.up_direction])
         self.debug('asking for move to {}'.format(position))
         self.execute(self.controller.calibrated_unit.reference_move, argument=position)
+
+    @blocking_command(category='Paramecium',
+                      description='Partially withdraw the pipette',
+                      task_description='Withdrawing the pipette')
+    def move_partial_withdraw(self):
+        self.execute(self.controller.calibrated_unit.relative_move, argument=[self.config.withdraw_distance*self.calibrated_unit.up_direction,0])
+
+    @blocking_command(category='Paramecium',
+                      description='Move pipette to impalement level by a side move',
+                      task_description='Moving pipette to impalement level by a side move')
+    def move_pipette_in(self):
+        # move out
+        self.execute(self.controller.calibrated_unit.relative_move, argument=[self.config.short_withdraw_distance*self.calibrated_unit.up_direction[0],0])
+        # move down
+        x, y, _ = self.controller.calibrated_unit.reference_position()
+        position = np.array([x, y, self.controller.microscope.floor_Z + self.config.impalement_level*self.controller.microscope.up_direction])
+        self.execute(self.controller.calibrated_unit.reference_move, argument=position)
+        # move in
+        self.execute(self.controller.calibrated_unit.relative_move, argument=[-self.config.short_withdraw_distance*self.calibrated_unit.up_direction,0])
+
+    #@blocking_command(category='Paramecium',
+    #                  description='Partially withdraw the pipette',
+    #                  task_description='Withdrawing the pipette')
+    #def set_center(self):
+        #self.center = self.cali
+
+        #self.register_key_action(Qt.Key_At, None,
+        #                         self.paramecium_interface.set_center)
+        #self.register_key_action(Qt.Key_Home, None,
+        #                         self.paramecium_interface.move_to_center)
