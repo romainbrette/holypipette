@@ -56,7 +56,7 @@ class ParameciumDeviceGui(ManipulatorGui):
         #                         self.paramecium_interface.set_center)
         #self.register_key_action(Qt.Key_Home, None,
         #                         self.paramecium_interface.move_to_center)
-        self.register_key_action(Qt.Key_Return, None,
+        self.register_key_action(Qt.Key_Space, Qt.ControlModifier,
                                  self.paramecium_interface.move_pipette_in)
         self.register_key_action(Qt.Key_W, None,
                                  self.paramecium_interface.partial_withdraw)
