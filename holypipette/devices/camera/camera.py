@@ -8,10 +8,10 @@ from __future__ import print_function
 import time
 
 import numpy as np
-import scipy.misc
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
 import cv2
+from PIL import Image
 
 __all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']
 
@@ -155,7 +155,8 @@ class FakeCamera(Camera):
                 manipulators[(np.abs(angle - direction) < border) & (np.abs(angle - direction) > border-edge_width) & (dist > 50)] = 75
                 frame[manipulators>0] = manipulators[manipulators>0]
         else:
-            frame = scipy.misc.imresize(self.frame, size=0.5)
+            img = Image.fromarray(self.frame)
+            frame = np.array(img.resize((self.width, self.height)))
         exposure_factor = self.exposure_time/30.
         frame = frame + np.random.randn(self.height, self.width)*5
         return np.array(np.clip(frame*exposure_factor, 0, 255),
