@@ -13,5 +13,6 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     packages=find_packages(),
-    install_requires=['numpy', 'PyQt5']
+    install_requires=['numpy', 'PyQt5', 'qtawesome', 'pillow', 'pyserial',
+                      'param']
 )
