@@ -18,13 +18,15 @@ class ParameciumDeviceController(TaskController):
         self.calibrated_unit.relative_move(self.config.withdraw_distance * self.calibrated_unit.up_direction[0], 0)
 
     def move_pipette_in(self):
+        '''
+        It is assumed that the pipette is at working level.
+        '''
         # move out
         self.calibrated_unit.relative_move(self.config.short_withdraw_distance*self.calibrated_unit.up_direction[0],0)
         self.calibrated_unit.wait_until_still()
         # move down
-        x, y, _ = self.calibrated_unit.reference_position()
-        position = np.array([x, y, self.microscope.floor_Z + self.config.impalement_level*self.microscope.up_direction])
-        self.calibrated_unit.reference_move(position)
+        movement = np.array([0, 0, -(self.config.working_level-self.config.impalement_level)*self.microscope.up_direction])
+        self.calibrated_unit.reference_relative_move(movement)
         self.calibrated_unit.wait_until_still()
         # move in
         self.calibrated_unit.relative_move(-self.config.short_withdraw_distance*self.calibrated_unit.up_direction[0],0)

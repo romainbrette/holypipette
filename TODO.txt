@@ -1,3 +1,8 @@
+* Test of motor commands
+* Check microscope stack; maybe use slow moves instead of steps
+* Units and stage: steps or slow moves when refocusing (move and track), fast moves for forward commands only
+* Check last move of calibration.
+* Autofocus and image flip.
 
 -----
 
@@ -7,20 +12,10 @@
 * pulses for R measurement should be small
 
 * Write template matching error during calibration
-* Paramecium tracking: autoexposure?
-* Paramecium tracking: angle doesn't work
 * it looks like photos are not stored during calibration
-* Paramecium stuff: maybe all this automatically from tracking?
-    1) Approach above coverslip
-    2) Move right above
-    3) Go down (slowly?)
-    save floor Z
-
 * Pressure wobble (see latest papers)
 * Recalibrate only X axis (for angle change)
 * Safe move: mvt in plane should also be safe, it's not
-* Image analysis:
-    take images of pipette at +-1 for each axis, including near the coverslip.
 
 * Calibration in reference system
 * Microscope stack: with slow move
