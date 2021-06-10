@@ -3,6 +3,33 @@ from time import sleep
 from scipy.optimize import golden, minimize_scalar
 from numpy import array,arange
 import numpy as np
+import warnings
+import os
+
+#### Copied and simplified from clampy
+def load_data(filename):
+    '''
+    Loads a text data file, with the following conventions:
+    - header gives variable names (separated by spaces)
+    - one column = one variable
+    Returns a dictionary of signals
+    '''
+    _, ext = os.path.splitext(filename)
+
+    f = open(filename, 'r')
+    variables = f.readline().split()
+    f.close()
+
+    # Load signals
+    signals = {}
+    M = np.loadtxt(filename, skiprows=1, unpack=True)
+    if len(M.shape) == 1:
+        M = M.reshape((1,len(M)))
+    for name, value in zip(variables, M):
+        signals[name] = value
+
+    return signals
+
 
 class ParameciumDeviceController(TaskController):
     def __init__(self, calibrated_unit, microscope,
@@ -30,3 +57,61 @@ class ParameciumDeviceController(TaskController):
         self.calibrated_unit.wait_until_still()
         # move in
         self.calibrated_unit.relative_move(-self.config.short_withdraw_distance*self.calibrated_unit.up_direction[0],0)
+
+    def electrophysiological_parameters(self):
+        '''
+        Reads from the oscilloscope and returns V0, R and Re
+        '''
+        # Load data
+        data = load_data(self.config.oscilloscope_filename)
+        V1, V2, I, t = data['V1'], data['V2'], data['Ic2'], data['t']
+        dt = t[1]-t[0]
+
+        # Calculate stimulus characteristics
+        threshold = 1e-12
+        I0 = np.mean(I[np.abs(I)>threshold])
+        T0 = (np.abs(I)>threshold).nonzero()[0][0]*dt
+        T1 = (np.abs(I)>threshold).sum()*dt
+
+        # Calculate offset and resistance
+        V0 = np.mean(V1[:int(T0 / dt)])  # calculated on initial pause
+        Vpeak = np.mean(V1[int((T0 + 2 * T1 / 3.) / dt):int((T0 + T1) / dt)])  # calculated on last third of the pulse
+        R1 = (Vpeak - V0) / I0
+
+        # Calculate electrode resistance
+        V02 = np.mean(V2[:int(T0 / dt)])  # calculated on initial pause
+        Vpeak = np.mean(V2[int((T0 + 2 * T1 / 3.) / dt):int((T0 + T1) / dt)])  # calculated on last third of the pulse
+        R2 = ((Vpeak - V02) / I0)
+
+        if R2>R1:
+            R, Re = R1, R2-R1
+        else:
+            R, Re = R2, R1-R2
+
+        return V0, R, Re
+
+    def move_pipette_until_drop(self):
+        '''
+        Moves pipette down until Vm drops
+        '''
+        previous_V0, previous_R, previous_Re = self.electrophysiological_parameters()
+
+        nsteps = int((self.config.working_level-self.config.impalement_level)/self.config.impalement_step)
+        step_movement = np.array([0, 0, -self.config.impalement_step * self.microscope.up_direction])
+        success = False
+        for _ in range(nsteps):
+            # Move down one step
+            self.calibrated_unit.reference_relative_move(step_movement)
+            self.calibrated_unit.wait_until_still()
+            # Check oscilloscope
+            V0, R, Re = self.electrophysiological_parameters()
+            if V0-previous_V0<-.1: # 10 mV drop
+                success = True
+                break
+            previous_V0, previous_R, previous_Re = V0, R, Re
+            self.sleep(self.config.pause_between_steps)
+
+        if success:
+            self.info('Successful impalement')
+        else:
+            self.info('Impalement failed')

@@ -60,3 +60,5 @@ class ParameciumDeviceGui(ManipulatorGui):
                                  self.paramecium_interface.move_pipette_in)
         self.register_key_action(Qt.Key_W, None,
                                  self.paramecium_interface.partial_withdraw)
+        self.register_key_action(Qt.Key_Space, Qt.ShiftModifier,
+                                 self.paramecium_interface.move_pipette_until_drop)

@@ -3,6 +3,7 @@ from holypipette.config import Config, NumberWithUnit, Number, Boolean
 from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision import cardinal_points
 from holypipette.controller.paramecium_device import ParameciumDeviceController
+import os
 
 import numpy as np
 import time
@@ -16,8 +17,14 @@ class ParameciumDeviceConfig(Config):
     pipette_distance = NumberWithUnit(250, bounds=(0, 2000), doc='Pipette distance from center', unit='µm')
     short_withdraw_distance = NumberWithUnit(20, bounds=(0, 100), doc='Withdraw before impalement', unit='µm')
 
+    impalement_step = NumberWithUnit(5, bounds=(1, 10), doc='Step size for impalement', unit='µm')
+    pause_between_steps = NumberWithUnit(.5, bounds=(0, 2), doc='Pause between impalement steps', unit='s')
+
+    oscilloscope_filename = os.path.expanduser('~/holypipette/oscilloscope.txt')
+
     categories = [('Manipulation', ['working_level', 'calibration_level', 'impalement_level', 'withdraw_distance', 'pipette_distance',
-                                    'short_withdraw_distance'])]
+                                    'short_withdraw_distance']),
+                  ('Automation', ['impalement_step', 'pause_between_steps'])]
 
 
 class CalibratedUnitProxy(object):
@@ -91,6 +98,12 @@ class ParameciumDeviceInterface(TaskInterface):
                       task_description='Moving pipette to impalement level by a side move')
     def move_pipette_in(self):
         self.execute(self.controller.move_pipette_in)
+
+    @blocking_command(category='Paramecium',
+                      description='Move pipette down until potential drop',
+                      task_description='Moving pipette down until potential drop')
+    def move_pipette_until_drop(self):
+        self.execute(self.controller.move_pipette_until_drop)
 
     #@blocking_command(category='Paramecium',
     #                  description='Partially withdraw the pipette',
