@@ -186,7 +186,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
     """
     #: Signals the end of a task with an "error code":
     #: 0: successful execution; 1: error during execution; 2: aborted
-    task_finished = QtCore.pyqtSignal(int, object)
+    task_finished_signal = QtCore.pyqtSignal(int, object)
 
     def __init__(self):
         super(TaskInterface, self).__init__()
