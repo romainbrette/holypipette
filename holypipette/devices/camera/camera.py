@@ -29,7 +29,6 @@ class Camera(object):
 
     def flip(self):
         self.flipped = not self.flipped
-        print(self.flipped)
 
     def preprocess(self, img):
         if self.flipped:
