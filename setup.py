@@ -14,5 +14,5 @@ setup(
     ],
     packages=find_packages(),
     install_requires=['numpy', 'PyQt5', 'qtawesome', 'pillow', 'pyserial',
-                      'param']
+                      'param', 'pyyaml']
 )
