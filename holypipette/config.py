@@ -1,7 +1,11 @@
 '''
 Support for configuration objects (based on the param package)
 '''
-import json
+import warnings
+try:
+    import yaml
+except ImportError:
+    warnings.warn('Could not import pyyaml, will not be able to save or load configuration files')
 
 import param
 from param import Number, Boolean  # to make it available for import
@@ -36,9 +40,9 @@ class Config(param.Parameterized):
     def to_file(self, filename):
         config_dict = self.to_dict()
         with open(filename, 'w') as f:
-            json.dump(config_dict, f)
+            yaml.dump(config_dict, f)
 
     def from_file(self, filename):
         with open(filename, 'r') as f:
-            config_dict = json.load(f)
+            config_dict = yaml.load(f)
         self.from_dict(config_dict)

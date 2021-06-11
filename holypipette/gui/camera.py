@@ -877,7 +877,7 @@ class ConfigGui(QtWidgets.QWidget):
 
     def save_config(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save configuration",
-                                                            filter='Configuration files (*.cfg)',
+                                                            filter='Configuration files (*.yaml)',
                                                             options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if filename:
             try:
@@ -892,7 +892,7 @@ class ConfigGui(QtWidgets.QWidget):
 
     def load_config(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Load configuration",
-                                                            filter='Configuration files (*.cfg)',
+                                                            filter='Configuration files (*.yaml)',
                                                             options=QtWidgets.QFileDialog.DontUseNativeDialog)
         if filename:
             try:
