@@ -10,7 +10,11 @@ import time
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 from PIL import Image
 
 __all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']

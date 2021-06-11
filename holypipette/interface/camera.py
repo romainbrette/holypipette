@@ -1,7 +1,11 @@
 from __future__ import print_function
 import numpy as np
 from PyQt5 import QtCore, QtWidgets
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 from numpy import *
 from holypipette.interface import TaskInterface, command
 from holypipette.vision import *

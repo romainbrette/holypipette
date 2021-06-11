@@ -9,7 +9,11 @@ from __future__ import print_function
 import sys
 import threading
 import warnings
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 from time import sleep, time
 import numpy as np
 

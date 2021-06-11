@@ -8,7 +8,11 @@ TODO:
 '''
 from holypipette.devices.manipulator import *
 import time
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 
 __all__ = ['Microscope']
 

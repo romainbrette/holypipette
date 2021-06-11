@@ -6,7 +6,11 @@ Uses OpenCV.
 Alternatively, one might use skimage.feature.match_template
 """
 
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 from .phase_cross_correlation import phase_cross_correlation
 
 __all__ = ['templatematching','MatchingError']

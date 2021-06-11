@@ -7,9 +7,12 @@ from math import atan2
 import itertools
 import collections
 
-import cv2
+import warnings
+try:
+    import cv2
+except:
+    warnings.warn('OpenCV not available')
 import numpy as np
-import matplotlib.pyplot as plt
 from time import time
 
 from numpy import zeros,uint8,pi, uint16, around
