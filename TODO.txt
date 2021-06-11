@@ -1,7 +1,4 @@
 * Paramecium localization using bounded variation
-* Autofocus and image flip.
-    Careful: it is not just the display that must be flipped, but the source image.
-    Therefore, the camera object. There should be preprocessing functions for the image.
 * Test of motor commands
 * Check microscope stack; maybe use slow moves instead of steps
 * Units and stage: steps or slow moves when refocusing (move and track), fast moves for forward commands only
