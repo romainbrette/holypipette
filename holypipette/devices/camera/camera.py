@@ -25,6 +25,20 @@ class Camera(object):
         super(Camera, self).__init__()
         self.width = 1000
         self.height = 1000
+        self.flipped = False # Horizontal flip
+
+    def flip(self):
+        self.flipped = not self.flipped
+        print(self.flipped)
+
+    def preprocess(self, img):
+        if self.flipped:
+            if len(img.shape)==2:
+                return np.array(img[:,::-1])
+            else:
+                return np.array(img[:,::-1,:])
+        else:
+            return img
 
     def new_frame(self):
         '''
@@ -163,8 +177,8 @@ class FakeCamera(Camera):
             frame = np.array(img.resize((self.width, self.height)))
         exposure_factor = self.exposure_time/30.
         frame = frame + np.random.randn(self.height, self.width)*5
-        return np.array(np.clip(frame*exposure_factor, 0, 255),
-                        dtype=np.uint8)
+        return self.preprocess(np.array(np.clip(frame*exposure_factor, 0, 255),
+                        dtype=np.uint8))
 
 
 class RecordedVideoCamera(Camera):

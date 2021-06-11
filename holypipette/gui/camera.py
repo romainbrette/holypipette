@@ -329,6 +329,8 @@ class CameraGui(QtWidgets.QMainWindow):
     def __init__(self, camera, image_edit=None, display_edit=None,
                  with_tracking=False):
         super(CameraGui, self).__init__()
+        self.camera = camera
+
         self.show_overlay = True
         self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
@@ -349,14 +351,23 @@ class CameraGui(QtWidgets.QMainWindow):
         self.status_bar.addWidget(self.task_progress, 1)
         self.status_label = QtWidgets.QLabel()
         self.status_bar.addPermanentWidget(self.status_label)
+
         self.help_button = QtWidgets.QToolButton(clicked=self.toggle_help)
         self.help_button.setIcon(qta.icon('fa.question-circle'))
         self.help_button.setCheckable(True)
+
+        self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip)
+        self.flip_button.setIcon(qta.icon('fa.exchange'))
+        #self.flip_button.setCheckable(True)
+
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
         self.log_button.setIcon(qta.icon('fa.file'))
         self.log_button.setCheckable(True)
+
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.addPermanentWidget(self.log_button)
+        self.status_bar.addPermanentWidget(self.flip_button)
+
         self.status_bar.setSizeGripEnabled(False)
         self.setStatusBar(self.status_bar)
         self.status_bar.messageChanged.connect(self.status_message_updated)
@@ -376,7 +387,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.running_task_interface = None
         self.config_button = None  # see initialize
         self.setWindowTitle("Camera GUI")
-        self.camera = camera
+
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
 
