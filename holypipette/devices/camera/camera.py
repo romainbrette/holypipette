@@ -50,6 +50,9 @@ class Camera(object):
         '''
         Returns the current image
         '''
+        return self.preprocess(self.raw_snap())
+
+    def raw_snap(self):
         return None
 
     def set_exposure(self, value):
@@ -117,7 +120,7 @@ class FakeCamera(Camera):
                       self.width//2:self.width//2+self.width]
         return np.array(frame, copy=True)
 
-    def snap(self):
+    def raw_snap(self):
         '''
         Returns the current image.
         This is a blocking call (wait until next frame is available)
@@ -177,8 +180,8 @@ class FakeCamera(Camera):
             frame = np.array(img.resize((self.width, self.height)))
         exposure_factor = self.exposure_time/30.
         frame = frame + np.random.randn(self.height, self.width)*5
-        return self.preprocess(np.array(np.clip(frame*exposure_factor, 0, 255),
-                        dtype=np.uint8))
+        return np.array(np.clip(frame*exposure_factor, 0, 255),
+                        dtype=np.uint8)
 
 
 class RecordedVideoCamera(Camera):
@@ -194,7 +197,7 @@ class RecordedVideoCamera(Camera):
         self._frame = None
         self.slowdon = slowdown
 
-    def snap(self):
+    def raw_snap(self):
         self._counter += 1
         if self._frame is None or self._counter >= self.slowdon:
             success, frame = self.video.read()

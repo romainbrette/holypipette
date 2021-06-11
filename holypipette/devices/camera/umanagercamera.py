@@ -62,7 +62,7 @@ class uManagerCamera(Camera):
         '''
         return (self.cam.getRemainingImageCount() > 0)
 
-    def snap(self):
+    def raw_snap(self):
         self.lock.acquire()
         while not self.new_frame():
             sleep(0.05)

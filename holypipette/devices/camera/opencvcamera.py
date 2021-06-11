@@ -31,7 +31,7 @@ class OpenCVCamera(Camera):
     def reset(self):
         self.video.open(0)
 
-    def snap(self):
+    def raw_snap(self):
         '''
         Returns the current image.
         This is a blocking call (wait until next frame is available)
