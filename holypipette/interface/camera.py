@@ -7,7 +7,7 @@ try:
 except:
     warnings.warn('OpenCV not available')
 from numpy import *
-from holypipette.interface import TaskInterface, command
+from holypipette.interface import TaskInterface, command, blocking_command
 from holypipette.vision import *
 
 
@@ -40,18 +40,25 @@ class CameraInterface(TaskInterface):
         if exposure > 0:
             self.updated_exposure.emit('Camera', 'Exposure: %.1fms' % exposure)
 
+    @blocking_command(category='Camera',
+                      description='Auto exposure',
+                      task_description='Adjusting exposure')
+    def auto_exposure(self,args):
+        self.camera.auto_exposure()
+        self.signal_updated_exposure()
+
     @command(category='Camera',
              description='Increase exposure time by {:.1f}ms',
              default_arg=2.5)
     def increase_exposure(self, increase):
-        self.camera.change_exposure(2.5)
+        self.camera.change_exposure(increase)
         self.signal_updated_exposure()
 
     @command(category='Camera',
              description='Decrease exposure time by {:.1f}ms',
              default_arg=2.5)
-    def decrease_exposure(self, increase):
-        self.camera.change_exposure(-2.5)
+    def decrease_exposure(self, decrease):
+        self.camera.change_exposure(-decrease)
         self.signal_updated_exposure()
 
     @command(category='Camera',

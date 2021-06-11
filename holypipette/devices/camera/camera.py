@@ -10,6 +10,7 @@ import time
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
+from scipy.optimize import root_scalar
 import warnings
 try:
     import cv2
@@ -64,6 +65,22 @@ class Camera(object):
     def change_exposure(self, change):
         if self.get_exposure() > 0:
             self.set_exposure(self.get_exposure() + change)
+
+    def auto_exposure(self):
+        '''
+        Auto exposure assumes frames are 8 bits.
+        '''
+        mean_luminance = 127
+
+        def f(value):
+            self.set_exposure(value)
+            while not self.new_frame():
+                time.sleep(0.05)
+            return self.snap().mean()-mean_luminance
+        results = root_scalar(f, method='bisect', bracket=[0.1, 100.], rtol=0.1) # 10% tolerance
+        if results.converged:
+            exposure = results.root
+            self.set_exposure(exposure)
 
     def reset(self):
         pass
