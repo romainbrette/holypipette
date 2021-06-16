@@ -10,8 +10,11 @@ import time
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
-from scipy.optimize import root_scalar
 import warnings
+try:
+    from scipy.optimize import root_scalar
+except ImportError:
+    warnings.warn('scipy.optimize.root_scalar not available')
 try:
     import cv2
 except:

@@ -30,6 +30,8 @@ __all__ = ['uManagerCamera', 'Hamamatsu', 'Lumenera']
 
 class uManagerCamera(Camera):
     def __init__(self, brand, name, exposure):
+        super(uManagerCamera, self).__init__()
+
         self.lock = threading.RLock()
         self.cam = MMCorePy.CMMCore()
         self.cam.loadDevice('Camera', brand, name)
