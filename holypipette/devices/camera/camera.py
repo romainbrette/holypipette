@@ -11,10 +11,7 @@ import numpy as np
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
 import warnings
-try:
-    from scipy.optimize import root_scalar
-except ImportError:
-    warnings.warn('scipy.optimize.root_scalar not available')
+from scipy.optimize import brentq
 try:
     import cv2
 except:
@@ -80,10 +77,8 @@ class Camera(object):
             while not self.new_frame():
                 time.sleep(0.05)
             return self.snap().mean()-mean_luminance
-        results = root_scalar(f, method='bisect', bracket=[0.1, 100.], rtol=0.1) # 10% tolerance
-        if results.converged:
-            exposure = results.root
-            self.set_exposure(exposure)
+        exposure = brentq(f, 0.1,100., rtol=0.1)
+        self.set_exposure(exposure)
 
     def reset(self):
         pass
