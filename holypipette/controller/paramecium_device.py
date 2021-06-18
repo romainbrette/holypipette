@@ -5,6 +5,7 @@ from numpy import array,arange
 import numpy as np
 import warnings
 import os
+from holypipette.utils.filelock import FileLock
 
 #### Copied and simplified from clampy
 def load_data(filename):
@@ -63,7 +64,14 @@ class ParameciumDeviceController(TaskController):
         Reads from the oscilloscope and returns V0, R and Re
         '''
         # Load data
-        data = load_data(self.config.oscilloscope_filename)
+        filename = self.config.oscilloscope_filename
+        while not os.path.exists(filename):
+            sleep(0.01)  # wait for new data
+        lock = FileLock(filename + ".lock")
+        with lock:
+            data = load_data(filename)
+            os.remove(filename)
+
         V1, V2, I, t = data['V1'], data['V2'], data['Ic2'], data['t']
         dt = t[1]-t[0]
 
