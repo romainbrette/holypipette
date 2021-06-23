@@ -210,17 +210,20 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             The argument of the requested command (possibly ``None``).
         """
         try:
+            print('command received')
+            self.debug('Command received')
             if argument is None:
                 command()
             else:
                 command(argument)
+            self.debug('Command received finished')
         except Exception:
             self.exception('"{}" failed.'.format(command.__name__))
             self.task_finished.emit(1, None)
 
     def _execute_single_task(self, controller, func, argument):
+        print('in _execute_single_task with controller ', controller)
         controller.save_state()
-
         self._current_controller = controller
         controller.abort_requested = False
         try:
@@ -274,6 +277,7 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             after a failed/aborted task. Note that it can be easier to pass a
             list of functions instead.
         """
+        print('Executing task')
         if not isinstance(task, collections.Sequence):
             task = [task]
             argument = [argument]
@@ -286,10 +290,12 @@ class TaskInterface(QtCore.QObject, LoggingObject):
                 raise TypeError('Can only execute methods of TaskController'
                                 'objects, but object for method {} is of type '
                                 '{}'.format(one_task.__name__, type(controller)))
+            print('Calling _execute_single_task, controller: ', controller)
             success = self._execute_single_task(controller, one_task,
                                                 one_argument)
             if not success:
                 return
+        self.debug('Task executed successfully')
         self.task_finished.emit(0, controller)
 
     @QtCore.pyqtSlot(TaskController)

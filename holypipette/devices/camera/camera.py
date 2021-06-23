@@ -12,6 +12,9 @@ from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
 import warnings
 from scipy.optimize import brentq
+
+from holypipette.controller import TaskController
+
 try:
     import cv2
 except:
@@ -21,7 +24,7 @@ from PIL import Image
 __all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']
 
 
-class Camera(object):
+class Camera(TaskController):
     def __init__(self):
         super(Camera, self).__init__()
         self.width = 1000
@@ -56,10 +59,11 @@ class Camera(object):
         return None
 
     def set_exposure(self, value):
-        print('Setting exposure time not supported for this camera')
+        self.warn('Setting exposure time not supported for this camera')
+        return -1
 
     def get_exposure(self):
-        print('Getting exposure time not supported for this camera')
+        self.warn('Getting exposure time not supported for this camera')
         return -1
 
     def change_exposure(self, change):
@@ -74,12 +78,13 @@ class Camera(object):
 
         def f(value):
             self.set_exposure(value)
-            time.sleep(.2+.001*value) # wait for new frame with updated value
+            self.debug('auto exposure: Waiting for next frame')
+            self.sleep(.2+.001*value) # wait for new frame with updated value
             while not self.new_frame():
-                time.sleep(0.05)
+                self.sleep(0.05)
             m = self.snap().mean()
             return m-mean_luminance
-        exposure = brentq(f, 0.1,100., rtol=0.1)
+        exposure = brentq(f, 0.1, 100., rtol=0.1)
         self.set_exposure(exposure)
 
     def reset(self):
@@ -125,6 +130,7 @@ class FakeCamera(Camera):
     def set_exposure(self, value):
         if 0 < value <= 200:
             self.exposure_time = value
+        return self.exposure_time
 
     def get_exposure(self):
         return self.exposure_time
