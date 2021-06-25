@@ -6,6 +6,7 @@ import functools
 import logging
 import datetime
 import traceback
+from collections import namedtuple
 from types import MethodType
 
 import param
@@ -299,8 +300,15 @@ class CameraInterface(TaskInterface):
         setattr(controller, method_name, MethodType(wrapper, controller))
 
     def execute(self, *args, **kwds):
-        print('in CameraInterface.execute')
         return super().execute(*args, **kwds)
+
+Command = namedtuple('Command', ['function',
+                                 'category',
+                                 'description',
+                                 'default_arg',
+                                 'success_message',
+                                 'task_description'],
+                     defaults=(None, None, None))
 
 
 class SimpleCameraGui(QtWidgets.QMainWindow):
@@ -325,7 +333,7 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         ``False``.
     '''
     log_signal = QtCore.pyqtSignal('QString')
-    camera_signal = QtCore.pyqtSignal(MethodType, object)
+    camera_signal = QtCore.pyqtSignal(Command, object)
     camera_reset_signal = QtCore.pyqtSignal(TaskController)
     updated_exposure_signal = QtCore.pyqtSignal(float)
 
@@ -358,6 +366,7 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         self.interface.link_signal(self.camera, 'set_exposure',
                                    self.updated_exposure_signal)
         self.updated_exposure_signal.connect(self.update_exposure_message)
+
         self.show_overlay = True
         self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
@@ -385,6 +394,7 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
 
         self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip)
         self.flip_button.setIcon(qta.icon('fa.exchange'))
+        self.flip_button.setCheckable(True)
 
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
         self.log_button.setIcon(qta.icon('fa.file'))
@@ -456,6 +466,41 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         exposure = self.camera.get_exposure()
         self.updated_exposure_signal.emit(exposure)
 
+        # Add a button for the configuration options if necessary
+        # if self.config_tab.count() > 0:
+        self.config_button = QtWidgets.QToolButton(
+            clicked=self.toggle_configuration_display)
+        self.config_button.setIcon(qta.icon('fa.cogs'))
+        self.config_button.setCheckable(True)
+        self.status_bar.addPermanentWidget(self.config_button)
+
+        self.commands = {'exit': Command(self.close,
+                                         'General',
+                                         'Exit the application'),
+                         'help': Command(self.help_button.click,
+                                         'General',
+                                         'Toggle display of keyboard/mouse commands'),
+                         'log': Command(self.log_button.click,
+                                        'General',
+                                        'Toggle display of log output'),
+                         'config': Command(self.config_button.click,
+                                           'General',
+                                           'Show/hide the configuration pane'),
+                         'overlay': Command(self.toggle_overlay,
+                                            'General',
+                                            'Show/hide the overlay information on the image'),
+                         'change_exposure': Command(self.camera.change_exposure,
+                                                    'Camera',
+                                                    'Increase/decrease exposure'),
+                         'auto_exposure': Command(self.camera.auto_exposure,
+                                                  'Camera',
+                                                  'Auto exposure',
+                                                  task_description='Adjusting exposure'),
+                         'save_image': Command(self.save_image,
+                                               'Camera',
+                                               'Save the current image to a file')
+                         }
+
     def display_edit(self, pixmap):
         '''
         Applies the functions stored in `~.SimpleCameraGui.display_edit_funcs` to the
@@ -491,20 +536,10 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
             image = func(image)
         return image
 
-    @command(category='General',
-             description='Exit the application')
-    def exit(self):
-        self.close()
-
-    @blocking_command(category='Camera',
-                      description='Auto exposure',
-                      task_description='Adjusting exposure')
     def auto_exposure(self, *args):
         print('executing with interface')
         self.interface.execute(self.camera.auto_exposure)
 
-    @command(category='Camera',
-             description='Save the current image to a file')
     def save_image(self):
         try:
             from PIL import Image
@@ -529,22 +564,21 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         in subclass should call the superclass if they want to keep the
         commands registered by the superclass(es).
         '''
-        self.register_key_action(Qt.Key_Question, None, self.help_keypress)
-        self.register_key_action(Qt.Key_L, None, self.log_keypress)
-        self.register_key_action(Qt.Key_Escape, None, self.exit)
+        self.register_key_action(Qt.Key_Question, None, 'help')
+        self.register_key_action(Qt.Key_L, None, 'log')
+        self.register_key_action(Qt.Key_Escape, None, 'exit')
         self.register_key_action(Qt.Key_Plus, None,
-                                 self.camera.change_exposure,
+                                 'change_exposure',
                                  argument=2.5,
                                  default_doc=False)
         self.register_key_action(Qt.Key_Minus, None,
-                                 self.camera.change_exposure,
+                                 'change_exposure',
                                  argument=-2.5,
                                  default_doc=False)
         self.help_window.register_custom_action('Camera', '+/-',
                                                 'Increase/decrease exposure by 2.5ms')
-        self.register_key_action(Qt.Key_I, None,
-                                 self.save_image)
-        self.register_key_action(Qt.Key_X, None, self.auto_exposure)
+        self.register_key_action(Qt.Key_I, None, 'save_image')
+        self.register_key_action(Qt.Key_X, None, 'auto_exposure')
 
     def close(self):
         '''
@@ -577,11 +611,16 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
             Whether to include the action in the automatically generated help.
             Defaults to ``True``.
         '''
+        if command not in self.commands:
+            all_commands = ", ".join("'%s'" % c for c in self.commands)
+            raise KeyError("Unknown command '%s' (known commands: %s)" % (command,
+                                                                          all_commands))
+        command = self.commands[command]
         self.mouse_actions[(click_type, modifier)] = command
         if default_doc:
             self.help_window.register_mouse_action(click_type, modifier,
                                                    command.category,
-                                                   command.auto_description())
+                                                   command.description)
 
     def video_mouse_press(self, event):
         # Look for an exact match first (key + modifier)
@@ -623,19 +662,12 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         self.status_bar.showMessage(message, 5000)
 
     def initialize(self):
-        print('initializaing')
+        print('initializing')
         self.camera_signal.connect(self.interface.command_received)
         self.camera_reset_signal.connect(self.interface.reset_requested)
         self.interface.task_finished.connect(self.task_finished)
         self.interface.connect(self)
         self.register_commands()
-        # Add a button for the configuration options if necessary
-        if self.config_tab.count() > 0:
-            self.config_button = QtWidgets.QToolButton(
-                clicked=self.toggle_configuration_display)
-            self.config_button.setIcon(qta.icon('fa.cogs'))
-            self.config_button.setCheckable(True)
-            self.status_bar.addPermanentWidget(self.config_button)
 
     def register_key_action(self, key, modifier, command, argument=None,
                             default_doc=True):
@@ -653,10 +685,8 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
             e.g. `.Qt.ShiftModifier` or `.Qt.ControlModifier`. Alternatively,
             ``None`` can be used to specify that the keypress should lead to
             the action independent of the modifier.
-        command : method
-            A method implementing the action that has been annotated with the
-            `@command <.command>` or `@blocking_command <.blocking_command>`
-            decorator.
+        command : str
+            A name of a `Command` present in ``self.commands``.
         argument : object, optional
             An additional argument that should be handled to the method defined
             as ``command``. Can be used to re-use the same action in a
@@ -665,11 +695,16 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
             Whether to include the action in the automatically generated help.
             Defaults to ``True``.
         '''
+        if command not in self.commands:
+            all_commands = ", ".join("'%s'" % c for c in self.commands)
+            raise KeyError("Unknown command '%s' (known commands: %s)" % (command,
+                                                                          all_commands))
+        command = self.commands[command]
         self.key_actions[(key, modifier)] = (command, argument)
         if default_doc:
             self.help_window.register_key_action(key, modifier,
                                                  command.category,
-                                                 command.auto_description(argument))
+                                                 command.description)
 
     def start_task(self, task_name, interface):
         print('start task for interface', interface)
@@ -742,21 +777,13 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         if description is not None:
             command, argument = description
             if self.running_task and not command.category == 'General':
-                print('another task is running')
                 # Another task is running, ignore the key press
                 # (we allow the "General" category to still allow to see the
                 # help, etc.)
                 return
-            if command.is_blocking:
-                print('blocking')
+            if getattr(command, 'is_blocking', False):
                 self.start_task(command.task_description, command.__self__.interface)
-            print('emitting command', self.camera_signal)
             self.camera_signal.emit(command, argument)
-
-    @command(category='General',
-             description='Toggle display of keyboard/mouse commands')
-    def help_keypress(self):
-        self.help_button.click()
 
     def toggle_help(self):
         if self.help_button.isChecked():
@@ -765,11 +792,6 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
             self.setFocus()
         else:
             self.help_window.setVisible(False)
-
-    @command(category='General',
-             description='Toggle display of log output')
-    def log_keypress(self):
-        self.log_button.click()
 
     def toggle_log(self):
         if self.log_button.isChecked():
@@ -805,13 +827,7 @@ class SimpleCameraGui(QtWidgets.QMainWindow):
         config_gui = ConfigGui(config)
         self.config_tab.addTab(config_gui, config.name)
 
-    @command(category='General',
-             description='Show/hide the configuration pane')
-    def configuration_keypress(self):
-        self.config_button.click()
 
-    @command(category='General',
-             description='Show/hide the overlay information on the image')
     def toggle_overlay(self):
         self.show_overlay = not self.show_overlay
 

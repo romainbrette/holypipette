@@ -213,9 +213,9 @@ class TaskInterface(QtCore.QObject, LoggingObject):
             print('command received')
             self.debug('Command received')
             if argument is None:
-                command()
+                command.function()
             else:
-                command(argument)
+                command.function(argument)
             self.debug('Command received finished')
         except Exception:
             self.exception('"{}" failed.'.format(command.__name__))
