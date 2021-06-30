@@ -123,3 +123,75 @@ class ParameciumDeviceController(TaskController):
             self.info('Successful impalement')
         else:
             self.info('Impalement failed')
+
+    def autocenter(self):
+        '''
+        Finds the center of the device.
+        '''
+        # Assume we are in the lighted region
+        I0 = self.camera.snap().mean()
+        I = I0
+        self.calibrated_stage.save_state()
+
+        ## Move the stage left and right
+
+        # Move until luminance drops by 50%
+        n = 0
+        while (I>.5*I0) and (n<30):
+            self.calibrated_stage.relative_move(500., axis=0)
+            self.calibrated_stage.wait_until_still()
+            I = self.camera.snap().mean()
+            n += 1
+        x0 = self.calibrated_stage.position(axis=0)
+        self.calibrated_stage.recover_state()
+        if n==30: # fail
+            self.info('Autocenter failed')
+            return
+
+        n = 0
+        while (I > .5 * I0) and (n < 30):
+            self.calibrated_stage.relative_move(-500., axis=0)
+            self.calibrated_stage.wait_until_still()
+            I = self.camera.snap().mean()
+            n += 1
+        x1 = self.calibrated_stage.position(axis=0)
+        self.calibrated_stage.recover_state()
+        if n == 30:  # fail
+            self.info('Autocenter failed')
+            return
+
+        # Place at midpoint
+        x = .5*(x0+x1)
+        self.calibrated_stage.absolute_move(x,axis=0)
+        self.calibrated_stage.wait_until_still()
+
+        ## Move the stage up and down
+        n = 0
+        while (I>.5*I0) and (n<30):
+            self.calibrated_stage.relative_move(500., axis=1)
+            self.calibrated_stage.wait_until_still()
+            I = self.camera.snap().mean()
+            n += 1
+        y0 = self.calibrated_stage.position(axis=1)
+        self.calibrated_stage.recover_state()
+        if n==30: # fail
+            self.info('Autocenter failed')
+            return
+
+        n = 0
+        while (I > .5 * I0) and (n < 30):
+            self.calibrated_stage.relative_move(-500., axis=1)
+            self.calibrated_stage.wait_until_still()
+            I = self.camera.snap().mean()
+            n += 1
+        y1 = self.calibrated_stage.position(axis=1)
+        self.calibrated_stage.recover_state()
+        if n == 30:  # fail
+            self.info('Autocenter failed')
+            return
+
+        # Place at midpoint
+        y = .5*(y0+y1)
+        self.calibrated_stage.absolute_move(y,axis=1)
+        self.calibrated_stage.wait_until_still()
+        self.info('Autocenter succeeded')

@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 from PyQt5.QtCore import Qt
 from holypipette.gui.manipulator import ManipulatorGui
+from holypipette.interface.paramecium_device import ParameciumDeviceSimplifiedInterface
 
 #################################################
 # Paramecium experiment with the device method #
@@ -21,7 +22,7 @@ class ParameciumDeviceGui(ManipulatorGui):
         self.add_config_gui(self.interface.config)
 
     def register_commands(self):
-        # We have all the commandes of the pipettes interface
+        # We have all the commands of the pipettes interface
         super(ParameciumDeviceGui, self).register_commands(manipulator_keys = False)
 
         #self.register_mouse_action(Qt.LeftButton, Qt.ShiftModifier,
@@ -47,6 +48,8 @@ class ParameciumDeviceGui(ManipulatorGui):
                                  self.interface.partial_withdraw)
         self.register_key_action(Qt.Key_Space, Qt.ShiftModifier,
                                  self.interface.move_pipette_until_drop)
+        self.register_key_action(Qt.Key_multiply, None,
+                                 self.interface.autocenter)
 
 if __name__ == '__main__':
     import sys
@@ -54,7 +57,6 @@ if __name__ == '__main__':
     from PyQt5 import QtWidgets
 
     from holypipette.log_utils import console_logger
-    from holypipette.interface.paramecium_device import ParameciumDeviceSimplifiedInterface
 
     from setup_script import *
 

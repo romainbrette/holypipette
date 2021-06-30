@@ -174,6 +174,12 @@ class ParameciumDeviceSimplifiedInterface(PipetteInterface):
     def move_pipette_until_drop(self):
         self.execute(self.controller.move_pipette_until_drop)
 
+    @blocking_command(category='Paramecium',
+                      description='Center the stage below the objective',
+                      task_description='Centering the stage')
+    def autocenter(self):
+        self.execute(self.controller.autocenter)
+
     #@blocking_command(category='Paramecium',
     #                  description='Partially withdraw the pipette',
     #                  task_description='Withdrawing the pipette')
