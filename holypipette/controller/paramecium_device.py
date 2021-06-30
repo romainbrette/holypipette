@@ -131,13 +131,13 @@ class ParameciumDeviceController(TaskController):
         '''
         # Assume we are in the lighted region
         I0 = self.camera.snap().mean()
-        I = I0
         self.calibrated_stage.save_state()
 
         ## Move the stage left and right
 
         # Move until luminance drops by 50%
         n = 0
+        I = I0
         while (I>.5*I0) and (n<30):
             self.calibrated_stage.relative_move(500., axis=0)
             self.calibrated_stage.wait_until_still()
@@ -150,6 +150,7 @@ class ParameciumDeviceController(TaskController):
             return
 
         n = 0
+        I = I0
         while (I > .5 * I0) and (n < 30):
             self.calibrated_stage.relative_move(-500., axis=0)
             self.calibrated_stage.wait_until_still()
@@ -168,6 +169,7 @@ class ParameciumDeviceController(TaskController):
 
         ## Move the stage up and down
         n = 0
+        I = I0
         while (I>.5*I0) and (n<30):
             self.calibrated_stage.relative_move(500., axis=1)
             self.calibrated_stage.wait_until_still()
@@ -180,6 +182,7 @@ class ParameciumDeviceController(TaskController):
             return
 
         n = 0
+        I = I0
         while (I > .5 * I0) and (n < 30):
             self.calibrated_stage.relative_move(-500., axis=1)
             self.calibrated_stage.wait_until_still()

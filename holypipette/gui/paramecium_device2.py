@@ -48,7 +48,7 @@ class ParameciumDeviceGui(ManipulatorGui):
                                  self.interface.partial_withdraw)
         self.register_key_action(Qt.Key_Space, Qt.ShiftModifier,
                                  self.interface.move_pipette_until_drop)
-        self.register_key_action(Qt.Key_multiply, None,
+        self.register_key_action(Qt.Key_Asterisk, None,
                                  self.interface.autocenter)
 
 if __name__ == '__main__':
