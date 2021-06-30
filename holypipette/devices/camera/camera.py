@@ -74,9 +74,11 @@ class Camera(object):
 
         def f(value):
             self.set_exposure(value)
+            time.sleep(.2+.001*value) # wait for new frame with updated value
             while not self.new_frame():
                 time.sleep(0.05)
-            return self.snap().mean()-mean_luminance
+            m = self.snap().mean()
+            return m-mean_luminance
         exposure = brentq(f, 0.1,100., rtol=0.1)
         self.set_exposure(exposure)
 

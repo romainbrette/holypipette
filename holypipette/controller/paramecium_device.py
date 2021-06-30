@@ -113,6 +113,7 @@ class ParameciumDeviceController(TaskController):
             self.calibrated_unit.wait_until_still()
             # Check oscilloscope
             V0, R, Re = self.electrophysiological_parameters()
+            self.info('V = {} mV'.format(V0*1000))
             if V0-previous_V0<-.1: # 10 mV drop
                 success = True
                 break
