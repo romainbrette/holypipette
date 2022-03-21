@@ -327,9 +327,8 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
         steps : number of steps
         '''
         ID = '01E8'
-        if steps < 0:
-            steps += 256
-        self.send_command(ID, [axis, steps], 0)
+        self.send_command(ID, [axis] + list(bytearray(struct.pack('h', steps))), 0)
+        #self.send_command(ID, [axis, steps], 0)
 
     def set_single_step_factor_trackball(self, axis, factor):
         '''

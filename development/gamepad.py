@@ -1,5 +1,8 @@
 '''
 Gamepad control of stage and manipulators
+
+Note: we can make it vibrate with
+gamepad.set_vibration(0-1,0-1, duration in ms)
 '''
 import os
 import threading
@@ -64,9 +67,12 @@ def run_gamepad(controller, axes):
     reader = GamepadReader()
     reader.start()
 
-    controller.set_single_step_factor_trackball(axes[0], 1)
-    controller.set_single_step_factor_trackball(axes[1], 1)
-    controller.set_single_step_factor_trackball(axes[2], 3)
+    low_speed = 1
+    high_speed = 2 # could switch to higher speeds with duration
+
+    controller.set_single_step_factor_trackball(axes[0], low_speed)
+    controller.set_single_step_factor_trackball(axes[1], low_speed)
+    controller.set_single_step_factor_trackball(axes[2], low_speed)
 
     while running:
         for event in reader.event_container: # maybe pop instead
@@ -76,28 +82,111 @@ def run_gamepad(controller, axes):
                 print(event.code, event.state)
         reader.event_container[:] = []
 
+        # just one threshold : .95
+        # then use angle
+
+        intensity = (reader.X**2 + reader.Y**2)**.5
 
         if abs(reader.X) > .1:
-            print('X=',reader.X)
-            if reader.X> 0:
-                print('moving')
-                controller.single_step_trackball(axes[0], 1)
+            if intensity<.95:
+                controller.set_single_step_factor_trackball(axes[0], low_speed)
             else:
-                controller.single_step_trackball(axes[0], -2)
+                controller.set_single_step_factor_trackball(axes[0], high_speed)
+            controller.single_step_trackball(axes[0], 2*(2*(reader.X>0)-1))
+            # if reader.X> 0:
+            #     print('moving')
+            #     controller.single_step_trackball(axes[0], 1)
+            # else:
+            #     controller.single_step_trackball(axes[0], -2)
         if abs(reader.Y) > .1:
-            print('Y=',reader.X)
-            if reader.Y> 0:
-                controller.single_step_trackball(axes[1], 1)
+            if intensity<.95:
+                controller.set_single_step_factor_trackball(axes[1], low_speed)
             else:
-                controller.single_step_trackball(axes[1], -2)
+                controller.set_single_step_factor_trackball(axes[1], high_speed)
+            controller.single_step_trackball(axes[1], 2*(2*(reader.Y>0)-1))
+            # if reader.Y> 0:
+            #     controller.single_step_trackball(axes[1], 1)
+            # else:
+            #     controller.single_step_trackball(axes[1], -2)
 
         z = reader.Z - reader.RZ
-        if abs(z) > 0.25:
-            z_step = 1 if z > 0 else -2
-            controller.single_step_trackball(axes[2], z_step)
+        if abs(z) > 0.1:
+            #z_step = 1 if z > 0 else -2
+            if abs(z)<.95:
+                controller.set_single_step_factor_trackball(axes[2], low_speed)
+            else:
+                controller.set_single_step_factor_trackball(axes[2], high_speed)
+            controller.single_step_trackball(axes[2], 2*(2*(z>0)-1))
+            #controller.single_step_trackball(axes[2], z_step)
+
+        time.sleep(.05)
+
+    reader.stop()
+
+def run_gamepad2(controller, axes):
+    running = True
+    reader = GamepadReader()
+    reader.start()
+
+    low_speed = 1
+    high_speed = 20 # could switch to higher speeds with duration
+    # need to change velocity too
+
+    while running:
+        for event in reader.event_container: # maybe pop instead
+            if event.code == 'BTN_WEST': # X
+                running = False # exit # actually there is an on and off state
+            elif event.code != 'SYN_REPORT':
+                print(event.code, event.state)
+        reader.event_container[:] = []
+
+        # just one threshold : .95
+        # then use angle
+
+        intensity = (reader.X**2 + reader.Y**2)**.5
+
+        if abs(reader.X) > .1:
+            controller.set_single_step_distance(axes[0], reader.X**3*high_speed)
+            controller.single_step(axes[0], 1)
+            # if intensity<.95:
+            #     controller.set_single_step_distance(axes[0], low_speed)
+            # else:
+            #     controller.set_single_step_distance(axes[0], high_speed)
+            #controller.single_step(axes[0], 1*(2*(reader.X>0)-1))
+            # if reader.X> 0:
+            #     print('moving')
+            #     controller.single_step_trackball(axes[0], 1)
+            # else:
+            #     controller.single_step_trackball(axes[0], -2)
+        if abs(reader.Y) > .1:
+            controller.set_single_step_distance(axes[1], reader.Y**3*high_speed)
+            controller.single_step(axes[1], 1)
+            # if intensity<.95:
+            #     controller.set_single_step_distance(axes[1], low_speed)
+            # else:
+            #     controller.set_single_step_distance(axes[1], high_speed)
+            #controller.single_step(axes[1], 1*(2*(reader.Y>0)-1))
+            # if reader.Y> 0:
+            #     controller.single_step_trackball(axes[1], 1)
+            # else:
+            #     controller.single_step_trackball(axes[1], -2)
+
+        z = reader.Z - reader.RZ
+        if abs(z) > 0.1:
+            controller.set_single_step_distance(axes[2],z*high_speed)
+            controller.single_step(axes[2], 1)
+            #z_step = 1 if z > 0 else -2
+            # if abs(z)<.95:
+            #     controller.set_single_step_distance(axes[2], low_speed)
+            # else:
+            #     controller.set_single_step_distance(axes[2], high_speed)
+            # controller.single_step(axes[2], 1*(2*(z>0)-1))
+            #controller.single_step_trackball(axes[2], z_step)
+
+        time.sleep(.05)
 
     reader.stop()
 
 if __name__ == '__main__':
     dev = LuigsNeumann_SM10()
-    run_gamepad(dev, axes=[7, 8, 9])
+    run_gamepad2(dev, axes=[7, 8, 9])
