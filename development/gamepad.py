@@ -134,7 +134,7 @@ def run_gamepad2(controller, axes):
 
     while running:
         for event in reader.event_container: # maybe pop instead
-            if event.code == 'BTN_WEST': # X
+            if (event.code == 'BTN_WEST') and (event.state == 1): # X
                 running = False # exit # actually there is an on and off state
             elif event.code != 'SYN_REPORT':
                 print(event.code, event.state)
@@ -173,7 +173,7 @@ def run_gamepad2(controller, axes):
 
         z = reader.Z - reader.RZ
         if abs(z) > 0.1:
-            controller.set_single_step_distance(axes[2],z*high_speed)
+            controller.set_single_step_distance(axes[2],z**3*high_speed)
             controller.single_step(axes[2], 1)
             #z_step = 1 if z > 0 else -2
             # if abs(z)<.95:

@@ -1,0 +1,32 @@
+# Gamepad bindings
+# Also: number of manipulators, etc
+
+X : lock_MP
+Y : lock_both_MP
+X+Y : calibrate
+A : go_to_memorized
+long A : memorize
+B : withdraw # does move in if already withdrawn # we also need to memorize
+
+left_X: MP_virtual_X +1
+left_Y : MP_Y +1
+
+right_X : stage_X +1
+right_Y : stage_Y +1
+
+cross_X : MP_fine_X +1
+cross_Y : MP_fine_Y +1
+
+left_finger : focus +1
+
+right_finger : focus -1
+
+left_finger+right_finger : focus_to_tip
+
+left_finger_button : MP_Z -1
+
+right_finger_button : MP_Z +1
+
+select : select_manipulator
+
+menu : quit

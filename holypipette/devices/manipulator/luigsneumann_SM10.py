@@ -374,7 +374,8 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
 
     def set_single_step_velocity(self, axis, velocity):
         '''
-        Velocity (units??) for `single_step`.
+        Velocity for `single_step`.
+        See table rps_slow.
         '''
         ID = '0158'
         data = (axis, velocity)
