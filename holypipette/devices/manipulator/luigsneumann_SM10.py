@@ -214,6 +214,40 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
         '''
         self.send_command('0144', [axis, speed], 0)
 
+    def home(self, axis):
+        '''
+        Move the axis to home.
+        '''
+        self.send_command('0104', [axis], 0)
+
+    def home_abort(self, axis):
+        '''
+        Aborts home movement.
+        '''
+        self.send_command('013F', [axis], 0)
+
+    def set_home_direction(self, axis, direction):
+        '''
+        Sets home direction.
+        '''
+        if direction==1:
+            self.send_command('013C', [axis, 0], 0)
+        elif direction==-1:
+            self.send_command('013C', [axis, 1], 0)
+
+    def set_home_velocity(self, axis, velocity):
+        '''
+        Sets home direction.
+        Velocity between 0 and 15.
+        '''
+        self.send_command('0139', [axis, velocity], 0)
+
+    def home_return(self, axis):
+        '''
+        Returns to position before home command.
+        '''
+        self.send_command('0022', [axis], 0)
+
     def absolute_move(self, x, axis, fast=default_fast):
         '''
         Moves the device axis to position x.
