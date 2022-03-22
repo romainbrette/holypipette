@@ -3,14 +3,21 @@
 
 joystick_threshold : .15 # threshold for joystick action
 joystick_power : 3 # power law for joystick action
+switch_duration : 5 # press duration to switch high speed mode
+axes :
+  manipulators :
+    - [1, 2, 3]
+    - [4, 5, 6]
+  stage : [7, 8]
+  focus : 9
 
 X : lock_MP
 Y : lock_all_MP
 X+Y : calibrate   # Careful: combinations must sorted
 A : go_to_memorized
 long A : memorize
-B ON : [withdraw, 5000] # moves in if already withdrawn # we just do home
-B OFF : stop_move_in # default: OFF
+B ON : [withdraw, 5000] # relative move, alternating sign
+B OFF : stop_withdraw # stops the relative movement
 
 left : [MP_virtualX_Y, -20, -20]
 cross : [stage_XY, -20, +20]
@@ -19,7 +26,7 @@ trigger : [focus, +20]
 
 left_trigger+right_trigger : focus_to_tip
 
-left_finger_button : [MP_Z, -20]
+left_finger_button : [MP_Z, -20] # not so useful here
 
 right_finger_button : [MP_Z, +20]
 

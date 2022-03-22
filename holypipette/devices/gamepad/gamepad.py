@@ -46,6 +46,8 @@ button_events = {'BTN_WEST': 'X',
                  'BTN_TR': 'right_finger_button'
                 }
 
+all_codes = ['ABS_X', 'ABS_Y', 'ABS_Z', 'ABS_RX', 'ABS_RY', 'ABS_RZ', 'ABS_HAT0X', 'ABS_HAT0Y'] + button_events.keys()
+
 long_duration_threshold = 1. # in seconds
 
 class GamepadReader(threading.Thread):
@@ -77,6 +79,8 @@ class GamepadProcessor(threading.Thread):
         self.terminated = False
 
         self.load(config)
+
+        self.last_change = dict.fromkeys(all_codes, time.time())
 
         ## State variables
         # Joystick 1
@@ -112,9 +116,13 @@ class GamepadProcessor(threading.Thread):
         self.button = dict.fromkeys(list(button_events.values()), False)
         self.time_last_on = None
 
+        ## High/low speed switch
+        self.cross_high_speed = False
+
         ## Parameters
         self.joystick_threshold = self.config.get('joystick_threshold', .15)
         self.joystick_power = self.config.get('joystick_power', 3)
+        self.switch_duration = self.config.get('switch_duration', 5.) # to switch to high speed mode
 
         self.releasing = False # if True, in a releasing process: do not process further events
         self.last_config_checked = time.time()
@@ -158,7 +166,17 @@ class GamepadProcessor(threading.Thread):
 
         # Call the relevant methods
         if (self.crossX != 0) or (self.crossY != 0):
-            self.command('cross', self.crossX, self.crossY)
+            last_change = max(self.last_change['ABS_HAT0X'], self.last_change['ABS_HAT0Y'])
+            if time.time() - last_change>self.switch_duration:
+                self.cross_high_speed = True
+            self.command('cross', self.crossX, self.crossY, high_speed = self.cross_high_speed)
+        else:
+            self.cross_high_speed = False
+
+    def save(self):
+        with open(self.config_file, 'w') as f:
+            self.config = yaml.safe_dump(self.config, f)
+        self.config_last_modified = os.stat(self.config_file)[8]
 
     def load(self, config=None):
         '''
@@ -188,6 +206,7 @@ class GamepadProcessor(threading.Thread):
         while not self.terminated:
             while self.gamepad.queue != []:
                 event = self.gamepad.queue.pop()
+                self.last_change[event.code] = time.time()
                 if event.code == 'ABS_X':
                     self.LX = event.state/32768.
                 elif event.code == 'ABS_Y':
@@ -241,7 +260,7 @@ class GamepadProcessor(threading.Thread):
                 self.check_config()
                 self.last_config_checked = t
 
-    def command(self, name, *args):
+    def command(self, name, *args, **kwds):
         '''
         Executes a command.
         If the description is a list, the first item is the command name, the rest are arguments.
@@ -255,7 +274,7 @@ class GamepadProcessor(threading.Thread):
             else:
                 command_name = description
                 arguments = []
-            self.__getattribute__(command_name)(*(list(args)+list(arguments)))
+            self.__getattribute__(command_name)(*(list(args)+list(arguments)), **kwds)
             return True
         else:
             return False
