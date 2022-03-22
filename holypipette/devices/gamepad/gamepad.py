@@ -40,10 +40,10 @@ button_events = {'BTN_WEST': 'X',
                  'BTN_NORTH': 'Y',
                  'BTN_EAST': 'B',
                  'BTN_SOUTH': 'A',
-                 'select': 'select', # I don't know the keys for those ones
-                 'menu': 'menu',
-                 'left_finger_button': 'left_finger_button',
-                 'right_finger_button': 'right_finger_button'
+                 'BTN_START': 'select', # I don't know the keys for those ones
+                 'BTN_SELECT': 'menu',
+                 'BTN_TL': 'left_finger_button',
+                 'BTN_TR': 'right_finger_button'
                 }
 
 long_duration_threshold = 1. # in seconds
@@ -60,9 +60,9 @@ class GamepadReader(threading.Thread):
 
     def run(self):
         while not self.terminated:
-            self.queue.append(self.gamepad.read()[0])  # This blocks the thread
-            if True:
-                print(self.queue[-1])
+            self.queue.insert(0,self.gamepad.read()[0])  # This blocks the thread
+            if False:
+                print(self.queue[-1].code)
 
     def stop(self):
         self.terminated = True
@@ -113,10 +113,11 @@ class GamepadProcessor(threading.Thread):
         self.time_last_on = None
 
         ## Parameters
-        self.joystick_threshold = self.config.get('joystick_threshold', .1)
+        self.joystick_threshold = self.config.get('joystick_threshold', .15)
         self.joystick_power = self.config.get('joystick_power', 3)
 
         self.releasing = False # if True, in a releasing process: do not process further events
+        self.last_config_checked = time.time()
 
     def map_joystick(self, x):
         '''
@@ -136,22 +137,28 @@ class GamepadProcessor(threading.Thread):
         '''
         # Process joystick states
         self.Z_processed = self.map_joystick(self.RZ - self.LZ)
+        if self.Z_processed != 0.:
+            self.command('trigger', self.Z_processed)
 
         intensity = (self.LX**2 + self.LY**2)**.5
-        unit_X, unit_Y = self.LX/intensity, self.LY/intensity
-        mapped_intensity = self.map_joystick(intensity)
-        self.LX_processed, self.LY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
+        if intensity>0:
+            unit_X, unit_Y = self.LX/intensity, self.LY/intensity
+            mapped_intensity = self.map_joystick(intensity)
+            if mapped_intensity>0:
+                self.LX_processed, self.LY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
+                self.command('left', self.LX_processed, self.LY_processed)
 
         intensity = (self.RX**2 + self.RY**2)**.5
-        unit_X, unit_Y = self.RX/intensity, self.RY/intensity
-        mapped_intensity = self.map_joystick(intensity)
-        self.RX_processed, self.RY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
+        if intensity>0:
+            unit_X, unit_Y = self.RX/intensity, self.RY/intensity
+            mapped_intensity = self.map_joystick(intensity)
+            if mapped_intensity>0:
+                self.RX_processed, self.RY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
+                self.command('right', self.RX_processed, self.RY_processed)
 
         # Call the relevant methods
-        self.command('left', self.LX_processed, self.LY_processed)
-        self.command('right', self.RX_processed, self.RY_processed)
-        self.command('cross', self.crossX, self.crossY)
-        self.command('trigger', self.Z_processed)
+        if (self.crossX != 0) or (self.crossY != 0):
+            self.command('cross', self.crossX, self.crossY)
 
     def load(self, config=None):
         '''
@@ -179,8 +186,8 @@ class GamepadProcessor(threading.Thread):
 
     def run(self):
         while not self.terminated:
-            while self.gamepad != []:
-                event = self.gamepad.pop()
+            while self.gamepad.queue != []:
+                event = self.gamepad.queue.pop()
                 if event.code == 'ABS_X':
                     self.LX = event.state/32768.
                 elif event.code == 'ABS_Y':
@@ -198,6 +205,7 @@ class GamepadProcessor(threading.Thread):
                 elif event.code == 'ABS_HAT0Y':
                     self.crossY = event.state*1.
                 elif event.code in button_events.keys():
+                    print(event.code, event.state)
                     button_event = button_events[event.code]
                     if event.state == 1: # ON event
                         self.button[button_event] = (event.state == 1)
@@ -221,9 +229,17 @@ class GamepadProcessor(threading.Thread):
                         # Trigger event
                         self.button[button_event] = (event.state==1)
                         self.releasing = True # in a releasing process: do not process further events
+                    else:
+                        self.button[button_event] = (event.state == 1)
 
             # This could be done only at certain time intervals
             self.process_joysticks()
+            time.sleep(.05)
+
+            t = time.time()
+            if t-self.last_config_checked>1.:
+                self.check_config()
+                self.last_config_checked = t
 
     def command(self, name, *args):
         '''
@@ -239,10 +255,7 @@ class GamepadProcessor(threading.Thread):
             else:
                 command_name = description
                 arguments = []
-            try:
-                self.__getattribute__(command_name)(*(args+arguments))
-            except:
-                print('Failed executing', command_name, *(args+arguments))
+            self.__getattribute__(command_name)(*(list(args)+list(arguments)))
             return True
         else:
             return False
@@ -257,6 +270,7 @@ class GamepadProcessor(threading.Thread):
         self.terminated = True
 
     def quit(self):
+        print("Quitting")
         self.stop() # just a synonym
 
 if __name__ == '__main__':
@@ -264,5 +278,5 @@ if __name__ == '__main__':
     reader.start()
     gamepad = GamepadProcessor(reader, config='~/PycharmProjects/holypipette/development/gamepad.yaml')
     gamepad.start()
-    gamepad.stop()
+    gamepad.join()
     reader.stop()

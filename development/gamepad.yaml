@@ -1,27 +1,27 @@
 # Gamepad bindings
 # Also: number of manipulators, etc
 
-joystick_threshold : .1 # threshold for joystick action
-joystick_power : 3 # power law for joystick action # could be in config file
+joystick_threshold : .15 # threshold for joystick action
+joystick_power : 3 # power law for joystick action
 
 X : lock_MP
 Y : lock_all_MP
 X+Y : calibrate   # Careful: combinations must sorted
 A : go_to_memorized
 long A : memorize
-B ON : [withdraw, -1] # moves in if already withdrawn # we just do home
+B ON : [withdraw, 5000] # moves in if already withdrawn # we just do home
 B OFF : stop_move_in # default: OFF
 
-left : [MP_virtualX_Y, +1, +1]
-right : [stage_XY, +1, +1]
-cross : [MP_fine_XZ, +1, +1]
-trigger : [focus, +1]
+left : [MP_virtualX_Y, -20, -20]
+cross : [stage_XY, -20, +20]
+right : [MP_fine_XZ, -5, +5]
+trigger : [focus, +20]
 
 left_trigger+right_trigger : focus_to_tip
 
-left_finger_button : [MP_Z, -1]
+left_finger_button : [MP_Z, -20]
 
-right_finger_button : [MP_Z, +1]
+right_finger_button : [MP_Z, +20]
 
 select : select_manipulator
 
