@@ -26,9 +26,11 @@ trigger : [focus, +20]
 
 left_trigger+right_trigger : focus_to_tip
 
-left_finger_button : [MP_Z, -20] # not so useful here
+left_finger_button ON : [MP_Z, -20] # not so useful here # make a relative move instead
+left_finger_button OFF : [MP_Z, -0]
 
 right_finger_button : [MP_Z, +20]
+right_finger_button OFF : [MP_Z, 0]
 
 select : select_manipulator
 

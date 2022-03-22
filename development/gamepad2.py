@@ -2,15 +2,10 @@
 Control of manipulators with gamepad
 
 TODO:
-- method parameters should be stored rather than passed as parameters
-- Check the status of the axis before movement?
+- axis signs should be stored rather than passed as parameters
 - Z clicks should be continuous
-- velocity should probably be adjusted to distance
-- maybe a trackball mode and a fine mode depending on intensity
-- cross : with acceleration / switch to trackball
-- alternative is to use relative moves that get aborted (eg for cross)
-
-cross and Z clicks: as events, relative_move with abortion
+- cross and Z clicks: as events, relative_move with abortion
+  or switch to fast mode with duration
 
 >> Switching with duration:
 - If in the same state for a long time, then switch to fast mode.
@@ -23,17 +18,16 @@ import os
 import time
 from holypipette.devices.manipulator.luigsneumann_SM10 import LuigsNeumann_SM10
 
-how_many_MP = 2
-
 class GamepadController(GamepadProcessor):
     def __init__(self, gamepad_reader, dev, config=None):
         super(GamepadController, self).__init__(gamepad_reader, config=config)
         self.current_MP = 0
-        self.locked = [False]*how_many_MP
+        self.how_many_MP = len(self.config['axes']['manipulators'])
+        self.locked = [False]*self.how_many_MP
         self.all_locked = False
         self.dev = dev
         #self.memory = None # should be in configuration file
-        self.calibration_position = [None]*how_many_MP
+        self.calibration_position = [None]*self.how_many_MP
         #self.dzdx = [0.]*how_many_MP # movement in z for a unit movement in x
         self.withdrawn = False
 
@@ -45,7 +39,7 @@ class GamepadController(GamepadProcessor):
         self.MP_axes = self.config["axes"]['manipulators']
         self.stage_axes = self.config["axes"]['stage']
         self.focus_axis = self.config["axes"]['focus']
-        self.dzdx = self.config.get('dzdx', [0.]*how_many_MP) # maybe as angle?
+        self.dzdx = self.config.get('dzdx', [0.]*self.how_many_MP) # maybe as angle?
         self.memory = self.config.get('memory', None)
         if self.memory is None:
             self.memorize()
@@ -59,7 +53,7 @@ class GamepadController(GamepadProcessor):
         self.terminated = True
 
     def select_manipulator(self):
-        self.current_MP = (self.current_MP + 1) % how_many_MP
+        self.current_MP = (self.current_MP + 1) % self.how_many_MP
         print('Selected manipulator:', self.current_MP+1)
 
     def lock_MP(self):
@@ -68,10 +62,10 @@ class GamepadController(GamepadProcessor):
 
     def lock_all_MP(self):
         if all(self.locked):
-            self.locked = [False]*how_many_MP
+            self.locked = [False]*self.how_many_MP
             print('Manipulator unlocked')
         else:
-            self.locked = [True] * how_many_MP
+            self.locked = [True] * self.how_many_MP
             print('Manipulator locked')
 
     def calibrate(self):
