@@ -61,6 +61,8 @@ class GamepadReader(threading.Thread):
     def run(self):
         while not self.terminated:
             self.queue.append(self.gamepad.read()[0])  # This blocks the thread
+            if True:
+                print(self.queue[-1])
 
     def stop(self):
         self.terminated = True
