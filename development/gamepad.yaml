@@ -5,7 +5,7 @@ joystick_threshold : .1 # threshold for joystick action
 joystick_power : 3 # power law for joystick action # could be in config file
 
 X : lock_MP
-Y : lock_both_MP
+Y : lock_all_MP
 X+Y : calibrate   # Careful: combinations must sorted
 A : go_to_memorized
 long A : memorize
