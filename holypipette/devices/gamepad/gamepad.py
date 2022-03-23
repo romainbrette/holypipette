@@ -33,6 +33,7 @@ import time
 import yaml
 import inputs
 import os
+import numpy as np
 
 __all__ = ['GamepadReader', 'GamepadProcessor']
 
@@ -96,14 +97,14 @@ class GamepadProcessor(threading.Thread):
         self.crossX = 0.
         self.crossY = 0.
         # Buttons
-        self.X = False
-        self.Y = False
-        self.A = False
-        self.B = False
-        self.select = False
-        self.menu = False
-        self.left_finger = False
-        self.right_finger = False
+        # self.X = False
+        # self.Y = False
+        # self.A = False
+        # self.B = False
+        # self.select = False
+        # self.menu = False
+        # self.left_finger = False
+        # self.right_finger = False
 
         ## Transformed joystick variables
         self.LX_processed = 0.
@@ -122,10 +123,14 @@ class GamepadProcessor(threading.Thread):
         ## Parameters
         self.joystick_threshold = self.config.get('joystick_threshold', .15)
         self.joystick_power = self.config.get('joystick_power', 3)
-        self.switch_duration = self.config.get('switch_duration', 5.) # to switch to high speed mode
+        self.switch_on_duration = self.config.get('switch_on_duration', 5.) # to switch to high speed mode
+        self.switch_off_duration = self.config.get('switch_off_duration', 5.) # to switch to low speed mode
 
         self.releasing = False # if True, in a releasing process: do not process further events
         self.last_config_checked = time.time()
+
+    def vibrate(self, left, right, duration_ms):
+        self.gamepad.set_vibration(left, right, duration_ms) # left and right are between 0 and 1
 
     def map_joystick(self, x):
         '''
@@ -165,13 +170,16 @@ class GamepadProcessor(threading.Thread):
                 self.command('right', self.RX_processed, self.RY_processed)
 
         # Call the relevant methods
+        last_change = max(self.last_change['ABS_HAT0X'], self.last_change['ABS_HAT0Y'])
         if (self.crossX != 0) or (self.crossY != 0):
-            last_change = max(self.last_change['ABS_HAT0X'], self.last_change['ABS_HAT0Y'])
-            if time.time() - last_change>self.switch_duration:
+            if time.time() - last_change>self.switch_on_duration:
                 self.cross_high_speed = True
             self.command('cross', self.crossX, self.crossY, high_speed = self.cross_high_speed)
         else:
-            self.cross_high_speed = False
+            if self.cross_high_speed: # Abort
+                self.command('cross', 0., 0., high_speed=True)
+            if time.time() - last_change>self.switch_off_duration:
+                self.cross_high_speed = False
 
     def save(self):
         with open(self.config_file, 'w') as f:
@@ -190,6 +198,13 @@ class GamepadProcessor(threading.Thread):
             self.config = yaml.safe_load(f)
 
         self.config_last_modified = os.stat(self.config_file)[8]
+
+        # Sort configuration keys
+        new_config = {}
+        for key, value in self.config:
+            new_key = '+'.join(sorted(key.split('+')))
+            new_config[new_key] = value
+        self.config = new_config
 
     def check_config(self):
         '''
@@ -231,17 +246,17 @@ class GamepadProcessor(threading.Thread):
                         self.time_last_on = time.time()
                         # Trigger an ON event
                         combination = self.get_combination()
-                        if (combination+' ON') in self.config:
-                            self.command(combination+' ON')
+                        if (combination+' onset') in self.config:
+                            self.command(combination+' onset')
                         self.releasing = False
                     elif not self.releasing: # OFF event
                         duration = time.time() - self.time_last_on
                         long_event = (duration>long_duration_threshold)
                         combination = self.get_combination()
-                        # Trigger an OFF event
-                        if (combination+' OFF') in self.config:
-                            if not long_event or not self.command('long '+combination + ' OFF'):
-                                self.command(combination + ' OFF')
+                        # Trigger an offset event
+                        if (combination+' offset') in self.config:
+                            if not long_event or not self.command('long '+combination + ' offset'):
+                                self.command(combination + ' offset')
                         else:
                             if not long_event or not self.command('long '+combination):
                                 self.command(combination)
@@ -252,6 +267,12 @@ class GamepadProcessor(threading.Thread):
                         self.button[button_event] = (event.state == 1)
 
             # This could be done only at certain time intervals
+
+            # Buttons
+            combination = self.get_combination()
+            if (combination+' on') in self.config:
+                self.command(combination + ' on')
+            # Joysticks
             self.process_joysticks()
             time.sleep(.05)
 
@@ -259,6 +280,8 @@ class GamepadProcessor(threading.Thread):
             if t-self.last_config_checked>1.:
                 self.check_config()
                 self.last_config_checked = t
+
+        self.save()
 
     def command(self, name, *args, **kwds):
         '''

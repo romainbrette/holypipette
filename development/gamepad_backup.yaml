@@ -3,8 +3,7 @@
 
 joystick_threshold : .15 # threshold for joystick action
 joystick_power : 3 # power law for joystick action
-switch_on_duration : 3 # press duration to switch to high speed mode
-switch_off_duration : 1 # press duration to switch to low speed mode
+switch_duration : 5 # press duration to switch high speed mode
 axes :
   manipulators :
     - [1, 2, 3]
@@ -27,10 +26,10 @@ trigger : [focus, +20]
 
 left_trigger+right_trigger : focus_to_tip
 
-left_finger_button onset : [MP_Z, -1000] # not so useful here
-left_finger_button offset : [MP_Z, 0]
+left_finger_button onset : [MP_Z, -20] # not so useful here # make a relative move instead
+left_finger_button offset : [MP_Z, -0]
 
-right_finger_button : [MP_Z, +1000]
+right_finger_button : [MP_Z, +20]
 right_finger_button offset : [MP_Z, 0]
 
 select : select_manipulator

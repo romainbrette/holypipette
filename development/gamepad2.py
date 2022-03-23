@@ -3,20 +3,14 @@ Control of manipulators with gamepad
 
 TODO:
 - axis signs should be stored rather than passed as parameters
-- Z clicks should be continuous
-- cross and Z clicks: as events, relative_move with abortion
-  or switch to fast mode with duration
-
->> Switching with duration:
-- If in the same state for a long time, then switch to fast mode.
-- When in fast mode, return to slow mode when no movement at all (maybe for some time).
-- When switching to fast mode, a large relative movement is triggered (in the right direction).
-- As soon as movement changes, movement is aborted then a new movement is triggered.
+- Command line argument: configuration file
+- Switching for joystick keys
 '''
 from holypipette.devices.gamepad import *
 import os
 import time
 from holypipette.devices.manipulator.luigsneumann_SM10 import LuigsNeumann_SM10
+import numpy as np
 
 class GamepadController(GamepadProcessor):
     def __init__(self, gamepad_reader, dev, config=None):
@@ -39,13 +33,16 @@ class GamepadController(GamepadProcessor):
         self.MP_axes = self.config["axes"]['manipulators']
         self.stage_axes = self.config["axes"]['stage']
         self.focus_axis = self.config["axes"]['focus']
-        self.dzdx = self.config.get('dzdx', [0.]*self.how_many_MP) # maybe as angle?
+        #self.dzdx = self.config.get('dzdx', [0.]*self.how_many_MP) # maybe as angle?
+        self.dzdx = np.sin(np.array(self.config.get('angle', [0.] * self.how_many_MP))) # maybe as angle?
         self.memory = self.config.get('memory', None)
         if self.memory is None:
             self.memorize()
+        self.stage_ongoing = (0., 0.) # Ongoing relative movement
 
     def save(self):
-        self.config['dzdx'] = self.dzdx
+        #self.config['dzdx'] = self.dzdx
+        self.config['angle'] = np.arcsin(np.array(self.dzdx))*180/np.pi
         self.config['memory'] = self.memory
         super(GamepadController, self).save()
 
@@ -116,9 +113,22 @@ class GamepadController(GamepadProcessor):
         X = X*float(directionX)
         Y = Y * float(directionY)
         #print('Stage',X,Y)
-        for i, d in enumerate([X,Y]):
-            self.dev.set_single_step_distance(self.stage_axes[i], d)
-            self.dev.single_step(self.stage_axes[i], 1)
+        if high_speed:
+            if self.stage_ongoing != (X, Y):
+                self.dev.stop(self.stage_axes[0])
+                self.dev.stop(self.stage_axes[1])
+                if (X!=0.) and (Y!=0.):
+                    self.dev.relative_move(5000.*(2*(directionX>0)-1), self.stage_axes[0])
+                    self.dev.relative_move(5000.*(2*(directionY>0)-1), self.stage_axes[1])
+                    self.stage_ongoing = (X, Y)
+        else:
+            if self.stage_ongoing != (0., 0.):
+                self.dev.stop(self.stage_axes[0])
+                self.dev.stop(self.stage_axes[1])
+                self.stage_ongoing = (0., 0.)
+            for i, d in enumerate([X,Y]):
+                self.dev.set_single_step_distance(self.stage_axes[i], d)
+                self.dev.single_step(self.stage_axes[i], 1)
 
     def MP_fine_XZ(self, X, Z, directionX, directionZ, high_speed=False):
         X = X*float(directionX)
@@ -137,7 +147,7 @@ class GamepadController(GamepadProcessor):
                 for i in range(len(self.locked)):
                     if i!= current_MP:
                         self.current_MP = i
-                        self.MP_Z(Z) # might not be the right direction!
+                        self.MP_Z_step(Z) # might not be the right direction!
                 self.current_MP = current_MP
 
     def focus(self, Z, direction, high_speed=False):
@@ -148,7 +158,14 @@ class GamepadController(GamepadProcessor):
 
     def MP_Z(self, direction, high_speed=False):
         d = float(direction)
-        print('MP Z', d)
+        print('MP Z')
+        if d == 0.: # abort
+            self.dev.stop(self.MP_axes[self.current_MP][2])
+        else:
+            self.dev.relative_move(direction, self.MP_axes[self.current_MP][2], fast=high_speed)
+
+    def MP_Z_step(self, direction, high_speed=False):
+        d = float(direction)
         self.dev.set_single_step_distance(self.MP_axes[self.current_MP][2], d)
         self.dev.single_step(self.MP_axes[self.current_MP][2], 1)
         if self.locked[self.current_MP]:
@@ -159,7 +176,7 @@ class GamepadController(GamepadProcessor):
                 for i in range(len(self.locked)):
                     if i!= current_MP:
                         self.current_MP = i
-                        self.MP_Z(direction) # might not be the right direction!
+                        self.MP_Z_step(direction) # might not be the right direction!
                 self.current_MP = current_MP
 
 
