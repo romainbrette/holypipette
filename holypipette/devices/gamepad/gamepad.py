@@ -183,7 +183,7 @@ class GamepadProcessor(threading.Thread):
 
     def save(self):
         with open(self.config_file, 'w') as f:
-            self.config = yaml.safe_dump(self.config, f)
+            yaml.safe_dump(self.config, f, default_flow_style=False)
         self.config_last_modified = os.stat(self.config_file)[8]
 
     def load(self, config=None):
@@ -201,7 +201,7 @@ class GamepadProcessor(threading.Thread):
 
         # Sort configuration keys
         new_config = {}
-        for key, value in self.config:
+        for key, value in self.config.items():
             new_key = '+'.join(sorted(key.split('+')))
             new_config[new_key] = value
         self.config = new_config
