@@ -117,14 +117,14 @@ class GamepadController(GamepadProcessor):
         print('Stage',X,Y)
         if high_speed:
             if self.stage_ongoing != (X, Y):
-                self.dev.stop(self.stage_axes[0])
-                self.dev.stop(self.stage_axes[1])
-                if (X!=0.) and (Y!=0.):
-                    print('Stage high speed move')
+                if self.stage_ongoing != (0., 0.):
+                    self.dev.stop(self.stage_axes[0])
+                    self.dev.stop(self.stage_axes[1])
+                if (X!=0.) or (Y!=0.):
                     print('Stage high speed move')
                     self.dev.relative_move(5000.*(2*(directionX>0)-1), self.stage_axes[0], fast=True)
                     self.dev.relative_move(5000.*(2*(directionY>0)-1), self.stage_axes[1], fast=True)
-                    self.stage_ongoing = (X, Y)
+                self.stage_ongoing = (X, Y)
         else:
             if self.stage_ongoing != (0., 0.):
                 self.dev.stop(self.stage_axes[0])
