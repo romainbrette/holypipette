@@ -26,8 +26,8 @@ class GamepadController(GamepadProcessor):
         #self.dzdx = [0.]*how_many_MP # movement in z for a unit movement in x
         self.withdrawn = False
 
-        #for i in range(1,10):
-        #    self.dev.set_single_step_velocity(i, 12)
+        for i in range(1,10):
+            self.dev.set_single_step_velocity(i, 12)
 
     def load(self, config=None):
         super(GamepadController, self).load(config)
@@ -36,7 +36,7 @@ class GamepadController(GamepadProcessor):
         self.focus_axis = self.config["axes"]['focus']
         self.how_many_MP = len(self.config['axes']['manipulators'])
         #self.dzdx = self.config.get('dzdx', [0.]*self.how_many_MP) # maybe as angle?
-        self.dzdx = np.sin(np.array(self.config.get('angle', [0.] * self.how_many_MP))) # maybe as angle?
+        self.dzdx = np.sin(np.pi/180*np.array(self.config.get('angle', [0.] * self.how_many_MP))) # maybe as angle?
         self.memory = self.config.get('memory', None)
         if self.memory is None:
             self.memorize()
@@ -122,8 +122,8 @@ class GamepadController(GamepadProcessor):
                     self.dev.stop(self.stage_axes[1])
                 if (X!=0.) or (Y!=0.):
                     print('Stage high speed move')
-                    self.dev.relative_move(5000.*(2*(directionX>0)-1), self.stage_axes[0], fast=True)
-                    self.dev.relative_move(5000.*(2*(directionY>0)-1), self.stage_axes[1], fast=True)
+                    self.dev.relative_move(5000.*np.sign(X), self.stage_axes[0], fast=True)
+                    self.dev.relative_move(5000.*np.sign(Y), self.stage_axes[1], fast=True)
                 self.stage_ongoing = (X, Y)
         else:
             if self.stage_ongoing != (0., 0.):
