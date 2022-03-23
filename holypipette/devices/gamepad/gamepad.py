@@ -121,10 +121,10 @@ class GamepadProcessor(threading.Thread):
         self.cross_high_speed = False
 
         ## Parameters
-        self.joystick_threshold = self.config.get('joystick_threshold', .15)
-        self.joystick_power = self.config.get('joystick_power', 3)
-        self.switch_on_duration = self.config.get('switch_on_duration', 5.) # to switch to high speed mode
-        self.switch_off_duration = self.config.get('switch_off_duration', 5.) # to switch to low speed mode
+        self.joystick_threshold = self.config['parameters'].get('joystick_threshold', .15)
+        self.joystick_power = self.config['parameters'].get('joystick_power', 3)
+        self.switch_on_duration = self.config['parameters'].get('switch_on_duration', 5.) # to switch to high speed mode
+        self.switch_off_duration = self.config['parameters'].get('switch_off_duration', 5.) # to switch to low speed mode
 
         self.releasing = False # if True, in a releasing process: do not process further events
         self.last_config_checked = time.time()
@@ -199,12 +199,13 @@ class GamepadProcessor(threading.Thread):
 
         self.config_last_modified = os.stat(self.config_file)[8]
 
+        self.keys = self.config['keys']
         # Sort configuration keys
-        new_config = {}
-        for key, value in self.config.items():
+        new_keys = {}
+        for key, value in self.keys.items():
             new_key = '+'.join(sorted(key.split('+')))
-            new_config[new_key] = value
-        self.config = new_config
+            new_keys[new_key] = value
+        self.keys = new_keys
 
     def check_config(self):
         '''
@@ -246,7 +247,7 @@ class GamepadProcessor(threading.Thread):
                         self.time_last_on = time.time()
                         # Trigger an ON event
                         combination = self.get_combination()
-                        if (combination+' onset') in self.config:
+                        if (combination+' onset') in self.keys:
                             self.command(combination+' onset')
                         self.releasing = False
                     elif not self.releasing: # OFF event
@@ -254,7 +255,7 @@ class GamepadProcessor(threading.Thread):
                         long_event = (duration>long_duration_threshold)
                         combination = self.get_combination()
                         # Trigger an offset event
-                        if (combination+' offset') in self.config:
+                        if (combination+' offset') in self.keys:
                             if not long_event or not self.command('long '+combination + ' offset'):
                                 self.command(combination + ' offset')
                         else:
@@ -270,7 +271,7 @@ class GamepadProcessor(threading.Thread):
 
             # Buttons
             combination = self.get_combination()
-            if (combination+' on') in self.config:
+            if (combination+' on') in self.keys:
                 self.command(combination + ' on')
             # Joysticks
             self.process_joysticks()
@@ -289,8 +290,8 @@ class GamepadProcessor(threading.Thread):
         If the description is a list, the first item is the command name, the rest are arguments.
         Returns True if executed
         '''
-        if name in self.config: # otherwise does nothing
-            description = self.config[name]
+        if name in self.keys: # otherwise does nothing
+            description = self.keys[name]
             if isinstance(description, list):
                 command_name = description[0]
                 arguments = description[1:]

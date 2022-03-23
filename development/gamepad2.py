@@ -6,7 +6,7 @@ TODO:
 - Command line argument: configuration file
 - Switching for joystick keys
 
-Relative move takes time to stop in fast mode. Because of a ramp?
+Note: relative move takes time to stop in fast mode.
 '''
 from holypipette.devices.gamepad import *
 import os

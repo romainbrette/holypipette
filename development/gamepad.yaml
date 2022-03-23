@@ -1,62 +1,41 @@
-A: go_to_memorized
-B offset: stop_withdraw
-B onset:
-- withdraw
-- 5000
-X: lock_MP
-X+Y: calibrate
-Y: lock_all_MP
-angle:
-- 0.0
-- 0.0
-axes:
-  focus: 9
-  manipulators:
-  - - 1
-    - 2
-    - 3
-  - - 4
-    - 5
-    - 6
-  stage:
-  - 7
-  - 8
-cross:
-- stage_XY
-- -20
-- 20
-joystick_power: 3
-joystick_threshold: 0.15
-left:
-- MP_virtualX_Y
-- -20
-- -20
-left_finger_button offset:
-- MP_Z
-- 0
-left_finger_button onset:
-- MP_Z
-- -2000
-left_trigger+right_trigger: focus_to_tip
-long A: memorize
-memory:
-- -5499.111328125
-- 23768.294921875
-- 27078.32421875
-menu: quit
-right:
-- MP_fine_XZ
-- -5
-- 5
-right_finger_button offset:
-- MP_Z
-- 0
-right_finger_button onset:
-- MP_Z
-- 2000
-select: select_manipulator
-switch_off_duration: 1
-switch_on_duration: 3
-trigger:
-- focus
-- 20
+# Gamepad bindings
+# Also: number of manipulators, etc
+
+axes :
+  manipulators :
+    - [1, 2, 3]
+    - [4, 5, 6]
+  stage : [7, 8]
+  focus : 9
+
+keys :
+  X : lock_MP
+  Y : lock_all_MP
+  X+Y : calibrate   # Careful: combinations must sorted
+  A : go_to_memorized
+  long A : memorize
+  B onset : [withdraw, 5000] # relative move, alternating sign
+  B offset : stop_withdraw # stops the relative movement
+
+  left : [MP_virtualX_Y, -20, -20]
+  cross : [stage_XY, -20, +20]
+  right : [MP_fine_XZ, -5, +5]
+  trigger : [focus, +20]
+
+  left_trigger+right_trigger : focus_to_tip
+
+  left_finger_button onset : [MP_Z, -2000] # not so useful here
+  left_finger_button offset : [MP_Z, 0]
+
+  right_finger_button onset: [MP_Z, +2000]
+  right_finger_button offset : [MP_Z, 0]
+
+  select : select_manipulator
+
+  menu : quit
+
+parameters :
+  joystick_threshold : .15 # threshold for joystick action
+  joystick_power : 3 # power law for joystick action
+  switch_off_duration : 1
+  switch_on_duration : 3
