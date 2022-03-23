@@ -4,7 +4,11 @@ Control of manipulators with gamepad
 TODO:
 - axis signs should be stored rather than passed as parameters
 - Command line argument: configuration file
-- Switching for joystick keys
+- Switching with finger buttons, and remove cross configuration
+    high_speed : fast relative move
+    low_speed : small steps
+    neither : slow relative move
+    -> for joysticks/cross, check if state changed (if so, abort)
 
 Note: relative move takes time to stop in fast mode.
 '''
@@ -25,6 +29,8 @@ class GamepadController(GamepadProcessor):
         self.calibration_position = [None]*self.how_many_MP
         #self.dzdx = [0.]*how_many_MP # movement in z for a unit movement in x
         self.withdrawn = False
+        self.high_speed = False
+        self.low_speed = False
 
         for i in range(1,10):
             self.dev.set_single_step_velocity(i, 12)
@@ -50,6 +56,18 @@ class GamepadController(GamepadProcessor):
 
     def quit(self):
         self.terminated = True
+
+    def high_speed_on(self):
+        self.high_speed = True
+
+    def high_speed_off(self):
+        self.high_speed = False
+
+    def low_speed_on(self):
+        self.low_speed = True
+
+    def low_speed_false(self):
+        self.low_speed = False
 
     def select_manipulator(self):
         self.current_MP = (self.current_MP + 1) % self.how_many_MP
@@ -100,7 +118,7 @@ class GamepadController(GamepadProcessor):
         print('Aborting')
         self.dev.stop(self.MP_axes[self.current_MP][0])
 
-    def MP_virtualX_Y(self, X, Y, directionX, directionY, high_speed=False):
+    def MP_virtualX_Y(self, X, Y, directionX, directionY):
         X = X*float(directionX)
         Y = Y * float(directionY)
         print('MP',X,Y)
@@ -111,21 +129,21 @@ class GamepadController(GamepadProcessor):
             self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
             self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
 
-    def stage_XY(self, X, Y, directionX, directionY, high_speed=False):
+    def stage_XY(self, X, Y, directionX, directionY):
         X = X*float(directionX)
         Y = Y * float(directionY)
         print('Stage',X,Y)
-        if high_speed:
+        if not self.low_speed:
             if self.stage_ongoing != (X, Y):
                 if self.stage_ongoing != (0., 0.):
                     self.dev.stop(self.stage_axes[0])
                     self.dev.stop(self.stage_axes[1])
                 if (X!=0.) or (Y!=0.):
                     print('Stage high speed move')
-                    self.dev.relative_move(5000.*np.sign(X), self.stage_axes[0], fast=True)
-                    self.dev.relative_move(5000.*np.sign(Y), self.stage_axes[1], fast=True)
+                    self.dev.relative_move(5000.*np.sign(X), self.stage_axes[0], fast=self.high_speed)
+                    self.dev.relative_move(5000.*np.sign(Y), self.stage_axes[1], fast=self.high_speed)
                 self.stage_ongoing = (X, Y)
-        else:
+        else: # steps
             if self.stage_ongoing != (0., 0.):
                 self.dev.stop(self.stage_axes[0])
                 self.dev.stop(self.stage_axes[1])
@@ -134,7 +152,7 @@ class GamepadController(GamepadProcessor):
                 self.dev.set_single_step_distance(self.stage_axes[i], d)
                 self.dev.single_step(self.stage_axes[i], 1)
 
-    def MP_fine_XZ(self, X, Z, directionX, directionZ, high_speed=False):
+    def MP_fine_XZ(self, X, Z, directionX, directionZ):
         X = X*float(directionX)
         Z = Z * float(directionZ)
         print('MP fine',X,Z)
@@ -154,23 +172,23 @@ class GamepadController(GamepadProcessor):
                         self.MP_Z_step(Z) # might not be the right direction!
                 self.current_MP = current_MP
 
-    def focus(self, Z, direction, high_speed=False):
+    def focus(self, Z, direction):
         Z = Z*float(direction)
         print('Focus',Z)
         self.dev.set_single_step_distance(self.focus_axis, Z)
         self.dev.single_step(self.focus_axis, 1)
 
-    def MP_Z(self, direction, high_speed=False):
-        d = float(direction)
-        print('MP Z', d)
-        if d == 0.: # abort
-            print("aborting")
-            self.dev.stop(self.MP_axes[self.current_MP][2])
-        else:
-            print('relative move', d)
-            self.dev.relative_move(d, self.MP_axes[self.current_MP][2], fast=False)
+    # def MP_Z(self, direction):
+    #     d = float(direction)
+    #     print('MP Z', d)
+    #     if d == 0.: # abort
+    #         print("aborting")
+    #         self.dev.stop(self.MP_axes[self.current_MP][2])
+    #     else:
+    #         print('relative move', d)
+    #         self.dev.relative_move(d, self.MP_axes[self.current_MP][2], fast=False)
 
-    def MP_Z_step(self, direction, high_speed=False):
+    def MP_Z_step(self, direction):
         d = float(direction)
         self.dev.set_single_step_distance(self.MP_axes[self.current_MP][2], d)
         self.dev.single_step(self.MP_axes[self.current_MP][2], 1)

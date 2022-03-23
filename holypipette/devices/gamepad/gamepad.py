@@ -117,9 +117,6 @@ class GamepadProcessor(threading.Thread):
         self.button = dict.fromkeys(list(button_events.values()), False)
         self.time_last_on = None
 
-        ## High/low speed switch
-        self.cross_high_speed = False
-
         ## Parameters
         self.joystick_threshold = self.config['parameters'].get('joystick_threshold', .15)
         self.joystick_power = self.config['parameters'].get('joystick_power', 3)
@@ -157,29 +154,22 @@ class GamepadProcessor(threading.Thread):
         if intensity>0:
             unit_X, unit_Y = self.LX/intensity, self.LY/intensity
             mapped_intensity = self.map_joystick(intensity)
-            if mapped_intensity>0:
-                self.LX_processed, self.LY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
-                self.command('left', self.LX_processed, self.LY_processed)
+            self.LX_processed, self.LY_processed = mapped_intensity * unit_X, mapped_intensity * unit_Y
+        else:
+            self.LX_processed, self.LY_processed = 0., 0.
+        self.command('left', self.LX_processed, self.LY_processed)
 
         intensity = (self.RX**2 + self.RY**2)**.5
         if intensity>0:
             unit_X, unit_Y = self.RX/intensity, self.RY/intensity
             mapped_intensity = self.map_joystick(intensity)
-            if mapped_intensity>0:
-                self.RX_processed, self.RY_processed = mapped_intensity*unit_X, mapped_intensity*unit_Y
-                self.command('right', self.RX_processed, self.RY_processed)
+            self.RX_processed, self.RY_processed = mapped_intensity * unit_X, mapped_intensity * unit_Y
+        else:
+            self.RX_processed, self.RY_processed = 0., 0.
+        self.command('right', self.RX_processed, self.RY_processed)
 
         # Call the relevant methods
-        last_change = max(self.last_change['ABS_HAT0X'], self.last_change['ABS_HAT0Y'])
-        if (self.crossX != 0) or (self.crossY != 0):
-            if time.time() - last_change>self.switch_on_duration:
-                self.cross_high_speed = True
-            self.command('cross', self.crossX, self.crossY, high_speed = self.cross_high_speed)
-        else:
-            if self.cross_high_speed: # Abort
-                self.command('cross', 0., 0., high_speed=True)
-            if time.time() - last_change>self.switch_off_duration:
-                self.cross_high_speed = False
+        self.command('cross', self.crossX, self.crossY)
 
     def save(self):
         with open(self.config_file, 'w') as f:

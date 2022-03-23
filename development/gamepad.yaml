@@ -23,32 +23,24 @@ keys:
   X+Y: calibrate
   Y: lock_all_MP
   cross:
-  - stage_XY
-  - -20
-  - -20
+    - MP_fine_XZ
+    - -10
+    - -10
   left:
   - MP_virtualX_Y
   - -20
   - -20
-  left_finger_button offset:
-  - MP_Z
-  - 0
-  left_finger_button onset:
-  - MP_Z
-  - -2000
+  left_finger_button offset: low_speed_off
+  left_finger_button onset: low_speed_on
   left_trigger+right_trigger: focus_to_tip
   long A: memorize
   menu: quit
   right:
-  - MP_fine_XZ
-  - -10
-  - -10
-  right_finger_button offset:
-  - MP_Z
-  - 0
-  right_finger_button onset:
-  - MP_Z
-  - 2000
+    - stage_XY
+    - -20
+    - -20
+  right_finger_button offset: high_speed_off
+  right_finger_button onset: high_speed_on
   select: select_manipulator
   trigger:
   - focus
@@ -60,5 +52,3 @@ memory:
 parameters:
   joystick_power: 3
   joystick_threshold: 0.15
-  switch_off_duration: 1
-  switch_on_duration: 3
