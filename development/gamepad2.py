@@ -2,6 +2,10 @@
 Control of manipulators with gamepad
 
 TODO:
+- high speed is not very speedy!
+- relative moves cannot be planar! so planar movements can only be fine
+- relative moves must be discretized!! (constant speed along each axis)
+=> each axis must be have an ongoing state, no need to check position
 - axis signs should be stored rather than passed as parameters?
 - Command line argument: configuration file
 - Switching with finger buttons, and remove cross configuration
@@ -9,6 +13,12 @@ TODO:
     low_speed : small steps
     neither : slow relative move
     -> for joysticks/cross, check if state changed (if so, abort)
+
+=> all hardware axes may move with relative moves
+=> virtual axes can only move with steps
+unless we use rps (will be approximate) or fix by measurement
+XZ : relative moves on cross
+virtual X, Y: steps only (but how about Y?)
 
 Note: relative move takes time to stop in fast mode.
 '''
@@ -66,7 +76,7 @@ class GamepadController(GamepadProcessor):
     def low_speed_on(self):
         self.low_speed = True
 
-    def low_speed_false(self):
+    def low_speed_off(self):
         self.low_speed = False
 
     def select_manipulator(self):
@@ -121,25 +131,26 @@ class GamepadController(GamepadProcessor):
     def MP_virtualX_Y(self, X, Y, directionX, directionY):
         X = X*float(directionX)
         Y = Y * float(directionY)
-        print('MP',X,Y)
-        dzdx = self.dzdx[self.current_MP]
-        X = X/(1+dzdx**2)**.5
-        Z = X*dzdx/(1+dzdx**2)**.5
-        for i, d in enumerate([X,Y,Z]):
-            self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
-            self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
+        if (X!=0.) or (Y!=0.):
+            print('MP',X,Y)
+            dzdx = self.dzdx[self.current_MP]
+            X = X/(1+dzdx**2)**.5
+            Z = X*dzdx/(1+dzdx**2)**.5
+            for i, d in enumerate([X,Y,Z]):
+                self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
+                self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
 
     def stage_XY(self, X, Y, directionX, directionY):
         X = X*float(directionX)
         Y = Y * float(directionY)
-        print('Stage',X,Y)
         if not self.low_speed:
             if self.stage_ongoing != (X, Y):
                 if self.stage_ongoing != (0., 0.):
                     self.dev.stop(self.stage_axes[0])
                     self.dev.stop(self.stage_axes[1])
+                    print('Stage abort')
                 if (X!=0.) or (Y!=0.):
-                    print('Stage high speed move')
+                    print('Stage speed move',X,Y,', high speed = ',self.high_speed)
                     self.dev.relative_move(5000.*np.sign(X), self.stage_axes[0], fast=self.high_speed)
                     self.dev.relative_move(5000.*np.sign(Y), self.stage_axes[1], fast=self.high_speed)
                 self.stage_ongoing = (X, Y)
@@ -147,6 +158,7 @@ class GamepadController(GamepadProcessor):
             if self.stage_ongoing != (0., 0.):
                 self.dev.stop(self.stage_axes[0])
                 self.dev.stop(self.stage_axes[1])
+                print('Stage abort')
                 self.stage_ongoing = (0., 0.)
             for i, d in enumerate([X,Y]):
                 self.dev.set_single_step_distance(self.stage_axes[i], d)
@@ -155,28 +167,30 @@ class GamepadController(GamepadProcessor):
     def MP_fine_XZ(self, X, Z, directionX, directionZ):
         X = X*float(directionX)
         Z = Z * float(directionZ)
-        print('MP fine',X,Z)
-        for i, d in [(0,X), (2,Z)]:
-            self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
-            self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
-        # Locked movements
-        if self.locked[self.current_MP]:
-            dzdx = self.dzdx[self.current_MP]
-            self.focus(1., Z + X*dzdx) # or the opposite?
-            # if others are locked, move them too
-            if all(self.locked):
-                current_MP = self.current_MP
-                for i in range(len(self.locked)):
-                    if i!= current_MP:
-                        self.current_MP = i
-                        self.MP_Z_step(Z) # might not be the right direction!
-                self.current_MP = current_MP
+        if (X!=0.) or (Z!=0.):
+            print('MP fine',X,Z)
+            for i, d in [(0,X), (2,Z)]:
+                self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
+                self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
+            # Locked movements
+            if self.locked[self.current_MP]:
+                dzdx = self.dzdx[self.current_MP]
+                self.focus(1., Z + X*dzdx) # or the opposite?
+                # if others are locked, move them too
+                if all(self.locked):
+                    current_MP = self.current_MP
+                    for i in range(len(self.locked)):
+                        if i!= current_MP:
+                            self.current_MP = i
+                            self.MP_Z_step(Z) # might not be the right direction!
+                    self.current_MP = current_MP
 
     def focus(self, Z, direction):
         Z = Z*float(direction)
-        print('Focus',Z)
-        self.dev.set_single_step_distance(self.focus_axis, Z)
-        self.dev.single_step(self.focus_axis, 1)
+        if Z!=0.:
+            print('Focus',Z)
+            self.dev.set_single_step_distance(self.focus_axis, Z)
+            self.dev.single_step(self.focus_axis, 1)
 
     # def MP_Z(self, direction):
     #     d = float(direction)

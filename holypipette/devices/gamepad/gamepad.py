@@ -2,31 +2,6 @@
 Gamepad reader
 
 - left_trigger + right_trigger
-- Save angles in config file.
-
-DONE:
-- Joysticks -> (angle, intensity) -> map intensity (e.g. threshold and power law)
-- Configuration file: check if file has been modified (date changed?), or simply reload every second.
-- Each key maps to method.
-- Get key combinations; buttons must be switches
-- Events triggered by buttons?
-    If there is a combination A+B, then A should trigger an event when off.
-    So if A+B triggers the event when off, we'll have a sequence like:
-        A, A+B, A, none
-    and the event A+B should be triggered.
-    So the algorithm is:
-        - wait until there is an off event.
-        - trigger the (possibly combination) event.
-        - wait until all buttons are off.
-- Events should be put in a queue (with pop?), because we don't want to have conflicting commands.
-    unless there is just a main loop dealing with the current state, and events directly trigger a command.
-    It doesn't even need to be a thread. We make a thread and join.
-- Duration is measured relative to the last on. If above some threshold (1 s?), then it's a long event.
-- Withdraw should move in if withdrawn, but it should also stop when released, so it's a different kind of event.
-
-TODO:
-- sort combinations defined in configuration file
-- Maybe display image of XBox One with commands.
 '''
 import threading
 import time
@@ -55,17 +30,18 @@ class GamepadReader(threading.Thread):
     '''
     Captures gamepad input and puts events in queue.
     '''
-    def __init__(self, gamepad_number=0):
+    def __init__(self, gamepad_number=0, id=None):
         self.gamepad = inputs.devices.gamepads[gamepad_number]
         super(GamepadReader, self).__init__()
         self.terminated = False
         self.queue = []
+        self.id = id
 
     def run(self):
         while not self.terminated:
             self.queue.insert(0,self.gamepad.read()[0])  # This blocks the thread
             if False:
-                print(self.queue[-1].code)
+                print(self.id ,self.queue[-1].code)
 
     def stop(self):
         self.terminated = True
@@ -307,9 +283,16 @@ class GamepadProcessor(threading.Thread):
         self.stop() # just a synonym
 
 if __name__ == '__main__':
-    reader = GamepadReader()
+    reader = GamepadReader(id=1)
     reader.start()
-    gamepad = GamepadProcessor(reader, config='~/PycharmProjects/holypipette/development/gamepad.yaml')
-    gamepad.start()
-    gamepad.join()
+    #gamepad = GamepadProcessor(reader, config='~/PycharmProjects/holypipette/development/gamepad.yaml')
+    #gamepad.start()
+    #gamepad.join()
+    reader2 = GamepadReader(id=2)
+    reader2.start()
+    time.sleep(10)
+    reader2.stop()
     reader.stop()
+    print([(event.code, event.state) for event in reader.queue])
+    print()
+    print([(event.code, event.state) for event in reader2.queue])
