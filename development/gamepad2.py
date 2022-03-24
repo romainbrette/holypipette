@@ -2,7 +2,7 @@
 Control of manipulators with gamepad
 
 TODO:
-- axis signs should be stored rather than passed as parameters
+- axis signs should be stored rather than passed as parameters?
 - Command line argument: configuration file
 - Switching with finger buttons, and remove cross configuration
     high_speed : fast relative move
