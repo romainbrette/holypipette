@@ -6,12 +6,9 @@ TODO:
 - discrete state should be of 8 possibilities, not 4 (overlap)
 - Command line argument: configuration file
 
-- remove locks
-- instead, two stage memories
-- withdraw might not be useful; just X (with cross)?
-_ maybe instead of plane movements we use the joystick for angle
+- Two stage memories
 - we might also need fine movements (trackball or steps?)
-    fine mvts with left finger?
+    fine mvts with left finger? (trackball?)
 
 Note: relative move takes time to stop in fast mode.
 '''
