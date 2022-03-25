@@ -72,6 +72,8 @@ class GamepadProcessor(threading.Thread):
         # Cross
         self.crossX = 0.
         self.crossY = 0.
+        self.previous_crossX = 0.
+        self.previous_crossY = 0.
         # Buttons
         # self.X = False
         # self.Y = False
@@ -88,6 +90,11 @@ class GamepadProcessor(threading.Thread):
         self.RX_processed = 0.
         self.RY_processed = 0.
         self.Z_processed = 0.
+        self.previous_LX_processed = 0.
+        self.previous_LY_processed = 0.
+        self.previous_RX_processed = 0.
+        self.previous_RY_processed = 0.
+        self.previous_Z_processed = 0.
 
         ## Buttons
         self.button = dict.fromkeys(list(button_events.values()), False)
@@ -157,6 +164,15 @@ class GamepadProcessor(threading.Thread):
 
         # Call the relevant methods
         self.command('cross', self.crossX, self.crossY)
+
+        self.previous_LX_processed = self.LX_processed
+        self.previous_RX_processed = self.RX_processed
+        self.previous_LY_processed = self.LY_processed
+        self.previous_RY_processed = self.RY_processed
+        self.previous_Z_processed = self.Z_processed
+        self.previous_crossX = self.crossX
+        self.previous_crossY = self.crossY
+
 
     def save(self):
         with open(self.config_file, 'w') as f:

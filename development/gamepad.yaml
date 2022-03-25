@@ -15,36 +15,30 @@ axes:
   - 8
 keys:
   A: go_to_memorized
-  B offset: stop_withdraw
-  B onset:
-  - withdraw
-  - 5000
-  X: lock_MP
   X+Y: calibrate
-  Y: lock_all_MP
   cross:
-  - MP_fine_XZ
-  - -5000
-  - -5000
+  - stage_XY
+  - -20000
+  - 20000
   left:
-  - MP_virtualX_Y
-  - -20
-  - -20
+  - MP_XY
+  - 20000
+  - -20000
   left_finger_button offset: low_speed_off
   left_finger_button onset: low_speed_on
   left_trigger+right_trigger: focus_to_tip
   long A: memorize
   menu: quit
   right:
-  - stage_XY
-  - -5000
-  - 5000
+  - MP_XZ
+  - 20000
+  - -20000
   right_finger_button offset: high_speed_off
   right_finger_button onset: high_speed_on
   select: select_manipulator
   trigger:
   - focus
-  - 20
+  - -20
 memory:
 - -1365.7568359375
 - 22238.23828125
