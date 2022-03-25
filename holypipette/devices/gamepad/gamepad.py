@@ -99,6 +99,9 @@ class GamepadProcessor(threading.Thread):
         self.switch_on_duration = self.config['parameters'].get('switch_on_duration', 5.) # to switch to high speed mode
         self.switch_off_duration = self.config['parameters'].get('switch_off_duration', 5.) # to switch to low speed mode
 
+        ## Axes moves
+        self.current_move = [0.]*100 # That's many possible axes
+
         self.releasing = False # if True, in a releasing process: do not process further events
         self.last_config_checked = time.time()
 
@@ -115,6 +118,14 @@ class GamepadProcessor(threading.Thread):
         #return sign*abs(x)**self.joystick_power
         # this may cause problems if x>1
         return sign*((abs(x)-self.joystick_threshold)/(1-self.joystick_threshold))**self.joystick_power
+
+    def discrete_state(self, X, Y):
+        '''
+        Returns discretized position (-1, 0, +1 for each component)
+        '''
+        Xd = ((X>Y) and (X>-Y)) - ((X<Y) and (X<-Y))
+        Yd = ((Y>X) and (Y>-X)) - ((Y<X) and (Y<-X))
+        return Xd, Yd
 
     def process_joysticks(self):
         '''
