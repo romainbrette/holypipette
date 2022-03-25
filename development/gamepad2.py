@@ -2,11 +2,10 @@
 Control of manipulators with gamepad
 
 TODO:
-- axis signs should be stored rather than passed as parameters
 - discrete state should be of 8 possibilities, not 4 (overlap)
 - Command line argument: configuration file
 
-- Two stage memories
+- Two stage memories, or more
 - we might also need fine movements (trackball or steps?)
     fine mvts with left finger? (trackball?)
 
@@ -34,6 +33,8 @@ class GamepadController(GamepadProcessor):
 
     def load(self, config=None):
         super(GamepadController, self).load(config)
+        self.relative_move = self.config["axes"]['relative_move']
+        self.direction = self.config["axes"]['direction']
         self.MP_axes = self.config["axes"]['manipulators']
         self.stage_axes = self.config["axes"]['stage']
         self.focus_axis = self.config["axes"]['focus']
@@ -98,30 +99,30 @@ class GamepadController(GamepadProcessor):
         print('Memorize')
         self.memory = self.dev.position_group(self.stage_axes+[self.focus_axis])
 
-    def MP_virtualX_Y(self, X, Y, directionX, directionY):
-        X = X*float(directionX)
-        Y = Y * float(directionY)
-        if (X!=0.) or (Y!=0.):
-            #print('MP',X,Y)
-            dzdx = self.dzdx[self.current_MP]
-            X = X/(1+dzdx**2)**.5
-            Z = X*dzdx/(1+dzdx**2)**.5
-            for i, d in enumerate([X,Y,Z]):
-                self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
-                self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
+    # def MP_virtualX_Y(self, X, Y, directionX, directionY):
+    #     X = X*float(directionX)
+    #     Y = Y * float(directionY)
+    #     if (X!=0.) or (Y!=0.):
+    #         #print('MP',X,Y)
+    #         dzdx = self.dzdx[self.current_MP]
+    #         X = X/(1+dzdx**2)**.5
+    #         Z = X*dzdx/(1+dzdx**2)**.5
+    #         for i, d in enumerate([X,Y,Z]):
+    #             self.dev.set_single_step_distance(self.MP_axes[self.current_MP][i], d)
+    #             self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
 
-    def stage_XY(self, X, Y, directionX, directionY):
+    def stage_XY(self, X, Y):
         X, Y = self.discrete_state(X, Y)
-        X = X*float(directionX)
-        Y = Y * float(directionY)
+        X = X*self.relative_move*self.direction[self.stage_axes[0]]
+        Y = Y*self.relative_move*self.direction[self.stage_axes[1]]
 
         self.buffered_relative_move(X, self.stage_axes[0], fast=self.high_speed)
         self.buffered_relative_move(Y, self.stage_axes[1], fast=self.high_speed)
 
-    def MP_XZ(self, X, Z, directionX, directionZ):
+    def MP_XZ(self, X, Z):
         X, Z = self.discrete_state(X, Z)
-        X = X*float(directionX)
-        Z = Z * float(directionZ)
+        X = X*self.relative_move*self.direction[self.MP_axes[self.current_MP][0]]
+        Z = Z*self.relative_move*self.direction[self.MP_axes[self.current_MP][2]]
 
         if not self.XY_on:
             self.buffered_relative_move(X, self.MP_axes[self.current_MP][0], fast=self.high_speed)
@@ -129,10 +130,10 @@ class GamepadController(GamepadProcessor):
         self.buffered_relative_move(Z, self.MP_axes[self.current_MP][2], fast=self.high_speed)
         self.previous_MP_X = X
 
-    def MP_XY(self, X, Y, directionX, directionY):
+    def MP_XY(self, X, Y):
         X, Y = self.discrete_state(X, Y)
-        X = X*float(directionX)
-        Y = Y * float(directionY)
+        X = X*self.relative_move*self.direction[self.MP_axes[self.current_MP][0]]
+        Y = Y*self.relative_move*self.direction[self.MP_axes[self.current_MP][1]]
 
         self.XY_on = (X != 0.)
         if not self.XZ_on:
@@ -146,20 +147,10 @@ class GamepadController(GamepadProcessor):
             self.dev.set_single_step_distance(self.focus_axis, Z)
             self.dev.single_step(self.focus_axis, 1)
 
-    def MP_Z_step(self, direction):
-        d = float(direction)
-        self.dev.set_single_step_distance(self.MP_axes[self.current_MP][2], d)
-        self.dev.single_step(self.MP_axes[self.current_MP][2], 1)
-        if self.locked[self.current_MP]:
-            self.focus(1., direction) # might not be the right direction!
-            # if others are locked, move them too
-            if all(self.locked):
-                current_MP = self.current_MP
-                for i in range(len(self.locked)):
-                    if i!= current_MP:
-                        self.current_MP = i
-                        self.MP_Z_step(direction) # might not be the right direction!
-                self.current_MP = current_MP
+    # def MP_Z_step(self, direction):
+    #     d = float(direction)
+    #     self.dev.set_single_step_distance(self.MP_axes[self.current_MP][2], d)
+    #     self.dev.single_step(self.MP_axes[self.current_MP][2], 1)
 
 
 dev = LuigsNeumann_SM10(stepmoves=False)
