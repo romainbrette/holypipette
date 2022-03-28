@@ -106,9 +106,6 @@ class GamepadProcessor(threading.Thread):
         self.switch_on_duration = self.config['parameters'].get('switch_on_duration', 5.) # to switch to high speed mode
         self.switch_off_duration = self.config['parameters'].get('switch_off_duration', 5.) # to switch to low speed mode
 
-        ## Axes moves
-        self.current_move = [0.]*100 # That's many possible axes
-
         self.releasing = False # if True, in a releasing process: do not process further events
         self.last_config_checked = time.time()
 
@@ -149,8 +146,8 @@ class GamepadProcessor(threading.Thread):
         '''
         # Process joystick states
         self.Z_processed = self.map_joystick(self.RZ - self.LZ)
-        if self.Z_processed != 0.:
-            self.command('trigger', self.Z_processed)
+        #if self.Z_processed != 0.:
+        self.command('trigger', self.Z_processed)
 
         intensity = (self.LX**2 + self.LY**2)**.5
         if intensity>0:
@@ -215,7 +212,7 @@ class GamepadProcessor(threading.Thread):
         try:
             if self.config_last_modified != os.stat(self.config_file)[8]:
                 self.load(self.config_file)
-                print('modified')
+                print('Configuration modified, reloading')
         except FileNotFoundError: # possibly being written
             time.sleep(.1)
 
@@ -241,7 +238,6 @@ class GamepadProcessor(threading.Thread):
                 elif event.code == 'ABS_HAT0Y':
                     self.crossY = event.state*1.
                 elif event.code in button_events.keys():
-                    print(event.code, event.state)
                     button_event = button_events[event.code]
                     if event.state == 1: # ON event
                         self.button[button_event] = (event.state == 1)

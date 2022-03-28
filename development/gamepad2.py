@@ -2,12 +2,15 @@
 Control of manipulators with gamepad
 
 TODO:
-- MP Z locking
-- Two stage memories, or more
+- Sometimes the manipulator doesn't stop moving, why? (print current_move)
+    not sure abort_all works
+    maybe we should instead check the status of the axis
+            ret = struct.unpack('20B', self.send_command('A120', data, 20))
+            moving = [ret[6 + i * 4] for i in range(len(axes))]
+            is_moving = any(moving)
+- Fine movements (trackball or steps?)
 - Command line argument: configuration file
-
-- we might also need fine movements (trackball or steps?)
-    fine mvts with left finger? (trackball?)
+- note : placement of MP every 15 deg
 '''
 from holypipette.devices.gamepad import *
 import os
@@ -25,13 +28,17 @@ class GamepadController(GamepadProcessor):
         self.low_speed = False
         self.XY_on = False
         self.XZ_on = False
+        self.locked = False
 
-        for i in range(1,10):
-            self.dev.set_single_step_velocity(i, 12)
+        ## Axes moves
+        self.current_move = [0.]*100 # That's many possible axes
+
+        #for i in range(1,10):
+        #    self.dev.set_single_step_velocity(i, 12)
 
     def load(self, config=None):
         super(GamepadController, self).load(config)
-        self.relative_move = self.config["axes"]['relative_move']
+        self.relative_move = self.config['relative_move']
         self.direction = self.config["axes"]['direction']
         self.MP_axes = self.config["axes"]['manipulators']
         self.stage_axes = self.config["axes"]['stage']
@@ -40,37 +47,53 @@ class GamepadController(GamepadProcessor):
         self.dzdx = np.sin(np.pi/180*np.array(self.config.get('angle', [0.] * self.how_many_MP))) # maybe as angle?
         self.memory = self.config.get('memory', None)
         if self.memory is None:
-            self.memorize()
+            self.memorize(0)
 
     def save(self):
         self.config['angle'] = [float(x) for x in np.arcsin(np.array(self.dzdx))*180/np.pi]
-        self.config['memory'] = [float(x) for x in self.memory]
+        for n in range(len(self.memory)):
+            self.memory[n] = [float(x) for x in self.memory[n]]
+        self.config['memory'] = self.memory
         super(GamepadController, self).save()
 
     def buffered_relative_move(self, x, axis, fast=False):
         '''
-        Issues a relative move only if the axis already doing that movement.
+        Issues a relative move only if the axis is not already doing that movement.
         '''
         if x != self.current_move[axis]:
             if self.current_move[axis] != 0.:
-                print('abort')
                 self.dev.stop(axis)
             if x!= 0.:
-                print('move')
                 self.dev.relative_move(x, axis, fast=fast)
             self.current_move[axis] = x
 
     def quit(self):
         self.terminated = True
 
+    def abort_all(self, force=True):
+        for axis in range(1, len(self.direction)):
+            if force or (self.current_move[axis] != 0.):
+                self.dev.stop(axis)
+                self.current_move[axis] = 0.
+
+    def lock(self):
+        self.locked = not self.locked
+        if self.locked:
+            print('Locked')
+        else:
+            print('Unlocked')
+
     def high_speed_on(self):
         self.high_speed = True
+        self.abort_all()
 
     def high_speed_off(self):
         self.high_speed = False
+        self.abort_all()
 
     def low_speed_on(self):
         self.low_speed = True
+        self.abort_all()
 
     def low_speed_off(self):
         self.low_speed = False
@@ -89,13 +112,13 @@ class GamepadController(GamepadProcessor):
                 print(dz/dx)
         self.calibration_position[self.current_MP] = position
 
-    def go_to_memorized(self):
-        print('Go to')
-        self.dev.absolute_move_group(self.memory, self.stage_axes+[self.focus_axis])
+    def go_to_memorized(self, n):
+        print('Go to', n)
+        self.dev.absolute_move_group(self.memory[n], self.stage_axes+[self.focus_axis])
 
-    def memorize(self):
-        print('Memorize')
-        self.memory = self.dev.position_group(self.stage_axes+[self.focus_axis])
+    def memorize(self, n):
+        print('Memorize', n)
+        self.memory[n] = self.dev.position_group(self.stage_axes+[self.focus_axis])
 
     # def MP_virtualX_Y(self, X, Y, directionX, directionY):
     #     X = X*float(directionX)
@@ -126,6 +149,10 @@ class GamepadController(GamepadProcessor):
             self.buffered_relative_move(X, self.MP_axes[self.current_MP][0], fast=self.high_speed)
             self.XZ_on = (X != 0.)
         self.buffered_relative_move(Z, self.MP_axes[self.current_MP][2], fast=self.high_speed)
+        if self.locked:
+            for i, axes in enumerate(self.MP_axes):
+                if i != self.current_MP:
+                    self.buffered_relative_move(Z, axes[2], fast=self.high_speed)
         self.previous_MP_X = X
 
     def MP_XY(self, X, Y):
@@ -139,7 +166,11 @@ class GamepadController(GamepadProcessor):
         self.buffered_relative_move(Y, self.MP_axes[self.current_MP][1], fast=self.high_speed)
         self.previous_MP_X = X
 
-    def focus(self, Z, direction): # could be a relative move too
+    def focus(self, Z): # could be a relative move too
+        Z = np.sign(Z)*self.relative_move*self.direction[self.focus_axis]
+        self.buffered_relative_move(Z, self.focus_axis, fast=self.high_speed)
+
+    def focus_step(self, Z, direction): # could be a relative move too
         Z = Z*float(direction)
         if Z!=0.:
             self.dev.set_single_step_distance(self.focus_axis, Z)

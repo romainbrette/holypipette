@@ -2,17 +2,18 @@ angle:
 - 37.33685605380802
 - 35.0
 axes:
-  focus: 9
   direction:
-    - -1
-    - -1
-    - -1
-    - 1
-    - -1
-    - -1
-    - -1
-    - -1
-    - -1
+  - 0
+  - -1
+  - -1
+  - -1
+  - 1
+  - -1
+  - -1
+  - -1
+  - -1
+  - -1
+  focus: 9
   manipulators:
   - - 1
     - 2
@@ -24,27 +25,41 @@ axes:
   - 7
   - 8
 keys:
-  A: go_to_memorized
-  X+Y: calibrate
+  A:
+  - go_to_memorized
+  - 0
+  B:
+  - go_to_memorized
+  - 1
+  X:
+  - abort_all
+  - true
+  Y: lock
   cross: stage_XY
   left: MP_XY
   left_finger_button offset: low_speed_off
   left_finger_button onset: low_speed_on
   left_trigger+right_trigger: focus_to_tip
-  long A: memorize
+  long A:
+  - memorize
+  - 0
+  long B:
+  - memorize
+  - 1
   menu: quit
   right: MP_XZ
   right_finger_button offset: high_speed_off
   right_finger_button onset: high_speed_on
   select: select_manipulator
-  trigger:
-  - focus
-  - -20
+  trigger: focus
 memory:
-- -1365.7568359375
-- 22238.23828125
-- 22272.20703125
+- - -1365.7568359375
+  - 22238.23828125
+  - 22272.20703125
+- - -1365.7568359375
+  - 22238.23828125
+  - 22272.20703125
 parameters:
   joystick_power: 3
   joystick_threshold: 0.15
-relative_move : 20000
+relative_move: 20000
