@@ -126,12 +126,20 @@ class GamepadProcessor(threading.Thread):
         # this may cause problems if x>1
         return sign*((abs(x)-self.joystick_threshold)/(1-self.joystick_threshold))**self.joystick_power
 
-    def discrete_state(self, X, Y):
+    def discrete_state4(self, X, Y):
         '''
-        Returns discretized position (-1, 0, +1 for each component)
+        Returns discretized position (-1, 0, +1 for each component), 4 cardinal positions
         '''
         Xd = ((X>Y) and (X>-Y)) - ((X<Y) and (X<-Y))
         Yd = ((Y>X) and (Y>-X)) - ((Y<X) and (Y<-X))
+        return Xd, Yd
+
+    def discrete_state8(self, X, Y):
+        '''
+        Returns discretized position (-1, 0, +1 for each component), 8 cardinal positions
+        '''
+        Xd = ((2*X>Y) and (2*X>-Y)) - ((2*X<Y) and (2*X<-Y))
+        Yd = ((2*Y>X) and (2*Y>-X)) - ((2*Y<X) and (2*Y<-X))
         return Xd, Yd
 
     def process_joysticks(self):

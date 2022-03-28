@@ -2,14 +2,12 @@
 Control of manipulators with gamepad
 
 TODO:
-- discrete state should be of 8 possibilities, not 4 (overlap)
+- MP Z locking
+- Two stage memories, or more
 - Command line argument: configuration file
 
-- Two stage memories, or more
 - we might also need fine movements (trackball or steps?)
     fine mvts with left finger? (trackball?)
-
-Note: relative move takes time to stop in fast mode.
 '''
 from holypipette.devices.gamepad import *
 import os
@@ -112,7 +110,7 @@ class GamepadController(GamepadProcessor):
     #             self.dev.single_step(self.MP_axes[self.current_MP][i], 1)
 
     def stage_XY(self, X, Y):
-        X, Y = self.discrete_state(X, Y)
+        X, Y = self.discrete_state8(X, Y)
         X = X*self.relative_move*self.direction[self.stage_axes[0]]
         Y = Y*self.relative_move*self.direction[self.stage_axes[1]]
 
@@ -120,7 +118,7 @@ class GamepadController(GamepadProcessor):
         self.buffered_relative_move(Y, self.stage_axes[1], fast=self.high_speed)
 
     def MP_XZ(self, X, Z):
-        X, Z = self.discrete_state(X, Z)
+        X, Z = self.discrete_state8(X, Z)
         X = X*self.relative_move*self.direction[self.MP_axes[self.current_MP][0]]
         Z = Z*self.relative_move*self.direction[self.MP_axes[self.current_MP][2]]
 
@@ -131,7 +129,7 @@ class GamepadController(GamepadProcessor):
         self.previous_MP_X = X
 
     def MP_XY(self, X, Y):
-        X, Y = self.discrete_state(X, Y)
+        X, Y = self.discrete_state8(X, Y)
         X = X*self.relative_move*self.direction[self.MP_axes[self.current_MP][0]]
         Y = Y*self.relative_move*self.direction[self.MP_axes[self.current_MP][1]]
 
