@@ -1,7 +1,5 @@
 '''
 Gamepad reader
-
-- left_trigger + right_trigger
 '''
 import threading
 import time

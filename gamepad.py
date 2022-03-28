@@ -8,6 +8,7 @@ TODO:
             ret = struct.unpack('20B', self.send_command('A120', data, 20))
             moving = [ret[6 + i * 4] for i in range(len(axes))]
             is_moving = any(moving)
+    maybe check status after stopping?
 - Fine movements (trackball or steps?)
 - Command line argument: configuration file
 - note : placement of MP every 15 deg
@@ -185,7 +186,7 @@ class GamepadController(GamepadProcessor):
 dev = LuigsNeumann_SM10(stepmoves=False)
 reader = GamepadReader()
 reader.start()
-gamepad = GamepadController(reader, dev, config='~/PycharmProjects/holypipette/development/gamepad.yaml')
+gamepad = GamepadController(reader, dev, config='~/PycharmProjects/holypipette/gamepad.yaml')
 gamepad.start()
 gamepad.join()
 reader.stop()

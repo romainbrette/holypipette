@@ -438,6 +438,13 @@ class LuigsNeumann_SM10(SerialDevice, Manipulator):
         ID = '00FF'
         self.send_command(ID, [axis], 0)
 
+    def stop_all(self):
+        """
+        Stops all 9 axes (could be more).
+        """
+        ID = '0xA0FF'
+        self.send_command(ID, [0, 0, 0, 0, 0, 0, 0, 0x01, 0xFF], 0)
+
     def zero(self, axes):
         """
         Sets the current position of the axes as the zero position.

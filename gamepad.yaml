@@ -39,7 +39,6 @@ keys:
   left: MP_XY
   left_finger_button offset: low_speed_off
   left_finger_button onset: low_speed_on
-  left_trigger+right_trigger: focus_to_tip
   long A:
   - memorize
   - 0
