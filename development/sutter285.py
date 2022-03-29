@@ -28,7 +28,7 @@ class Sutter(object):
     threaded    = None
     log_fields  = ['event', 'position', 'timestamp']
 
-    def __init__(self,port="/dev/cu.usbserial", timeout=5, logfile = None, verbose = False, threaded=False):
+    def __init__(self,port="/dev/tty.usbserial", timeout=5, logfile = None, verbose = False, threaded=False):
         self.verbose = verbose
         self.threaded = threaded
         try:
