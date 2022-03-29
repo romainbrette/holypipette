@@ -2,6 +2,10 @@
 Control of manipulators with gamepad
 
 TODO:
+- Moving the MP home seems to create huge hardware problems, especially with the stage.
+    It seems generally unworkable.
+    Another solution must be found.
+- Zeroing doesn't work.
 - Sometimes the manipulator doesn't stop moving, why? (print current_move)
     not sure abort_all works
     maybe we should instead check the status of the axis
@@ -51,8 +55,10 @@ class GamepadController(GamepadProcessor):
 
     def save(self):
         self.config['angle'] = [float(x) for x in np.arcsin(np.array(self.dzdx))*180/np.pi]
-        self.config['memory_init'] = [float(x) for x in self.memory_init]
-        self.config['working_level'] = [float(x) for x in self.working_level]
+        if self.memory_init is not None:
+            self.config['memory_init'] = [float(x) for x in self.memory_init]
+        if self.working_level is not None:
+            self.config['working_level'] = float(self.working_level)
         super(GamepadController, self).save()
 
     def init_axes(self):
@@ -67,18 +73,14 @@ class GamepadController(GamepadProcessor):
             self.dev.home(axis)
         self.dev.home(self.focus_axis)
 
-        # Wait untill still
-        for MP_axes in self.MP_axes:
-            self.dev.wait_until_still(MP_axes)
-        self.dev.wait_until_still(self.stage_axes+[self.focus_axis])
+        # Wait until still
+        print("Waiting for 10 seconds.")
+        time.sleep(10)
 
         # Zero
-        for MP_axes in self.MP_axes:
-            for axis in MP_axes:
-                self.dev.zero(axis)
-        for axis in self.stage_axes:
-            self.dev.zero(axis)
-        self.dev.zero(self.focus_axis)
+        #for MP_axes in self.MP_axes:
+        #    self.dev.zero(MP_axes)
+        #self.dev.zero(self.stage_axes+[self.focus_axis])
 
     def buffered_relative_move(self, x, axis, fast=False):
         '''
@@ -148,8 +150,9 @@ class GamepadController(GamepadProcessor):
     def memorize_init(self):
         # Init position
         print('Memorize init position')
-        self.memory_init = [self.dev.position_group(self.stage_axes+[self.focus_axis])] +\
-                           [self.dev.position_group(MP_axes for MP_axes in self.MP_axes)]
+        self.memory_init = list(self.dev.position_group(self.stage_axes+[self.focus_axis]))
+        for MP_axes in self.MP_axes:
+            self.memory_init.extend(list(self.dev.position_group(MP_axes)))
 
     def memorize_working_level(self):
         print('Memorize working level')
@@ -161,8 +164,8 @@ class GamepadController(GamepadProcessor):
         dz = self.working_level - self.dev.position(self.focus_axis)
         # Move manipulators, then focus
         for i, MP_axes in enumerate(self.MP_axes):
-            self.dev.relative_move_group(dz, MP_axes[2])
-        self.dev.relative_move_group(dz, self.focus_axis[2])
+            self.dev.relative_move(dz, MP_axes[2])
+        self.dev.relative_move(dz, self.focus_axis)
 
     # def MP_virtualX_Y(self, X, Y, directionX, directionY):
     #     X = X*float(directionX)

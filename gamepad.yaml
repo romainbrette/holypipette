@@ -25,13 +25,9 @@ axes:
   - 7
   - 8
 keys:
-  A:
-  - go_to_init
-  - 0
-  B:
-  - go_to_working_level
-  - 1
+  A: go_to_init
   A+B: init_axes
+  B: go_to_working_level
   X:
   - abort_all
   - true
@@ -48,7 +44,18 @@ keys:
   right_finger_button onset: high_speed_on
   select: select_manipulator
   trigger: focus
+memory_init:
+- 29324.046875
+- 34139.37890625
+- 5116.3037109375
+- -6261.17578125
+- -2313.2421875
+- -41791.41015625
+- 17292.13671875
+- -16645.83984375
+- 4437.19921875
 parameters:
   joystick_power: 3
   joystick_threshold: 0.15
 relative_move: 20000
+working_level: 7559.82958984375
