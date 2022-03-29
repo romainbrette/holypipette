@@ -46,16 +46,39 @@ class GamepadController(GamepadProcessor):
         self.focus_axis = self.config["axes"]['focus']
         self.how_many_MP = len(self.config['axes']['manipulators'])
         self.dzdx = np.sin(np.pi/180*np.array(self.config.get('angle', [0.] * self.how_many_MP))) # maybe as angle?
-        self.memory = self.config.get('memory', None)
-        if self.memory is None:
-            self.memorize(0)
+        self.memory_init = self.config.get('memory_init', None)
+        self.working_level = self.config.get('working_level', None)
 
     def save(self):
         self.config['angle'] = [float(x) for x in np.arcsin(np.array(self.dzdx))*180/np.pi]
-        for n in range(len(self.memory)):
-            self.memory[n] = [float(x) for x in self.memory[n]]
-        self.config['memory'] = self.memory
+        self.config['memory_init'] = [float(x) for x in self.memory_init]
+        self.config['working_level'] = [float(x) for x in self.working_level]
         super(GamepadController, self).save()
+
+    def init_axes(self):
+        '''
+        Move all axes home and reset positions.
+        '''
+        # Move home
+        for MP_axes in self.MP_axes:
+            for axis in MP_axes:
+                self.dev.home(axis)
+        for axis in self.stage_axes:
+            self.dev.home(axis)
+        self.dev.home(self.focus_axis)
+
+        # Wait untill still
+        for MP_axes in self.MP_axes:
+            self.dev.wait_until_still(MP_axes)
+        self.dev.wait_until_still(self.stage_axes+[self.focus_axis])
+
+        # Zero
+        for MP_axes in self.MP_axes:
+            for axis in MP_axes:
+                self.dev.zero(axis)
+        for axis in self.stage_axes:
+            self.dev.zero(axis)
+        self.dev.zero(self.focus_axis)
 
     def buffered_relative_move(self, x, axis, fast=False):
         '''
@@ -113,13 +136,33 @@ class GamepadController(GamepadProcessor):
                 print(dz/dx)
         self.calibration_position[self.current_MP] = position
 
-    def go_to_memorized(self, n):
-        print('Go to', n)
-        self.dev.absolute_move_group(self.memory[n], self.stage_axes+[self.focus_axis])
+    def go_to_init(self):
+        print('Go to init position')
+        # Focus first
+        self.dev.absolute_move(self.memory_init[2], self.focus_axis)
+        # Then the rest
+        self.dev.absolute_move_group(self.memory_init[:2], self.stage_axes)
+        for i, MP_axes in enumerate(self.MP_axes):
+            self.dev.absolute_move_group(self.memory_init[3+3*i:6+3*i], MP_axes)
 
-    def memorize(self, n):
-        print('Memorize', n)
-        self.memory[n] = self.dev.position_group(self.stage_axes+[self.focus_axis])
+    def memorize_init(self):
+        # Init position
+        print('Memorize init position')
+        self.memory_init = [self.dev.position_group(self.stage_axes+[self.focus_axis])] +\
+                           [self.dev.position_group(MP_axes for MP_axes in self.MP_axes)]
+
+    def memorize_working_level(self):
+        print('Memorize working level')
+        self.working_level = self.dev.position(self.focus_axis)
+
+    def go_to_working_level(self):
+        # Move focus and manipulators to working level
+        # First calculate the relative move
+        dz = self.working_level - self.dev.position(self.focus_axis)
+        # Move manipulators, then focus
+        for i, MP_axes in enumerate(self.MP_axes):
+            self.dev.relative_move_group(dz, MP_axes[2])
+        self.dev.relative_move_group(dz, self.focus_axis[2])
 
     # def MP_virtualX_Y(self, X, Y, directionX, directionY):
     #     X = X*float(directionX)

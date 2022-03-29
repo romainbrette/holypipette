@@ -26,11 +26,12 @@ axes:
   - 8
 keys:
   A:
-  - go_to_memorized
+  - go_to_init
   - 0
   B:
-  - go_to_memorized
+  - go_to_working_level
   - 1
+  A+B: init_axes
   X:
   - abort_all
   - true
@@ -39,25 +40,14 @@ keys:
   left: MP_XY
   left_finger_button offset: low_speed_off
   left_finger_button onset: low_speed_on
-  long A:
-  - memorize
-  - 0
-  long B:
-  - memorize
-  - 1
+  long A: memorize_init
+  long B: memorize_working_level
   menu: quit
   right: MP_XZ
   right_finger_button offset: high_speed_off
   right_finger_button onset: high_speed_on
   select: select_manipulator
   trigger: focus
-memory:
-- - -1365.7568359375
-  - 22238.23828125
-  - 22272.20703125
-- - -1365.7568359375
-  - 22238.23828125
-  - 22272.20703125
 parameters:
   joystick_power: 3
   joystick_threshold: 0.15
