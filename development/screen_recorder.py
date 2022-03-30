@@ -1,49 +1,53 @@
 '''
 Records camera from screen capture.
 
-Problems:
-- the clock may change, this causes a localization issue.
-- I can only get up to 10 Hz. Not sufficient to get precise timing of frames. Although perhaps I could downsample.
+Install pywin32 via conda
 
-In the end, this is no better than a screen capture program.
+At 1342x1006 I get 16 Hz.
 
-See this:
-https://stackoverflow.com/questions/3586046/fastest-way-to-take-a-screenshot-with-python-on-windows/3586280#3586280
-https://stackoverflow.com/questions/1080719/screenshot-an-application-regardless-of-whats-in-front-of-it
-
-On Mac: Screenshot: 0.47 s ! 0.42 with pyautogui; same with PIL
-On PC: 0.05 s or so.
+It is critical to reduce the window size as much as possible
 '''
 import imageio
 import time
 import numpy as np
-import pyautogui
+import win32gui
+import win32ui
+from ctypes import windll
 
-# # Timing measurement
-# t=time.time()
-# for _ in range(10):
-#     image = pyautogui.screenshot()
-#     imageio.imsave("tif/test.tif", image)
-# print(time.time()-t)
-# exit(0)
-
-countdown = 5 # in seconds
 decimate = 10
 duration = 10 # in seconds
-fps = 10. # in Hz, should be just slightly higher than the actual FPS of the video
+fps = 30. # in Hz, expected frame rate
 
-## Count down
-for i in range(countdown,0,-1):
-    print(i)
-    time.sleep(1)
+# Select the window
+hwnd = win32gui.FindWindow(None, 'DinoCapture 2.0')
+left, top, right, bot = win32gui.GetClientRect(hwnd)
+#left, top, right, bot = win32gui.GetWindowRect(hwnd)
+w = right - left
+h = bot - top
+
+hwndDC = win32gui.GetWindowDC(hwnd)
+mfcDC  = win32ui.CreateDCFromHandle(hwndDC)
+saveDC = mfcDC.CreateCompatibleDC()
+
+saveBitMap = win32ui.CreateBitmap()
+saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+
+saveDC.SelectObject(saveBitMap)
+
+def screenshot():
+    result = windll.user32.PrintWindow(hwnd, saveDC.GetSafeHdc(), 3)
+    bmpinfo = saveBitMap.GetInfo()
+    bmpstr = saveBitMap.GetBitmapBits(True)
+    im = np.frombuffer(bmpstr, dtype=np.uint8).reshape((bmpinfo['bmHeight'], bmpinfo['bmWidth'], 4))
+    return im[:,:,2::-1]
 
 ## Find the active zone
 print('Localizing the camera display.')
 
 # Find pixels that change
-previous_image = imageio.imread('<screen>') #[::decimate, ::decimate]
+previous_image = screenshot() #[::decimate, ::decimate]
 time.sleep(.1)
-image = imageio.imread('<screen>') #[::decimate, ::decimate]
+image = screenshot() #[::decimate, ::decimate]
 zone = (image != previous_image)
 
 # Find columns and rows
@@ -52,18 +56,33 @@ x1, x2 = columns[0], columns[-1]+1
 rows = zone.sum(axis=1).nonzero()[0]
 y1, y2 = rows[0], rows[-1]+1
 
-## Recording
-t0 = t = time.time()
-i = 0
-while t<t0+duration:
-    image = pyautogui.screenshot(region=(x1,y1,x2,y2))
-    ## Saving
-    imageio.imsave("tif/test{}.tif".format(i), image)
+print('Window size: {}x{}'.format(x2-x1, y2-y1))
 
-    new_t = time.time()
-    if new_t-t < 1/fps:
-        time.sleep(1/fps - (new_t-t))
-    else:
-        print("lost frame",i,"by ",new_t-t - 1/fps,"second")
+## Recording
+t0 = t = previous_t = time.time()
+i = 0
+previous_image_down = image[y1:y2:decimate,x1:x2:decimate,:]
+while t<t0+duration:
     t = time.time()
-    i += 1
+    if t-previous_t > 1/fps:
+        print("lost frame",i,"by ",t-previous_t - 1/fps,"second")
+    previous_t = t
+
+    image = screenshot()[y1:y2,x1:x2,:]
+    image_down = image[::decimate,::decimate,:]
+
+    if (image_down == previous_image_down).all():
+        print("Identical frame")
+    else:
+        ## Saving
+        #imageio.imsave("tif/test{}.tif".format(i), image)
+        i += 1
+
+    previous_image_down = image_down*1
+
+print(i, 'frames')
+
+win32gui.DeleteObject(saveBitMap.GetHandle())
+saveDC.DeleteDC()
+mfcDC.DeleteDC()
+win32gui.ReleaseDC(hwnd, hwndDC)
