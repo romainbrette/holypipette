@@ -3,8 +3,16 @@ Records camera from screen capture.
 
 Problems:
 - the clock may change, this causes a localization issue.
+- I can only get up to 10 Hz. Not sufficient to get precise timing of frames. Although perhaps I could downsample.
 
-Screenshot: 0.47 s ! 0.42 with pyautogui
+In the end, this is no better than a screen capture program.
+
+See this:
+https://stackoverflow.com/questions/3586046/fastest-way-to-take-a-screenshot-with-python-on-windows/3586280#3586280
+https://stackoverflow.com/questions/1080719/screenshot-an-application-regardless-of-whats-in-front-of-it
+
+On Mac: Screenshot: 0.47 s ! 0.42 with pyautogui; same with PIL
+On PC: 0.05 s or so.
 '''
 import imageio
 import time
