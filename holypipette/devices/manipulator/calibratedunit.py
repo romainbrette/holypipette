@@ -1,23 +1,28 @@
 # coding=utf-8
 """
-A class to handle a manipulator unit with coordinates calibrated to the reference system of a camera.
+A class to handle a manipulator unit with coordinates calibrated to a fixed reference system
+(typically the stage).
 It contains methods to calibrate the unit.
 
-Should messages be issued?
-Also ranges should be taken into account
+Manipulator directions (+-1) must be set so that x>0 means going down (advancing the axis) and z>0 means going up.
 
-Should this be in devices/ ? Maybe in a separate calibration folder
+TODO:
+- maybe microscope should be a CalibratedUnit?
+    > cf focus()
+- add camera moves and position in CalibratedUnit
+- move_new_pipette_back: use a large relative_move and abort
+- CalibratedStage.calibrate : calibrate camera
 """
 from __future__ import print_function
 from __future__ import absolute_import
 from .manipulatorunit import *
 from numpy import (array, zeros, dot, arange, vstack, sign, pi, arcsin,
-                   mean, std, isnan)
+                   mean, std, isnan, cos, sin)
 from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
 
 
-__all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage']
+__all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage', 'CalibratedCamera']
 
 verbose = True
 
@@ -26,29 +31,10 @@ from holypipette.config import Config, NumberWithUnit, Number, Boolean
 
 
 class CalibrationConfig(Config):
-    position_tolerance = NumberWithUnit(0.5, unit='μm',
-                                        doc='Position tolerance',
-                                        bounds=(0, 10))
-    sleep_time = NumberWithUnit(1., unit='s',
-                                doc='Sleep time before taking pictures',
-                                bounds=(0, 2))
-    stack_depth = NumberWithUnit(8, unit='μm', doc='Depth of stack of photos',
-                                 bounds=(0, 20))
-    calibration_moves = Number(9, doc='Number of calibration moves',
-                               bounds=(1, 20))
     position_update = NumberWithUnit(1000, unit='ms',
                                      doc='Update displayed position every',
                                      bounds=(0, 10000))
-    equalize_axes = Boolean(True, doc='Normalize stage axes')
-    pause_in_stack = NumberWithUnit(0.3, unit='s',
-                                doc='Pause between pictures of a z-stack',
-                                bounds=(0, 2))
-    stage_refine_steps = Number(2, doc='Number of refinement steps for stage calibration',
-                               bounds=(0, 20))
-    categories = [('Calibration', ['sleep_time', 'position_tolerance',
-                                   'stack_depth', 'calibration_moves', 'equalize_axes', 'pause_in_stack',
-                                   'stage_refine_steps']),
-                  ('Display', ['position_update'])]
+    categories = [('Display', ['position_update'])]
 
 
 class CalibrationError(Exception):
@@ -59,35 +45,124 @@ class CalibrationError(Exception):
         return self.message
 
 
-# class Objective(object):
-#     '''
-#     An objective is defined by a magnification factor (4, 20, 40x),
-#     an offset for the focal plane, and a conversion factor from um to px
-#     (which is camera-dependent).
-#     '''
-#     def __init__(self, magnification, factor, offset):
-#         self.magnification = magnification
-#         self.factor = factor
-#         self.offset = offset
+class CalibratedCamera(object):
+    def __init__(self, camera=None):
+        '''
+        A camera calibrated to a fixed reference coordinate system.
+
+        Parameters
+        ----------
+        camera : a camera, ie, object with a snap() method (optional, for visual calibration)
+        '''
+        self.calibrated = False
+        self.camera = camera
+
+        # Matrices for passing from reference system to camera system
+        self.M = zeros((2,2)) # unit to camera
+        self.Minv = zeros((2,2)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
+        self.r0 = zeros(2) # Offset in reference system
+
+    def camera_position(self, p):
+        '''
+        Position in the camera system.
+
+        Parameters
+        ----------
+        p : XY position in um in the reference system.
+
+        Returns
+        -------
+        The camera position in pixel as an XY vector.
+        '''
+        if not self.calibrated:
+            raise CalibrationError
+        return dot(self.M, p) + self.r0
+
+    def reference_position(self, y):
+        '''
+        Position in the reference system.
+
+        Parameters
+        ----------
+        y : XY position in pixel in the camera system.
+
+        Returns
+        -------
+        The current position in um as an XY vector.
+        '''
+        if not self.calibrated:
+            raise CalibrationError
+        return dot(self.Minv, y - self.r0)
+
+    def pixel_per_um(self, M=None):
+        '''
+        Returns the objective magnification in pixel per um, calculated for each reference axis.
+        '''
+        if M is None:
+            M = self.M
+        p = []
+        for axis in range(2):
+            p.append(((M[0,axis]**2 + M[1,axis]**2))**.5)
+        return p
+
+    def analyze_calibration(self):
+        '''
+        Analyzes calibration matrices.
+        '''
+        # Objective magnification
+        pixel_per_um = self.pixel_per_um()
+        print("Magnification for each axis: "+str(pixel_per_um))
+        print("Field size: "+str(self.camera.width/pixel_per_um[0])+" µm x "+str(self.camera.height/pixel_per_um[1])+' µm')
+
+    def save_configuration(self):
+        '''
+        Outputs configuration in a dictionary.
+        '''
+        config = {'M' : self.M,
+                  'r0' : self.r0}
+
+        return config
+
+    def load_configuration(self, config):
+        '''
+        Loads configuration from dictionary config.
+        Variables not present in the dictionary are untouched.
+        '''
+        self.M = config.get('M', self.M)
+        if 'M' in config:
+            self.Minv = pinv(self.M)
+            self.calibrated = True
+        self.r0 = config.get('r0', self.r0)
+
+    def snap(self):
+        '''
+        Returns the current image
+        '''
+        return self.camera.snap()
+
 
 class CalibratedUnit(ManipulatorUnit):
     def __init__(self, unit, stage=None, microscope=None, camera=None,
-                 config=None):
+                 config=None, direction=None, alpha=0., theta=0.):
         '''
         A manipulator unit calibrated to a fixed reference coordinate system.
         The stage refers to a platform on which the unit is mounted, which can
         be None.
+
+        For a manipulator, this gives the position of the tip.
+        For a stage, it gives the position of the stage center.
 
         Parameters
         ----------
         unit : ManipulatorUnit for the (XYZ) unit
         stage : CalibratedUnit for the stage
         microscope : ManipulatorUnit for the microscope (single axis)
-        camera : a camera, ie, object with a snap() method (optional, for visual calibration)
+        camera : CalibratedCamera (optional)
+        direction : vector of +-1 directions
+        alpha : horizontal angle of the manipulator
+        theta : vertical angle of the manipulator
         '''
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
-        self.saved_state_question = ('Move manipulator and stage back to '
-                                     'initial position?')
         if config is None:
             config = CalibrationConfig(name='Calibration config')
         self.config = config
@@ -101,20 +176,27 @@ class CalibratedUnit(ManipulatorUnit):
         self.camera = camera
 
         self.calibrated = False
-        self.up_direction = [-1 for _ in range(len(unit.axes))] # Default up direction, determined during calibration
-
-        self.pipette_position = None
-        self.photos = None
-        self.photo_x0 = None
-        self.photo_y0 = None
+        self.direction = direction # Direction for each axis (+- 1)
+        self.alpha = alpha
+        self.theta = theta
 
         # Matrices for passing to the camera/microscope system
         self.M = zeros((3,len(unit.axes))) # unit to camera
         self.Minv = zeros((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
         self.r0 = zeros(3) # Offset in reference system
 
-        # Dictionary of objectives and conditions (immersed/non immersed)
-        #self.objective = dict()
+        self.build_matrix()
+
+    def build_matrix(self):
+        '''
+        Builds the transformation matrix from angles.
+        '''
+        if self.M.sum() == 0.: # not calculated yet
+            self.M = array([[self.direction[0]*cos(self.alpha)*cos(self.theta), -self.direction[1]*sin(self.alpha), 0.],
+                            [self.direction[0]*sin(self.alpha)*cos(self.theta), self.direction[1]*cos(self.alpha), 0.],
+                            [self.direction[0]*sin(self.theta), 0., self.direction[2]]])
+            self.Minv = pinv(self.M)
+            self.calibrated = True
 
     def save_state(self):
         if self.stage is not None:
@@ -139,7 +221,7 @@ class CalibratedUnit(ManipulatorUnit):
 
     def reference_position(self):
         '''
-        Position in the reference camera system.
+        Position in the reference system.
 
         Returns
         -------
@@ -150,9 +232,19 @@ class CalibratedUnit(ManipulatorUnit):
         u = self.position() # position vector in manipulator unit system
         return dot(self.M, u) + self.r0 + self.stage.reference_position()
 
-    def reference_move_not_X(self, r, safe = False):
+    def camera_position(self):
         '''
-        Moves the unit to position r in reference camera system, without moving the stage,
+        Position in the camera system.
+
+        Returns
+        -------
+        The current position in um as an XYZ vector.
+        '''
+        return self.camera.camera_position(self.reference_position())
+
+    def reference_move_not_X(self, r):
+        '''
+        Moves the unit to position r in reference system, without moving the stage,
         but without moving the X axis (so this can be done last).
 
         Parameters
@@ -166,9 +258,9 @@ class CalibratedUnit(ManipulatorUnit):
         u[0] = self.position(axis=0)
         self.absolute_move(u)
 
-    def reference_move_not_Z(self, r, safe = False):
+    def reference_move_not_Z(self, r):
         '''
-        Moves the unit to position r in reference camera system, without moving the stage,
+        Moves the unit to position r in reference system, without moving the stage,
         but without moving the Z axis (so this can be done last).
 
         Parameters
@@ -184,7 +276,7 @@ class CalibratedUnit(ManipulatorUnit):
 
     def reference_move(self, r, safe = False):
         '''
-        Moves the unit to position r in reference camera system, without moving the stage.
+        Moves the unit to position r in reference system, without moving the stage.
 
         Parameters
         ----------
@@ -214,7 +306,7 @@ class CalibratedUnit(ManipulatorUnit):
 
     def reference_relative_move(self, r):
         '''
-        Moves the unit by vector r in reference camera system, without moving the stage.
+        Moves the unit by vector r in reference system, without moving the stage.
 
         Parameters
         ----------
@@ -225,21 +317,11 @@ class CalibratedUnit(ManipulatorUnit):
         u = dot(self.Minv, r)
         self.relative_move(u)
 
-    def withdraw(self):
-        '''
-        Withdraw the pipette to the upper end position
-        '''
-        if self.up_direction[0]>0:
-            position = self.max[0]
-        else:
-            position = self.min[0]
-        self.absolute_move(position, axis=0)
-
     def focus(self):
         '''
         Move the microscope so as to put the pipette tip in focus
         '''
-        self.microscope.absolute_move(self.reference_position()[2])
+        self.microscope.reference_move(self.reference_position()[2])
         self.microscope.wait_until_still()
 
     def safe_move(self, r, withdraw = 0., recalibrate = False):
@@ -267,7 +349,7 @@ class CalibratedUnit(ManipulatorUnit):
         uprime = self.reference_position() # I should call this uprime but rprime
 
         # First we check whether movement is up or down
-        if (r[2] - uprime[2])*self.microscope.up_direction<0:
+        if (r[2] - uprime[2])<0:
             # Movement is down
             # First, we determine the intersection between the line going through x
             # with direction corresponding to the manipulator first axis.
@@ -279,93 +361,9 @@ class CalibratedUnit(ManipulatorUnit):
             # We need to wait here!
             self.wait_until_still()
 
-        # Recalibrate 100 um before target; only if distance is greater than 500 um
-        if recalibrate & (length>500):
-            self.reference_move(r + 50 * p * self.up_direction[0],safe=True)
-            self.wait_until_still()
-            z0 = self.microscope.position()
-            self.focus()
-            self.auto_recalibrate(center=False)
-            self.microscope.absolute_move(z0)
-            self.microscope.wait_until_still()
-
         # Final move
-        self.reference_move(r + withdraw * p * self.up_direction[0], safe = True) # Or relative move in manipulator coordinates, first axis (faster)
+        self.reference_move(r - withdraw * p, safe = True) # Or relative move in manipulator coordinates, first axis (faster)
 
-    def take_photos(self, rig = 1):
-        '''
-        Take photos of the pipette. It is assumed that the pipette is centered and in focus.
-        '''
-        self.info('Taking photos of pipette')
-        if rig == 1:
-            self.pipette_position = pipette_cardinal(crop_center(self.camera.snap()))
-        else:
-            distance = 100
-            self.relative_move(distance, 0)
-            self.wait_until_still(0)
-            self.sleep(0.1)
-            img1 = crop_center(self.camera.snap())
-            self.relative_move(-distance, 0)
-            self.wait_until_still(0)
-            self.sleep(0.1)
-            img2 = crop_center(self.camera.snap())
-            self.pipette_position = pipette_cardinal2(img1, img2)
-
-        self.info("Pipette cardinal position: "+str(self.pipette_position))
-
-        z0 = self.microscope.position()
-        z = z0 + arange(-self.config.stack_depth, self.config.stack_depth + 1)  # +- stack_depth um around current position
-        stack = self.microscope.stack(self.camera, z, preprocessing=lambda img: crop_cardinal(crop_center(img), self.pipette_position),
-                                      save = 'series', pause=self.config.pause_in_stack)
-        # Caution: image at depth -5 corresponds to the pipette being at depth +5 wrt the focal plane
-
-        # Check microscope position
-        if abs(z0-self.microscope.position())>self.config.position_tolerance:
-            raise CalibrationError('Microscope has not returned to its initial position.')
-        self.sleep(self.config.sleep_time)
-        image = self.camera.snap()
-        x0, y0, _ = templatematching(image, stack[self.config.stack_depth])
-
-        # Calculate minimum correlation with stack images
-        image = stack[len(stack)//2] # Focused image
-        min_match = min([templatematching(image, template)[2] for template in stack])
-        # We accept matches with matching correlation up to twice worse
-        self.min_photo_match = min_match
-
-        self.photos = stack
-        self.photo_x0 = x0
-        self.photo_y0 = y0
-
-    def pixel_per_um(self, M=None):
-        '''
-        Returns the objective magnification in pixel per um, calculated for each manipulator axis.
-        '''
-        if M is None:
-            M = self.M
-        p = []
-        for axis in range(len(self.axes)):
-            # The third axis is in um, the first two in pixels, hence the odd formula
-            p.append(((M[0,axis]**2 + M[1,axis]**2)/(1-M[2,axis]**2))**.5)
-        return p
-
-
-    def analyze_calibration(self):
-        '''
-        Analyzes calibration matrices.
-        '''
-        # Objective magnification
-        print("Magnification for each axis of the pipette: "+str(self.pixel_per_um()[:2]))
-        pixel_per_um = self.stage.pixel_per_um()[0]
-        print("Magnification for each axis of the stage: "+str(pixel_per_um))
-        print("Field size: "+str(self.camera.width/pixel_per_um)+" µm x "+str(self.camera.height/pixel_per_um)+' µm')
-        # Pipette vs. stage (for each axis, mvt should correspond to 1 um)
-        for axis in range(len(self.axes)):
-            compensating_move = -dot(self.stage.Minv,self.M[:,axis])
-            length = (sum(compensating_move[:2]**2)+self.M[2,axis]**2)**.5
-            print("Precision of axis "+str(axis)+": "+str(abs(1-length)))
-            # Angles
-            angle = abs(180/pi * arcsin(self.M[2,axis] / length))
-            print('Angle of axis '+str(axis)+": "+str(angle))
 
     def move_new_pipette_back(self):
         '''
@@ -403,491 +401,16 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             self.info('Pipette not found')
 
-    # ***** REFACTORING OF CALIBRATION ****
-    def locate_pipette(self, threshold=None, depth=None, return_correlation=False):
+
+    def measure_theta(self, p):
         '''
-        Locates the pipette on screen, using photos previously taken.
-
-        Parameters
-        ----------
-        threshold : correlation threshold
-        depth : maximum distance in z to search; if None, only uses the depth of the photo stack
-        return_correlation : if True, returns the best correlation in the template matching
-
-        Returns
-        -------
-        x,y,z : position on screen relative to center
+        Measure vertical angle by comparing the current position with another position in focus.
         '''
-        stack = self.photos
-
-        if depth is not None:
-            # Move the focus so as explore a larger depth
-            z0 = self.microscope.position()
-            z = -depth+len(stack)/2
-            valmax = -1
-            while z<depth+len(stack)/2:
-                self.debug('Depth: '+str(z))
-                self.microscope.absolute_move(z0 + z)
-                self.microscope.wait_until_still()
-                x,y,zt,c = self.locate_pipette(threshold=threshold, depth=None, return_correlation=True)
-                if c>valmax:
-                    xm,ym,zm,valmax = x,y,z+zt,c
-                z += len(stack)
-            self.microscope.absolute_move(z0)
-            self.microscope.wait_until_still()
-            self.info('Pipette identified at depth '+str(zm))
-            if return_correlation:
-                return xm,ym,zm,valmax
-            else:
-                return xm,ym,zm
-
-        x0, y0 = self.photo_x0, self.photo_y0
-        if threshold is None:
-            threshold = 1-(1-self.min_photo_match)*2
-
-        image = self.camera.snap()
-
-        # Error margins for position estimation
-        template_height, template_width = stack[self.config.stack_depth].shape
-        xmargin = template_width / 4
-        ymargin = template_height / 4
-
-        # First template matching to estimate pipette position on screen
-        xt, yt, _ = templatematching(image, stack[self.config.stack_depth])
-
-        image = self.camera.snap()
-        # Crop image around estimated position
-        image = image[int(yt - ymargin):int(yt + template_height + ymargin),
-                      int(xt - xmargin):int(xt + template_width + xmargin)]
-        dx = xt - xmargin
-        dy = yt - ymargin
-
-        valmax = -1
-        for i, template in enumerate(stack):  # we look for the best matching template
-            xt, yt, val = templatematching(image, template)
-            xt += dx
-            yt += dy
-            if val > valmax:
-                valmax = val
-                x, y, z = xt, yt, self.config.stack_depth - i  # note the sign for z
-
-        self.debug('Correlation=' + str(valmax))
-        if valmax < threshold:
-            raise CalibrationError('Matching error: the pipette is absent or not focused')
-
-        self.info('Pipette identified at x,y,z=' + str(x - x0) + ',' + str(y - y0) + ',' + str(z))
-
-        if return_correlation:
-            return x-x0, y-y0, z, valmax
-        else:
-            return x-x0, y-y0, z
-
-    def move_and_track(self, distance, axis, M, move_stage=False):
-        '''
-        Moves along one axis and track the pipette with microscope and optionally the stage.
-
-        Arguments
-        ---------
-        distance : distance to move
-        axis : axis number
-
-        Returns
-        -------
-        x,y,z: pipette position on screen and focal plane
-        '''
-        self.relative_move(distance, axis)
-        self.abort_if_requested()
-        # Estimate movement on screen
-        estimate = M[:, axis]*distance
-
-        # Move the stage to compensate
-        if move_stage:
-            self.abort_if_requested()
-            self.debug('Compensatory movement: {}'.format(list(estimate)))
-            self.stage.reference_relative_move(-estimate)
-            self.stage.wait_until_still()
-
-        self.abort_if_requested()
-
-        # Autofocus
-        self.wait_until_still(axis) # Wait until pipette has moved
-        self.microscope.relative_move(estimate[2])
-        self.microscope.wait_until_still()
-
-        # Locate pipette
-        self.sleep(self.config.sleep_time)
-        x, y, z = self.locate_pipette()
-        self.abort_if_requested()
-        # Focus, move stage and locate again
-        self.microscope.relative_move(z)
-        if move_stage:
-            self.abort_if_requested()
-            self.stage.reference_relative_move(-array([x, y, 0]))
-            self.stage.wait_until_still()
-        self.abort_if_requested()
-        self.microscope.wait_until_still()
-        self.sleep(self.config.sleep_time)
-        self.abort_if_requested()
-        x, y, z = self.locate_pipette()
-
-        return x, y, z
-
-    def move_back(self, z0, u0, us0=None):
-        '''
-        Moves back up to original position, refocus and locate pipette
-
-        Arguments
-        ---------
-        z0 : microscope position
-        u0 : unit position
-        us0 : stage position
-
-        Returns
-        -------
-        x,y,z : pipette position on screen and focal plane
-        '''
-        # Move back
-        self.microscope.absolute_move(z0)
-        self.microscope.wait_until_still()
-        self.abort_if_requested()
-        self.absolute_move(u0)
-        if us0 is not None: # stage moves too
-            self.abort_if_requested()
-            self.stage.absolute_move(us0)
-            self.stage.wait_until_still()
-        self.abort_if_requested()
-        self.wait_until_still()
-
-        # Locate pipette
-        self.sleep(self.config.sleep_time)
-        _, _, z = self.locate_pipette()
-
-        self.abort_if_requested()
-
-        # Focus and locate again
-        self.microscope.relative_move(z)
-        self.microscope.wait_until_still()
-        self.sleep(self.config.sleep_time)
-        x, y, z = self.locate_pipette()
-
-        return x,y,z
-
-    def calculate_up_directions(self, M):
-        '''
-        Calculates up directions for all axes and microscope from the matrix.
-        '''
-        # Determine up direction for the first axis (assumed to be the main axis)
-        positive_move = 1*M[:, 0] # move of 1 um along first axis
-        self.debug('Positive move: {}'.format(positive_move))
-        self.up_direction[0] = up_direction(self.pipette_position, positive_move)
-        self.info('Axis 0 up direction: ' + str(self.up_direction[0]))
-
-        # Determine microscope up direction
-        if self.microscope.up_direction is None:
-            self.microscope.up_direction = sign(M[2, 0])
-        self.info('Microscope up direction: ' + str(self.microscope.up_direction))
-
-        # Determine up direction of other axes
-        for axis in range(1,len(self.axes)):
-            # We use microscope up direction
-            s = sign(M[2, axis] * self.microscope.up_direction)
-            if s != 0:
-                self.up_direction[axis] = s
-            self.info('Axis ' + str(axis) + ' up direction: ' + str(self.up_direction[0]))
-
-    def refine(self):
-        '''
-        Refine the calibration by iterating over large movements.
-        '''
-        # *** Calculate image borders ***
-        template_height, template_width = self.photos[self.config.stack_depth].shape
-        width, height = self.camera.width, self.camera.height
-        # We use a margin of 1/4 of the template
-        left_border = -(width/2-(template_width*3)/4)
-        right_border = (width/2-(template_width*3)/4)
-        top_border = -(height/2-(template_height*3)/4)
-        bottom_border = (height/2-(template_height*3)/4)
-
-    def calibrate(self, rig =1):
-        '''
-        Automatic calibration.
-        Starts without moving the stage, then moves the stage (unless it is fixed).
-        '''
-        # *** Calibrate the stage ***
-        if not self.stage.calibrated:
-            self.info('Calibrating stage first')
-            self.stage.calibrate()
-        self.abort_if_requested()
-        # *** Take photos ***
-        # Take a stack of photos on different focal planes, spaced by 1 um
-        if rig ==1:
-            self.take_photos()
-        else:
-            self.take_photos(rig = 2)
-
-        # *** Calculate image borders ***
-
-        template_height, template_width = self.photos[self.config.stack_depth].shape
-        width, height = self.camera.width, self.camera.height
-        # We use a margin of 1/4 of the template
-        left_border = -(width/2-(template_width*3)/4)
-        right_border = (width/2-(template_width*3)/4)
-        top_border = -(height/2-(template_height*3)/4)
-        bottom_border = (height/2-(template_height*3)/4)
-
-        self.debug('Borders L/R/T/B : {} {} {} {}'.format(left_border,right_border,top_border,bottom_border))
-
-        # *** Store initial position ***
-        z0 = self.microscope.position()
-        u0 = self.position()
-        us0 = self.stage.position()
-
-        self.info('First matrix estimation (move each axis once)')
-        # *** First pass: move each axis once and estimate matrix ***
-        M = zeros((3, len(self.axes)))
-        distance = self.config.stack_depth*.5
-        self.debug('Distance: {}'.format(distance))
-        oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
-        for axis in range(len(self.axes)):
-            self.debug('Moving axis {}'.format(axis))
-            x, y, z = self.move_and_track(distance, axis, M, move_stage=False)
-            z += self.microscope.position()
-            self.debug('x={}, y={}, z={}'.format(x, y, z))
-            M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
-            oldx, oldy, oldz = x, y, z
-
-        # if self.config.equalize_axes:
-        #     M = self.equalize_matrix(M)
-
-        self.debug('Matrix:' + str(M))
-
-        # *** Calculate up directions ***
-        self.calculate_up_directions(M)
-
-        self.info('Moving back to initial position')
-        # Move back to initial position
-        oldx, oldy, oldz = self.move_back(z0, u0, None)  # The pipette could have moved
-        oldz += self.microscope.position()
-
-        # Calculate floor (min Z)
-        if self.microscope.up_direction>0:
-            self.microscope.floor_Z = self.microscope.min
-        else:
-            self.microscope.floor_Z = self.microscope.max
-
-        if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
-            floor = z0-300.*self.microscope.up_direction
-            self.debug('Setting floor to {} (300 um below current position)'.format(floor))
-        else:
-            floor = self.microscope.floor_Z
-
-        self.info('Estimating the matrix with increasingly large movements')
-        # *** Estimate the matrix using increasingly large movements ***
-        min_distance = distance
-        for axis in range(len(self.axes)):
-            self.debug('Calibrating axis ' + str(axis))
-            distance = min_distance * 1.
-            oldrs = self.stage.reference_position()
-            move_stage = False
-            moves = 0
-            while moves < self.config.calibration_moves: # just for testing
-                moves += 1
-                distance *= 2
-                self.debug('Distance ' + str(distance))
-
-                # Check whether the next position might be unreachable
-                future_position = self.position(axis) - distance*self.up_direction[axis]
-                if (future_position<self.min[axis]) | (future_position>self.max[axis]):
-                    self.info("Next move cannot be performed (end position)")
-                    break
-
-                # Estimate final position on screen
-                dxe, dye, dze = -self.M[:, axis] * distance * self.up_direction[axis]
-                xe, ye, ze = oldx+dxe, oldy+dye, oldz+dze
-
-                # Check whether we might be out of field
-                if (xe<left_border) | (xe>right_border) | (ye<top_border) | (ye>bottom_border):
-                    self.info('Next move is out of field')
-                    if not self.fixed:
-                        move_stage = True # Move the stage to recenter
-                    else:
-                        break
-
-                # Check whether we might reach the floor (with 100 um margin)
-                if (ze - floor) * self.microscope.up_direction < 100.:
-                    self.info('We reached the coverslip (z={z}, floor={floor}, microscope up={up}).'.format(z=ze, floor=floor, up=self.microscope.up_direction))
-                    break
-
-                self.abort_if_requested()
-                # Move pipette down
-                x, y, z = self.move_and_track(-distance*self.up_direction[axis], axis, M,
-                                              move_stage=move_stage)
-                rs = self.stage.reference_position()
-
-                # Update matrix
-                z += self.microscope.position()
-                M[:, axis] = -(array([x - oldx, y - oldy, z - oldz])+oldrs-rs) / distance*self.up_direction[axis]
-
-                # if self.config.equalize_axes:
-                #     M[:, axis] = self.normalize_axis(M[:,axis])
-
-                oldx, oldy, oldz = x, y, z
-                oldrs = rs
-
-            # Move back to initial position
-            u = self.position(axis)
-            self.debug('Moving back over '+str(u0[axis]-u)+' um')
-            oldrs = self.stage.reference_position() # Normally not necessary
-            x, y, z = self.move_back(z0, u0, us0)
-            rs = self.stage.reference_position()
-            # Update matrix
-            z += self.microscope.position()
-            M[:, axis] = (array([x - oldx, y - oldy, z - oldz]) + oldrs-rs) / (u0[axis]-u)
-            # if self.config.equalize_axes:
-            #     M[:, axis] = self.normalize_axis(M[:, axis])
-            oldx, oldy, oldz = x, y, z
-
-        self.debug('Final Matrix:' + str(M))
-
-        if not isnan(M).any():
-            # *** Compute the (pseudo-)inverse ***
-            Minv = pinv(M)
-
-            # *** Calculate offset ***0
-            #    Offset is such that the initial position is the position on screen in the reference system
-            r0 = array([x, y, z]) - dot(M, u0) - self.stage.reference_position()
-
-            # Store the new values
-            self.M = M
-            self.Minv = Minv
-            self.r0 = r0
-            self.calibrated = True
-        else:
-            raise CalibrationError('Matrix contains NaN values')
-
-    # TODO: Is this function still used?
-    def calibrate2(self):
-        '''
-        Automatic calibration.
-        Second algorithm: moves along axes of the reference system.
-        '''
-        # *** Calibrate the stage ***
-        self.stage.calibrate()
-
-        # *** Take photos ***
-        # Take a stack of photos on different focal planes, spaced by 1 um
-        self.take_photos()
-
-        # *** Calculate image borders ***
-
-        template_height, template_width = self.photos[self.config.stack_depth].shape
-        width, height = self.camera.width, self.camera.height
-        # We use a margin of 1/4 of the template
-        left_border = -(width/2-(template_width*3)/4)
-        right_border = (width/2-(template_width*3)/4)
-        top_border = -(height/2-(template_height*3)/4)
-        bottom_border = (height/2-(template_height*3)/4)
-
-        # *** Store initial position ***
-        z0 = self.microscope.position()
-        u0 = self.position()
-        us0 = self.stage.position()
-
-        # *** First pass: move each axis once and estimate matrix ***
-        self.Minv = 0*self.Minv # Erase current matrix
-        distance = self.config.stack_depth*.5
-        oldx, oldy, oldz = 0., 0., self.microscope.position() # Initial position on screen: centered and focused
-        for axis in range(len(self.axes)):
-            x,y,z = self.move_and_track(distance, axis, move_stage=False)
-            z+= self.microscope.position()
-            self.debug('x={}, y={}, z={}'.format(x, y, z))
-            self.M[:, axis] = array([x-oldx, y-oldy, z-oldz]) / distance
-            oldx, oldy, oldz = x, y, z
-        self.debug('Matrix:' + str(self.M))
-
-        # *** Calculate up directions ***
-        self.calculate_up_directions()
-
-        # Move back to initial position
-        oldx, oldy, oldz = self.move_back(z0, u0, None)  # The pipette could have moved
-        oldz+=self.microscope.position()
-
-        # Calculate floor (min Z)
-        if self.microscope.floor_Z is None: # If min Z not provided, assume 300 um margin
-            floor = z0-300.*self.microscope.up_direction
-        else:
-            floor = self.microscope.floor_Z
-
-        # *** Estimate the matrix using increasingly large movements ***
-        min_distance = distance
-        for axis in range(3):
-            self.info('Calibrating axis ' + str(axis))
-            distance = min_distance * 1.
-            oldrs = self.stage.reference_position()
-            move_stage = False
-            while (distance<300): # just for testing
-                distance *= 2
-                self.debug('Distance ' + str(distance))
-
-                # Move pipette
-                move = zeros(3)
-                if (axis == 2):
-                    # move pipette down
-                    move[axis] = -distance*self.microscope.up_direction[axis]
-                else:
-                    move[axis] = distance # we should move in a direction that does not collide with the objective
-
-                next_u = self.position()+dot(self.Minv, move)
-                next_us = self.stage.position()-dot(self.stage.Minv, move)
-
-                # Check whether we might reach the floor (with 100 um margin)
-                if (next_u[2] - floor) * self.microscope.up_direction < 100.:
-                    self.info('We reached the coverslip.')
-                    break
-
-                # Check whether we might exceed the limits
-                if (next_u < self.min).any() | (next_u > self.max).any() | \
-                   (next_us < self.stage.min).any() | (next_us > self.stage.max).any():
-                    self.info('Next position is not reachable')
-                    break
-
-                self.reference_relative_move(move)
-                self.wait_until_still()
-                if (axis==2):
-                    self.microscope.relative_move(move[2])
-                    self.microscope.wait_until_still()
-                self.stage.reference_relative_move(-move)
-                self.stage.wait_until_still()
-
-                x,y,z = self.locate_pipette()
-
-                # Update matrix
-                z += self.microscope.position()
-                r = array([x,y,z])-array([oldx,oldy,oldz])
-                self.Minv[:, axis] = dot(self.Minv,move+r) / move[axis]
-
-                # Adjust
-                self.stage.reference_relative_move(-array([x,y,0]))
-                self.microscope.relative_move(z)
-                x,y,z = self.locate_pipette()
-
-                oldx, oldy, oldz = x, y, z
-
-            # Move back to initial position
-            x, y, z = self.move_back(z0, u0, us0)
-            z += self.microscope.position()
-            oldx, oldy, oldz = x, y, z
-
-        self.debug('Matrix:' + str(self.M))
-
-        # *** Compute the (pseudo-)inverse ***
-        self.M = pinv(self.Minv)
-
-        # *** Calculate offset ***0
-        #    Offset is such that the initial position is the position on screen in the reference system
-        self.r0 = array([x, y, z]) - dot(self.M, u0) - self.stage.reference_position()
-
-        self.calibrated = True
+        new_p = self.position()
+        self.theta = arcsin(abs((new_p[2] - p[2])/(new_p[0] - p[0])))
+        # Rebuild the matrix
+        self.M[:] = 0.
+        self.build_matrix()
 
     def recalibrate(self, xy=(0,0)):
         '''
@@ -902,127 +425,43 @@ class CalibratedUnit(ManipulatorUnit):
         r0 = array([x, y, z0]) - dot(self.M, u0) - stager0
         self.r0 = r0
 
-    def manual_calibration(self, landmarks):
-        '''
-        Calibrates the unit based on 4 landmarks.
-        The stage must be properly calibrated.
-        '''
-        landmark_r, landmark_u, landmark_rs = landmarks
-        self.debug('landmark r: ' + str(landmark_r))
-
-        # r is the reference position (screen + focal plane)
-        r0 = landmark_r[0]
-        r = array([(r-r0) for r in landmark_r[1:]]).T
-        rs0 = landmark_rs[0]
-        rs = array([(rs-rs0) for rs in landmark_rs[1:]]).T
-        u0 = landmark_u[0]
-        u = array([(u-u0) for u in landmark_u[1:]]).T
-
-        self.debug('r: '+str(r))
-        self.debug('rs: ' + str(rs))
-        self.debug('u: '+str(u))
-        M = dot(r-rs,inv(u))
-        self.debug('Matrix: ' + str(M))
-
-        # 4) Recompute the matrix and the (pseudo) inverse
-        Minv = pinv(M)
-
-        # 5) Calculate conversion factor.
-
-        # Offset (doesn't seem to be right)
-        r0 = r0-rs0-dot(M, u0)
-        self.M = M
-        self.Minv = Minv
-        self.r0 = r0
-        self.calibrated = True
-
-    def auto_recalibrate(self, center=True):
-        '''
-        Recalibrates the unit by shifting the reference frame (r0).
-        The pipette is visually identified using a stack of photos.
-
-        Parameters
-        ----------
-        center : if True, move stage and focus to center the pipette
-        '''
-        self.info('Automatic recalibration')
-        x,y,z = self.locate_pipette(depth=50) # 50 um
-        z+= self.microscope.position()
-        self.info('Pipette at z='+str(z))
-
-        u0 = self.position()
-        stager0 = self.stage.reference_position()
-
-        # Offset is such that the position is (x,y,z) in the reference system
-        self.r0 = array([x,y,z]) - dot(self.M, u0) - stager0
-
-        # Move to center pipette
-        if center:
-            self.debug('Center pipette')
-            self.microscope.absolute_move(z)
-            self.abort_if_requested()
-            self.stage.reference_relative_move(-array([x,y]))
-        self.wait_until_still()
 
     def save_configuration(self):
         '''
         Outputs configuration in a dictionary.
         '''
-        config = {'up_direction' : self.up_direction,
+        config = {'direction' : self.direction,
                   'M' : self.M,
-                  'r0' : self.r0,
-                  'pipette_position' : self.pipette_position,
-                  'photos' : self.photos,
-                  'photo_x0' : self.photo_x0,
-                  'photo_y0' : self.photo_y0,
-                  'min' : self.min,
-                  'max' : self.max}
+                  'theta' : self.theta
+                  'r0' : self.r0}
 
         return config
+
 
     def load_configuration(self, config):
         '''
         Loads configuration from dictionary config.
         Variables not present in the dictionary are untouched.
         '''
-        self.up_direction = config.get('up_direction', self.up_direction)
+        self.direction = config.get('direction', self.direction)
         self.M = config.get('M', self.M)
         if 'M' in config:
             self.Minv = pinv(self.M)
             self.calibrated = True
         self.r0 = config.get('r0', self.r0)
-        self.pipette_position = config.get('pipette_position', self.pipette_position)
-        self.photos = config.get('photos', self.photos)
-        self.photo_x0 = config.get('photo_x0', self.photo_x0)
-        self.photo_y0 = config.get('photo_y0', self.photo_y0)
-        #self.min = config.get('min', self.min)
-        #self.max = config.get('max', self.max)
+        self.theta = config.get('theta', self.theta)
+        self.build_matrix()
 
-    def normalize_axis(self, column):
-        '''
-        Normalizes a column so that it corresponds to a 1 um move.
-        This requires a calibrated stage.
-        '''
-        mean_pixel_per_um = mean(self.stage.pixel_per_um())
-        return column / ((column[0] + column[1])/mean_pixel_per_um + column[2])
 
-    def equalize_matrix(self, M=None):
+class CalibratedMicroscope(CalibratedUnit):
+    def __init__(self, microscope, config=None, direction=None):
         '''
-        Normalizes the transformation matrix so that each column corresponds to a 1 um move.
-        By default the current transformation matrix is used.
-        This requires a calibrated stage.
+        A motorized microscope calibrated to a fixed reference coordinate system.
+        It just needs a direction, such that z<0 means going down.
         '''
-        if M is None:
-            return_M = True
-        else:
-            return_M = False
-        mean_pixel_per_um = mean(self.stage.pixel_per_um())
-        for axis in range(len(self.axes)):
-            M[:, axis] = M[:, axis] / ((M[0,axis] + M[1,axis])/mean_pixel_per_um + M[2,axis])
-        if return_M:
-            return M
-        else:
-            self.M = M
+        CalibratedUnit.__init__(self, microscope, stage=None,
+                                config=config, direction=[direction])
+        self.calibrated = True
 
 
 class CalibratedStage(CalibratedUnit):
@@ -1030,23 +469,31 @@ class CalibratedStage(CalibratedUnit):
     A horizontal stage calibrated to a fixed reference coordinate system.
     The optional stage refers to a platform on which the unit is mounted, which can
     be None.
-    The stage is assumed to be parallel to the focal plane (no autofocus needed)
+    The stage is assumed to be parallel to the focal plane.
 
     Parameters
     ----------
     unit : ManipulatorUnit for this stage
     stage : CalibratedUnit for a stage on which this stage might be mounted
     microscope : ManipulatorUnit for the microscope (single axis)
-    camera : a camera, ie, object with a ``snap()`` method (optional, for visual calibration)
+    camera : CalibratedCamera (optional)
+    direction : vector of +-1 directions for axes
     '''
     def __init__(self, unit, stage=None, microscope=None, camera=None,
-                 config=None):
+                 config=None, direction=None):
         CalibratedUnit.__init__(self, unit, stage, microscope, camera,
-                                config=config)
-        self.saved_state_question = 'Move stage back to initial position?'
+                                config=config, direction=direction)
         # It should be an XY stage, ie, two axes
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
+
+    def recalibrate(self, xy=(0,0)):
+        '''
+        Sets the current position as the central position, i.e., X=Y=0.
+        '''
+        CalibratedUnit.recalibrate(xy=xy)
+        self.r0[2] = 0.
+
 
     def reference_move(self, r):
         if len(r)==2: # Third coordinate is actually not useful
@@ -1088,7 +535,6 @@ class CalibratedStage(CalibratedUnit):
     def calibrate(self):
         '''
         Automatic calibration for a horizontal XY stage
-
         '''
         if not self.stage.calibrated:
             self.stage.calibrate()
