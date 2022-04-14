@@ -7,9 +7,6 @@ It contains methods to calibrate the unit.
 Manipulator directions (+-1) must be set so that x>0 means going down (advancing the axis) and z>0 means going up.
 
 TODO:
-- maybe microscope should be a CalibratedUnit?
-    > cf focus()
-- add camera moves and position in CalibratedUnit
 - move_new_pipette_back: use a large relative_move and abort
 - CalibratedStage.calibrate : calibrate camera
 """
@@ -22,7 +19,8 @@ from numpy.linalg import inv, pinv, norm
 from holypipette.vision import *
 
 
-__all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage', 'CalibratedCamera']
+__all__ = ['CalibratedUnit', 'CalibrationError', 'CalibratedStage', 'CalibratedCamera', 'CalibratedMicroscope',
+           'CalibrationConfig']
 
 verbose = True
 
@@ -88,11 +86,27 @@ class CalibratedCamera(object):
 
         Returns
         -------
-        The current position in um as an XY vector.
+        The position in um as an XY vector.
         '''
         if not self.calibrated:
             raise CalibrationError
         return dot(self.Minv, y - self.r0)
+
+    def reference_movement(self, y):
+        '''
+        Movement vector in the reference system.
+
+        Parameters
+        ----------
+        y : XY vector in pixel in the camera system.
+
+        Returns
+        -------
+        The movement in um as an XY vector.
+        '''
+        if not self.calibrated:
+            raise CalibrationError
+        return dot(self.Minv, y)
 
     def pixel_per_um(self, M=None):
         '''
@@ -159,8 +173,8 @@ class CalibratedUnit(ManipulatorUnit):
         microscope : ManipulatorUnit for the microscope (single axis)
         camera : CalibratedCamera (optional)
         direction : vector of +-1 directions
-        alpha : horizontal angle of the manipulator
-        theta : vertical angle of the manipulator
+        alpha : horizontal angle of the manipulator, in degree
+        theta : vertical angle of the manipulator, in degree
         '''
         ManipulatorUnit.__init__(self, unit.dev, unit.axes)
         if config is None:
@@ -192,9 +206,9 @@ class CalibratedUnit(ManipulatorUnit):
         Builds the transformation matrix from angles.
         '''
         if self.M.sum() == 0.: # not calculated yet
-            self.M = array([[self.direction[0]*cos(self.alpha)*cos(self.theta), -self.direction[1]*sin(self.alpha), 0.],
-                            [self.direction[0]*sin(self.alpha)*cos(self.theta), self.direction[1]*cos(self.alpha), 0.],
-                            [self.direction[0]*sin(self.theta), 0., self.direction[2]]])
+            self.M = array([[self.direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -self.direction[1]*sin(self.alpha*pi/180), 0.],
+                            [self.direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), self.direction[1]*cos(self.alpha*pi/180), 0.],
+                            [self.direction[0]*sin(self.theta*pi/180), 0., self.direction[2]]])
             self.Minv = pinv(self.M)
             self.calibrated = True
 
@@ -289,7 +303,7 @@ class CalibratedUnit(ManipulatorUnit):
         if safe:
             z0 = self.position(axis=2)
             z = u[2]
-            if (z-z0)*self.up_direction[2]>0: # going up
+            if z-z0>0: # going up
                 # Go up first
                 self.absolute_move(z,axis=2)
                 self.wait_until_still(2)
@@ -304,6 +318,21 @@ class CalibratedUnit(ManipulatorUnit):
         else:
             self.absolute_move(u)
 
+    def camera_move(self, p, safe = False):
+        '''
+        Moves the unit to position p in camera system, without moving the stage.
+        The third coordinate is the z position in the reference system.
+
+        Parameters
+        ----------
+        p : XYZ position vector, XY in pixel, Z in um
+        safe : if True, moves the Z axis first or last, so as to avoid touching the coverslip
+        '''
+        r = zeros(3)
+        r[:2] = self.camera.reference_position(p[:2])
+        r[2] = p[2]
+        self.reference_move(r, safe=safe)
+
     def reference_relative_move(self, r):
         '''
         Moves the unit by vector r in reference system, without moving the stage.
@@ -316,6 +345,20 @@ class CalibratedUnit(ManipulatorUnit):
             raise CalibrationError
         u = dot(self.Minv, r)
         self.relative_move(u)
+
+    def camera_relative_move(self, p):
+        '''
+        Moves the unit by vector p in camera system, without moving the stage.
+        The third coordinate is the z position in the reference system.
+
+        Parameters
+        ----------
+        p : XYZ position vector, XY in pixel, Z in um
+        '''
+        r = zeros(3)
+        r[:2] = self.camera.reference_movement(p[:2])
+        r[2] = p[2]
+        self.reference_relative_move(r)
 
     def focus(self):
         '''
@@ -371,7 +414,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         # First move it 2 mm before target position
         withdraw = 2000.
-        self.reference_move(array([0,0,self.microscope.position()])+ withdraw * self.M[:,0] * self.up_direction[0])
+        self.reference_move(array([0,0,self.microscope.reference_position()])- withdraw * self.M[:,0])
         self.wait_until_still()
 
         # Take photos to analyze the mean contrast (not exactly)
@@ -389,7 +432,7 @@ class CalibratedUnit(ManipulatorUnit):
             self.debug('Moving down, i='+str(i))
             #self.relative_move(-50.*self.up_direction[0],0)
             # absolute move just to ensure it's fast
-            self.absolute_move(self.position(0)-100. * self.up_direction[0], 0)
+            self.absolute_move(self.position(0)+100., 0)
             self.wait_until_still(0)
             I = std(self.camera.snap())
             if abs(I-I0)>sigma:
@@ -407,7 +450,8 @@ class CalibratedUnit(ManipulatorUnit):
         Measure vertical angle by comparing the current position with another position in focus.
         '''
         new_p = self.position()
-        self.theta = arcsin(abs((new_p[2] - p[2])/(new_p[0] - p[0])))
+        self.theta = 180/pi*arcsin(abs((new_p[2] - p[2])/(new_p[0] - p[0])))
+        self.debug('theta ='+str(self.theta))
         # Rebuild the matrix
         self.M[:] = 0.
         self.build_matrix()
@@ -416,10 +460,12 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         Recalibrates the unit by shifting the reference frame (r0).
         It assumes that the pipette is centered on screen.
+
+        TODO: map xy in pixel to um
         '''
         #    Offset is such that the position is (x,y,z0) in the reference system
         u0 = self.position()
-        z0 = self.microscope.position()
+        z0 = self.microscope.reference_position()
         stager0 = self.stage.reference_position()
         x,y = xy
         r0 = array([x, y, z0]) - dot(self.M, u0) - stager0
@@ -432,7 +478,7 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         config = {'direction' : self.direction,
                   'M' : self.M,
-                  'theta' : self.theta
+                  'theta' : self.theta,
                   'r0' : self.r0}
 
         return config

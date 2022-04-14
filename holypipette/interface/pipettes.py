@@ -1,12 +1,13 @@
 # coding=utf-8
 import pickle
 import os
+import yaml
 
 import numpy as np
 from PyQt5 import QtCore
 
 from holypipette.interface import TaskInterface, command, blocking_command
-from holypipette.devices.manipulator.calibratedunit import CalibratedUnit, CalibratedStage, CalibrationConfig
+from holypipette.devices.manipulator.calibratedunit import *
 import time
 
 class PipetteInterface(TaskInterface):
@@ -19,18 +20,8 @@ class PipetteInterface(TaskInterface):
     def __init__(self, stage, microscope, camera, units,
                  config_filename=None):
         super(PipetteInterface, self).__init__()
-        self.microscope = microscope
-        self.camera = camera
         # Create a common calibration configuration for all stages/manipulators
         self.calibration_config = CalibrationConfig(name='Calibration')
-        self.calibrated_stage = CalibratedStage(stage, None, microscope, camera,
-                                                config=self.calibration_config)
-        self.calibrated_units = [CalibratedUnit(unit,
-                                                self.calibrated_stage,
-                                                microscope,
-                                                camera,
-                                                config=self.calibration_config)
-                                 for unit in units]
 
         # This should be refactored (in TaskInterface?)
         config_folder = os.path.join(os.path.expanduser('~'),'holypipette')
@@ -39,69 +30,39 @@ class PipetteInterface(TaskInterface):
         if config_filename is None:
             config_filename = 'config_manipulator.cfg'
         config_filename = os.path.join(config_folder,config_filename)
-
         self.config_filename = config_filename
+
+        # Load stage and manipulator configuration
+        filename = os.path.join(config_folder, 'configuration.yaml')
+        with open(filename, 'r') as f:
+            manip_config = yaml.safe_load(f)
+
+        self.microscope = CalibratedMicroscope(microscope, config=self.calibration_config,
+                                               direction=manip_config['microscope']['direction'])
+        self.camera = CalibratedCamera(camera)
+        self.calibrated_stage = CalibratedStage(stage, None, self.microscope, self.camera,
+                                                config=self.calibration_config,
+                                                direction=manip_config['stage']['direction'])
+        self.calibrated_units = []
+        for i, unit in enumerate(units):
+            CalibratedUnit(unit, self.calibrated_stage, self.microscope, self.camera,
+                           config=self.calibration_config,
+                           direction=manip_config['manipulators'][i]['direction'],
+                           alpha=manip_config['manipulators'][i]['alpha'],
+                           theta=manip_config['manipulators'][i]['theta'])
+
         self.current_unit = 0
         self.calibrated_unit = None
-        self.cleaning_bath_position = None
-        self.contact_position = None
-        self.rinsing_bath_position = None
-        self.paramecium_tank_position = None
         self.timer_t0 = time.time()
+
+        self.calibration_started = False
+        self.previous_position = None
 
     def connect(self, main_gui):
         self.manipulator_switched.connect(main_gui.set_status_message)
         self.switch_manipulator(1)
         # We call this via command_received to catch errors automatically
         self.command_received(self.load_configuration, None)
-
-    @command(category='Manipulators',
-             description='Measure manipulator ranges')
-    def measure_ranges(self):
-        '''
-        This is called every 500 ms when measuring ranges.
-        It updates the min and max on each axis.
-        '''
-        for i,calibrated_unit in enumerate(self.calibrated_units):
-            position = calibrated_unit.position()
-            calibrated_unit.min = np.array([position,calibrated_unit.min]).min(axis=0)
-            calibrated_unit.max = np.array([position,calibrated_unit.max]).max(axis=0)
-            self.info('Unit {} min = {}, max={}'.format(i,list(calibrated_unit.min),list(calibrated_unit.max)))
-
-        position = self.calibrated_stage.position()
-        self.calibrated_stage.min = np.array([position, self.calibrated_stage.min]).min(axis=0)
-        self.calibrated_stage.max = np.array([position, self.calibrated_stage.max]).max(axis=0)
-        self.info('Stage min = {}, max={}'.format(list(self.calibrated_stage.min), list(self.calibrated_stage.max)))
-
-        position = self.microscope.position()
-        self.microscope.min = min(self.microscope.min, position)
-        self.microscope.max = max(self.microscope.max, position)
-        self.info('Microscope min = {}, max={}'.format(self.microscope.min, self.microscope.max))
-
-    @command(category='Manipulators',
-             description='Reset manipulator ranges')
-    def reset_ranges(self):
-        for calibrated_unit in self.calibrated_units:
-            calibrated_unit.min = np.ones(len(calibrated_unit.min))*1e6
-            calibrated_unit.max = -np.ones(len(calibrated_unit.max))*1e6
-        self.calibrated_stage.min = np.ones(len(self.calibrated_stage.min))*1e6
-        self.calibrated_stage.max = -np.ones(len(self.calibrated_stage.max))*1e6
-        self.microscope.min = 1e6
-        self.microscope.max = -1e6
-
-    @command(category='Manipulators',
-             description='Check manipulator ranges')
-    def check_ranges(self):
-        for i,calibrated_unit in enumerate(self.calibrated_units):
-            print(calibrated_unit.min,calibrated_unit.max)
-            if ((calibrated_unit.max-calibrated_unit.min)<500.).any():
-                self.debug("Ranges of unit "+str(i)+" might not have been updated")
-        print(self.calibrated_stage.min,self.calibrated_stage.max)
-        if ((self.calibrated_stage.max - self.calibrated_stage.min) < 500.).any():
-            self.debug("Ranges of the stage might not have been updated")
-        print(self.microscope.min,self.microscope.max)
-        if self.microscope.max-self.microscope.min<500.:
-            self.debug("Ranges of the microscope might not have been updated")
 
     @command(category='Manipulators',
              description='Move pipette in x direction by {:.0f}μm',
@@ -165,27 +126,21 @@ class PipetteInterface(TaskInterface):
 
 
     @blocking_command(category='Stage',
-                      description='Calibrate stage only',
-                      task_description='Calibrating stage')
-    def calibrate_stage(self):
-        self.execute([self.calibrated_stage.calibrate,
-                      self.calibrated_unit.analyze_calibration])
-
+                      description='Zero position',
+                      task_description='Setting zero position')
+    def zero_position(self):
+        self.execute([self.calibrated_stage.recalibrate,
+                      self.microscope.recalibrate])
 
     @blocking_command(category='Manipulators',
                       description='Calibrate manipulator',
                       task_description='Calibrating manipulator')
     def calibrate_manipulator(self):
-        self.execute([self.calibrated_unit.calibrate,
-                      self.calibrated_unit.analyze_calibration])
-
-    @blocking_command(category='Manipulators',
-                      description='Calibrate stage and manipulator (2nd Method)',
-                      task_description='Calibrating stage and manipulator (2nd Method)')
-    def calibrate_manipulator2(self):
-        self.execute([self.calibrated_unit.calibrate,
-                      self.calibrated_unit.analyze_calibration],
-                     argument=[2, None])
+        if self.calibration_started:
+            self.execute(self.calibrated_unit.measure_theta, argument=self.previous_position)
+        else:
+            self.previous_position = self.calibrated_unit.position()
+        self.calibration_started = not self.calibration_started
 
     @blocking_command(category='Manipulators',
                       description='Recalibrate manipulator',
@@ -205,7 +160,7 @@ class PipetteInterface(TaskInterface):
                      task_description='Moving to position with safe approach')
     def move_pipette(self, xy_position):
         x, y = xy_position
-        position = np.array([x, y, self.microscope.position()])
+        position = np.array([x, y, self.microscope.reference_position()])
         self.debug('asking for safe move to {}'.format(position))
         self.execute(self.calibrated_unit.safe_move, argument=position)
 

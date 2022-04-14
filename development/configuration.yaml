@@ -1,0 +1,19 @@
+# Configuration of stage and manipulators
+# To put in ~/holypipette/configuration.yaml
+stage :
+  direction:
+    - 1
+    - 1
+manipulators :
+  - direction :
+      - 1
+      - 1
+    alpha : 0
+    theta : 35
+  - direction :
+      - 1
+      - -1
+    alpha : 180
+    theta : 35
+microscope :
+  direction: 1
