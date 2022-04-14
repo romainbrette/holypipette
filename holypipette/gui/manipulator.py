@@ -46,22 +46,6 @@ class ManipulatorGui(CameraGui):
         self._last_stage_measurement = None
         self._stage_position = (None, None, None)
 
-    @command(category='Manipulators',
-             description='Measure manipulator ranges')
-    def measure_ranges(self):
-        if self.position_measurement is False:
-            self.interface.info('Measuring manipulator ranges')
-            self.position_measurement = True
-            # Reset ranges
-            self.interface.reset_ranges()
-            self.position_timer.start(500)
-        else:
-            self.interface.info('Stopped measuring manipulator ranges')
-            self.position_measurement = False
-            self.position_timer.stop()
-            # Check whether all positions have been updated
-            self.interface.check_ranges()
-
     def display_manipulator(self, pixmap):
         '''
         Displays the number of the selected manipulator.
@@ -194,17 +178,14 @@ class ManipulatorGui(CameraGui):
 
         # Calibration commands
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
-                                 self.interface.calibrate_stage)
+                                 self.interface.zero_position)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
                                  self.interface.calibrate_manipulator)
-        self.register_key_action(Qt.Key_C, Qt.AltModifier,
-                                 self.interface.calibrate_manipulator2)
         self.register_key_action(Qt.Key_R, Qt.NoModifier,
                                  self.interface.recalibrate_manipulator)
         self.register_mouse_action(Qt.RightButton, Qt.NoModifier,
                                    self.interface.recalibrate_manipulator_on_click)
-        self.register_key_action(Qt.Key_M, Qt.NoModifier,
-                                 self.measure_ranges)
+
         # Pipette selection
         number_of_units = len(self.interface.calibrated_units)
         for unit_number in range(number_of_units):
@@ -219,6 +200,10 @@ class ManipulatorGui(CameraGui):
 
         self.register_key_action(Qt.Key_S, Qt.ControlModifier,
                                  self.interface.save_configuration)
+
+        # Move pipette to center
+        self.register_key_action(Qt.Key_Return, Qt.NoModifier,self.interface.move_pipette,
+                                 argument=(0,0))
 
         # Move pipette by clicking
         self.register_mouse_action(Qt.LeftButton, Qt.NoModifier,
