@@ -45,11 +45,11 @@ class PipetteInterface(TaskInterface):
                                                 direction=manip_config['stage']['direction'])
         self.calibrated_units = []
         for i, unit in enumerate(units):
-            CalibratedUnit(unit, self.calibrated_stage, self.microscope, self.camera,
-                           config=self.calibration_config,
-                           direction=manip_config['manipulators'][i]['direction'],
-                           alpha=manip_config['manipulators'][i]['alpha'],
-                           theta=manip_config['manipulators'][i]['theta'])
+            self.calibrated_units.append(CalibratedUnit(unit, self.calibrated_stage, self.microscope, self.camera,
+                                                       config=self.calibration_config,
+                                                       direction=manip_config['manipulators'][i]['direction'],
+                                                       alpha=manip_config['manipulators'][i]['alpha'],
+                                                       theta=manip_config['manipulators'][i]['theta']))
 
         self.current_unit = 0
         self.calibrated_unit = None

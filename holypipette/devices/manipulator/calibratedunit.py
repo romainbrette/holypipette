@@ -206,9 +206,11 @@ class CalibratedUnit(ManipulatorUnit):
         Builds the transformation matrix from angles.
         '''
         if self.M.sum() == 0.: # not calculated yet
-            self.M = array([[self.direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -self.direction[1]*sin(self.alpha*pi/180), 0.],
-                            [self.direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), self.direction[1]*cos(self.alpha*pi/180), 0.],
-                            [self.direction[0]*sin(self.theta*pi/180), 0., self.direction[2]]])
+            direction = zeros(3)
+            direction[:len(self.direction)] = self.direction
+            self.M = array([[direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -direction[1]*sin(self.alpha*pi/180), 0.],
+                            [direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), direction[1]*cos(self.alpha*pi/180), 0.],
+                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]])[:len(self.direction), :len(self.direction)]
             self.Minv = pinv(self.M)
             self.calibrated = True
 

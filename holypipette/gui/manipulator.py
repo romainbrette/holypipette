@@ -37,11 +37,6 @@ class ManipulatorGui(CameraGui):
         self.tip_x, self.tip_y = None, None
         self.tip_t0 = None
 
-        # Measure manipulator positions (range measurement)
-        self.position_timer = QtCore.QTimer()
-        self.position_timer.timeout.connect(self.interface.measure_ranges)
-        self.position_measurement = False
-
         # Stage position for display
         self._last_stage_measurement = None
         self._stage_position = (None, None, None)
@@ -64,7 +59,7 @@ class ManipulatorGui(CameraGui):
                              'will not be very helpful...')
         stage = self.interface.calibrated_stage
         camera_pixel_per_um = getattr(self.camera, 'pixel_per_um', None)
-        if stage.calibrated or camera_pixel_per_um:
+        if self.interface.camera.calibrated or camera_pixel_per_um:
             pen_width = 4
             if camera_pixel_per_um is not None:
                 bar_length = camera_pixel_per_um
