@@ -175,7 +175,7 @@ class ManipulatorGui(CameraGui):
         self.register_key_action(Qt.Key_C, Qt.ControlModifier,
                                  self.interface.zero_position)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.interface.calibrate_manipulator)
+                                 self.interface.zero_position) #calibrate_manipulator)
         self.register_key_action(Qt.Key_R, Qt.NoModifier,
                                  self.interface.recalibrate_manipulator)
         self.register_mouse_action(Qt.RightButton, Qt.NoModifier,

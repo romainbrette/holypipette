@@ -129,8 +129,11 @@ class PipetteInterface(TaskInterface):
                       description='Zero position',
                       task_description='Setting zero position')
     def zero_position(self):
-        self.execute([self.calibrated_stage.recalibrate,
-                      self.microscope.recalibrate])
+        self.execute(self.calibrated_stage.recalibrate)
+        self.execute(self.microscope.recalibrate)
+        ## The list command doesn't seem to work
+        #self.execute([self.calibrated_stage.recalibrate,
+        #              self.microscope.recalibrate])
 
     @blocking_command(category='Manipulators',
                       description='Calibrate manipulator',
@@ -177,7 +180,7 @@ class PipetteInterface(TaskInterface):
                       description='Go to the floor (cover slip)',
                       task_description='Go to the floor (cover slip)')
     def go_to_floor(self):
-        self.execute(self.microscope.absolute_move,
+        self.execute(self.microscope.reference_move,
                      argument=0)
 
     # TODO: Make the configuration system more general/clean

@@ -194,9 +194,9 @@ class CalibratedUnit(ManipulatorUnit):
         self.alpha = alpha
         self.theta = theta
 
-        # Matrices for passing to the camera/microscope system
-        self.M = zeros((3,len(unit.axes))) # unit to camera
-        self.Minv = zeros((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
+        # Matrices for passing to the reference system
+        self.M = zeros((3,3)) # unit to camera
+        self.Minv = zeros((3,3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
         self.r0 = zeros(3) # Offset in reference system
 
         self.build_matrix()
@@ -210,7 +210,7 @@ class CalibratedUnit(ManipulatorUnit):
             direction[:len(self.direction)] = self.direction
             self.M = array([[direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -direction[1]*sin(self.alpha*pi/180), 0.],
                             [direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), direction[1]*cos(self.alpha*pi/180), 0.],
-                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]])[:len(self.direction), :len(self.direction)]
+                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]]) # [:len(self.direction), :len(self.direction)]
             self.Minv = pinv(self.M)
             self.calibrated = True
 
@@ -511,6 +511,20 @@ class CalibratedMicroscope(CalibratedUnit):
                                 config=config, direction=[direction])
         self.calibrated = True
 
+        self.r0 = 0.
+
+    def reference_move(self, r):
+        self.absolute_move(self.direction[0]*r - self.r0, axis=0)
+
+    def reference_relative_move(self, r):
+        self.relative_move(self.direction[0]*r, axis=0)
+
+    def reference_position(self):
+        return self.direction[0]*self.position(0) + self.r0
+
+    def recalibrate(self):
+        self.r0 = -self.position(0)
+
 
 class CalibratedStage(CalibratedUnit):
     '''
@@ -535,13 +549,16 @@ class CalibratedStage(CalibratedUnit):
         if len(self.axes) != 2:
             raise CalibrationError('The unit should have exactly two axes for horizontal calibration.')
 
-    def recalibrate(self, xy=(0,0)):
+    def recalibrate(self):
         '''
         Sets the current position as the central position, i.e., X=Y=0.
         '''
-        CalibratedUnit.recalibrate(xy=xy)
-        self.r0[2] = 0.
-
+        #    Offset is such that the position is (x,y,z0) in the reference system
+        u0 = self.position()
+        u0_filled = zeros(3)
+        u0_filled[:2] = u0
+        stager0 = self.stage.reference_position()
+        self.r0 = - dot(self.M, u0_filled) - stager0
 
     def reference_move(self, r):
         if len(r)==2: # Third coordinate is actually not useful
