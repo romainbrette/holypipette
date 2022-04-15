@@ -62,7 +62,7 @@ class PipetteInterface(TaskInterface):
         self.manipulator_switched.connect(main_gui.set_status_message)
         self.switch_manipulator(1)
         # We call this via command_received to catch errors automatically
-        self.command_received(self.load_configuration, None)
+        #self.command_received(self.load_configuration, None)
 
     @command(category='Manipulators',
              description='Move pipette in x direction by {:.0f}μm',
