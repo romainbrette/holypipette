@@ -195,8 +195,8 @@ class CalibratedUnit(ManipulatorUnit):
         self.theta = theta
 
         # Matrices for passing to the reference system
-        self.M = zeros((3,3)) # unit to camera
-        self.Minv = zeros((3,3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
+        self.M = zeros((3,len(unit.axes))) # unit to camera
+        self.Minv = zeros((len(unit.axes),3)) # Inverse of M, when well defined (otherwise pseudoinverse? pinv)
         self.r0 = zeros(3) # Offset in reference system
 
         self.build_matrix()
@@ -210,7 +210,7 @@ class CalibratedUnit(ManipulatorUnit):
             direction[:len(self.direction)] = self.direction
             self.M = array([[direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -direction[1]*sin(self.alpha*pi/180), 0.],
                             [direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), direction[1]*cos(self.alpha*pi/180), 0.],
-                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]]) # [:len(self.direction), :len(self.direction)]
+                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]])[:,:len(self.direction)]
             self.Minv = pinv(self.M)
             self.calibrated = True
 
@@ -555,10 +555,8 @@ class CalibratedStage(CalibratedUnit):
         '''
         #    Offset is such that the position is (x,y,z0) in the reference system
         u0 = self.position()
-        u0_filled = zeros(3)
-        u0_filled[:2] = u0
         stager0 = self.stage.reference_position()
-        self.r0 = - dot(self.M, u0_filled) - stager0
+        self.r0 = - dot(self.M, u0) - stager0
 
     def reference_move(self, r):
         if len(r)==2: # Third coordinate is actually not useful

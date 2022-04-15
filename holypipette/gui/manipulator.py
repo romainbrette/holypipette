@@ -172,10 +172,10 @@ class ManipulatorGui(CameraGui):
                                  self.show_tip_switch)
 
         # Calibration commands
-        self.register_key_action(Qt.Key_C, Qt.ControlModifier,
+        self.register_key_action(Qt.Key_C, Qt.ControlModifier, # cmd on Mac
                                  self.interface.zero_position)
         self.register_key_action(Qt.Key_C, Qt.NoModifier,
-                                 self.interface.zero_position) #calibrate_manipulator)
+                                 self.interface.calibrate_manipulator)
         self.register_key_action(Qt.Key_R, Qt.NoModifier,
                                  self.interface.recalibrate_manipulator)
         self.register_mouse_action(Qt.RightButton, Qt.NoModifier,
