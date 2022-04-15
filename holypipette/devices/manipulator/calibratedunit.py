@@ -210,7 +210,7 @@ class CalibratedUnit(ManipulatorUnit):
             direction[:len(self.direction)] = self.direction
             self.M = array([[direction[0]*cos(self.alpha*pi/180)*cos(self.theta*pi/180), -direction[1]*sin(self.alpha*pi/180), 0.],
                             [direction[0]*sin(self.alpha*pi/180)*cos(self.theta*pi/180), direction[1]*cos(self.alpha*pi/180), 0.],
-                            [direction[0]*sin(self.theta*pi/180), 0., direction[2]]])[:,:len(self.direction)]
+                            [-direction[0]*sin(self.theta*pi/180), 0., direction[2]]])[:,:len(self.direction)]
             self.Minv = pinv(self.M)
             self.calibrated = True
 
@@ -299,6 +299,7 @@ class CalibratedUnit(ManipulatorUnit):
         r : XYZ position vector in um
         safe : if True, moves the Z axis first or last, so as to avoid touching the coverslip
         '''
+        print('Reference move to '+str(r))
         if not self.calibrated:
             raise CalibrationError
         u = dot(self.Minv, r-self.stage.reference_position()-self.r0)
@@ -335,7 +336,7 @@ class CalibratedUnit(ManipulatorUnit):
         r[2] = p[2]
         self.reference_move(r, safe=safe)
 
-    def reference_relative_move(self, r):
+    def reference_relative_move(self, r, axis=None):
         '''
         Moves the unit by vector r in reference system, without moving the stage.
 
@@ -345,6 +346,10 @@ class CalibratedUnit(ManipulatorUnit):
         '''
         if not self.calibrated:
             raise CalibrationError
+        if axis is not None:
+            rfilled = zeros(3)
+            rfilled[axis] = r
+            r = rfilled
         u = dot(self.Minv, r)
         self.relative_move(u)
 
@@ -523,7 +528,7 @@ class CalibratedMicroscope(CalibratedUnit):
         return self.direction[0]*self.position(0) + self.r0
 
     def recalibrate(self):
-        self.r0 = -self.position(0)
+        self.r0 = -self.direction[0]*self.position(0)
 
 
 class CalibratedStage(CalibratedUnit):

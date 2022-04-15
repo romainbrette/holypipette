@@ -135,9 +135,9 @@ class PipetteInterface(TaskInterface):
         #self.execute([self.calibrated_stage.recalibrate,
         #              self.microscope.recalibrate])
 
-    @blocking_command(category='Manipulators',
+    @command(category='Manipulators',
                       description='Calibrate manipulator',
-                      task_description='Calibrating manipulator')
+                      success_message='Calibration done')
     def calibrate_manipulator(self):
         if self.calibration_started:
             self.execute(self.calibrated_unit.measure_theta, argument=self.previous_position)

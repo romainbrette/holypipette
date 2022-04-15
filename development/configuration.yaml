@@ -3,17 +3,17 @@
 stage :
   direction:
     - 1
-    - 1
+    - -1
 manipulators :
   - direction :
-      - -1
+      - 1
       - -1
       - 1
     alpha : 180
     theta : 25
   - direction :
-      - 1
       - -1
+      - 1
       - 1
     alpha : 0
     theta : 25
