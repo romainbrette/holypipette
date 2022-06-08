@@ -17,6 +17,7 @@ __all__ = ['OpenCVCamera']
 
 class OpenCVCamera(Camera):
     def __init__(self, width=None, height=None):
+        super(OpenCVCamera, self).__init__()
         self.video = cv2.VideoCapture(0)
         if width is not None:
             self.video.set(3, width)
