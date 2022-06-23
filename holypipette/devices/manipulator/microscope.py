@@ -94,7 +94,7 @@ class Microscope(Manipulator):
         camera : a camera, eg with a snap() method
         z : A list of z positions
         preprocessing : a function that processes the images (optional)
-        save : saves images to disk if True
+        save : saves images to disk if not None. If it contains {}, then this is the full path name.
         pause : pause in second after each movement
         '''
         position = self.position()
@@ -110,7 +110,10 @@ class Microscope(Manipulator):
             img = preprocessing(camera.snap())
             images.append(img)
             if save is not None:
-                cv2.imwrite('./screenshots/'+save+'{}.jpg'.format(k), img)
+                if '{}' in save:
+                    cv2.imwrite(save.format(int(zi)), img)
+                else:
+                    cv2.imwrite('./screenshots/'+save+'{}.jpg'.format(k), img)
         self.absolute_move(position)
         self.wait_until_still()
         return images
