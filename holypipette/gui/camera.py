@@ -395,14 +395,14 @@ class CameraGui(QtWidgets.QMainWindow):
 
         self.display_edit_funcs = []
         if display_edit is None:
-            display_edit = self.draw_cross
-        if isinstance(display_edit, collections.Sequence):
+            display_edit = []
+        if isinstance(display_edit, collections.abc.Sequence):
             self.display_edit_funcs.extend(display_edit)
         else:
             self.display_edit_funcs.append(display_edit)
 
         self.image_edit_funcs = []
-        if isinstance(image_edit, collections.Sequence):
+        if isinstance(image_edit, collections.abc.Sequence):
             self.image_edit_funcs.extend(image_edit)
         elif image_edit is not None:
             self.image_edit_funcs.append(image_edit)
@@ -494,6 +494,8 @@ class CameraGui(QtWidgets.QMainWindow):
         '''
         Close the GUI.
         '''
+        print('closing GUI')
+        self.camera.acquisition_thread.running = False
         del self.camera
         super(CameraGui, self).close()
 

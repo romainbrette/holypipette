@@ -25,6 +25,7 @@ class OpenCVCamera(Camera):
             self.video.set(4, height)
         self.width = int(self.video.get(3))
         self.height = int(self.video.get(4))
+        self.start_acquisition()
 
     def __del__(self):
         self.video.release()

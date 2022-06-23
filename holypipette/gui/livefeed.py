@@ -54,10 +54,12 @@ class LiveFeedQt(QtWidgets.QLabel):
     @QtCore.pyqtSlot()
     def update_image(self):
         try:
-            if not self.camera.new_frame():
-                return
             # get data and display
-            frame = self.camera.snap()
+            queue = self.camera.queue
+            if not len(queue):
+                return  # nothing in the queue yet
+            _, _, _, frame = queue[-1]
+
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
                 if frame.dtype == np.dtype('uint32'):
@@ -71,7 +73,6 @@ class LiveFeedQt(QtWidgets.QLabel):
                 # Color image via OpenCV
                 bytesPerLine = 3*self.width
                 format = QtGui.QImage.Format_RGB888
-
             frame = self.image_edit(frame)
             q_image = QtGui.QImage(frame.data, self.width, self.height,
                                    bytesPerLine, format)

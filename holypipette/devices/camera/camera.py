@@ -5,7 +5,11 @@ TODO:
 * A stack() method which takes a series of photos along Z axis
 '''
 from __future__ import print_function
+import collections
+import os
 import time
+import threading
+import imageio
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
@@ -21,13 +25,118 @@ from PIL import Image
 __all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']
 
 
+class FileWriteThread(threading.Thread): # saves frames individually
+    def __init__(self, *args, **kwds):
+        self.queue = kwds.pop('queue')
+        threading.Thread.__init__(self, *args, **kwds)
+        self.running = True
+
+    def run(self):
+        self.running = True
+        frames_read = 0
+        while self.running:
+            # wait until something is in the queue
+            try:
+                fname, frame_number, elapsed_time, frame = self.queue[-1]
+
+                if frame_number is None:
+                    # Marker for end of recording
+                    # Go through everything in the queue to make sure we haven't missed any
+                    for fname, frame_number, elapsed_time, frame in self.queue:
+                        if frame_number is None or frame_number <= frames_read:
+                            continue
+                        frames_read = frame_number
+                        imageio.imwrite(fname, frame)
+                    break
+                idx = 1
+                while frame_number is None or frame_number <= frames_read:
+                    fname, frame_number, elapsed_time, frame = self.queue[idx]
+                    idx += 1
+                frames_read = frame_number
+                imageio.imwrite(fname, frame)
+                if frame_number % 20 == 0:
+                    print('Finished writing {}.'.format(fname))
+            except IndexError:
+                # queue is emtpy, wait
+                time.sleep(0.01)
+                # TODO: Store image metadata to file as well?
+
+
+class MovieWriteThread(FileWriteThread): # saves frames to a movie file
+    def __init__(self, *args, **kwds):
+        FileWriteThread.__init__(self, *args, **kwds)
+
+    def run(self):
+        self.running = True
+        while self.running:
+            # wait until something is in the queue
+            try:
+                writer, frame_number, elapsed_time, frame = self.queue.popleft()
+                if writer is None:
+                    # special marker for the end of recording
+                    break
+                writer.append_data(frame)
+                if frame_number % 20 == 0:
+                    print('Finished writing {}.'.format(frame_number))
+            except IndexError:
+                # queue is emtpy, wait
+                time.sleep(0.01)
+                # TODO: Store image metadata to file as well?
+
+
+class AcquisitionThread(threading.Thread):
+    def __init__(self, *args, **kwds):
+        if any(kwd not in kwds for kwd in ['directory',
+                                           'file_prefix', 'camera']):
+            raise ValueError('Need to provide "n_images",'
+                             '"directory", "file_prefix", and "camera" keyword'
+                             'arguments')
+        self.directory = kwds.pop('directory')
+        if not os.path.exists(self.directory):
+            os.mkdir(self.directory)
+        self.file_prefix = kwds.pop('file_prefix')
+        self.camera = kwds.pop('camera')
+        self.queue = kwds.pop('queue')
+        kwds['name'] = 'image_acquire_thread'
+        self.running = True
+        self.delay = kwds.pop('delay', 0.)
+
+        threading.Thread.__init__(self, *args, **kwds)
+
+    def run(self):
+        self.running = True
+
+        elapsed_time = 0.0
+        last_frame = 0
+        while self.running:
+            frame = self.camera.raw_snap()
+            image_fname = os.path.join(self.directory,
+                                        'image_{}_{:03d}.tiff'.format(self.file_prefix,
+                                                                last_frame))
+            # Put image into queue for disk storage
+            self.queue.append((image_fname, last_frame, elapsed_time, frame))
+            last_frame += 1
+        # Put the end marker into the queue
+        self.queue.append((None, None, None, None))
+
+
 class Camera(object):
     def __init__(self):
         super(Camera, self).__init__()
+        self.queue = collections.deque(maxlen=1000)
         self.width = 1000
         self.height = 1000
         self.flipped = False # Horizontal flip
 
+    def start_acquisition(self):
+        self.file_thread = FileWriteThread(queue=self.queue)
+        self.acquisition_thread = AcquisitionThread(camera=self,
+                                                     directory='.',
+                                                     file_prefix='',
+                                                     queue=self.queue)
+        self.file_thread.start()
+        self.acquisition_thread.start()
+    
     def flip(self):
         self.flipped = not self.flipped
 
@@ -108,7 +217,6 @@ class FakeParamecium(object):
 
 class FakeCamera(Camera):
     def __init__(self, manipulator=None, image_z=0, paramecium=False):
-        super(FakeCamera, self).__init__()
         self.width = 1024
         self.height = 768
         self.exposure_time = 30
@@ -121,6 +229,7 @@ class FakeCamera(Camera):
         else:
             self.paramecium = None
         self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2)*0.5, 10)*50 + 128, 0, 255), dtype=np.uint8)
+        super(FakeCamera, self).__init__()
 
     def set_exposure(self, value):
         if 0 < value <= 200:
