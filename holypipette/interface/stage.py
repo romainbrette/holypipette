@@ -17,7 +17,10 @@ class StageConfig(Config):
     stack_max_Z = NumberWithUnit(50, bounds=(0, 3000), doc='Maximum Z', unit='µm')
     stack_dZ = NumberWithUnit(5, bounds=(0, 500), doc='Z increment', unit='µm')
 
-    categories = [('Stack', ['stack_min_Z', 'stack_max_Z', 'stack_dZ'])]
+    video_duration = NumberWithUnit(5, bounds=(0, 10000), doc='Duration', unit='s')
+
+    categories = [('Stack', ['stack_min_Z', 'stack_max_Z', 'stack_dZ']),
+                  ('Video', ['video_duration'])]
 
 class StageInterface(TaskInterface):
     '''
@@ -90,3 +93,12 @@ class StageInterface(TaskInterface):
 
             path = os.path.join(directory, 'stack_'+str(uuid.uuid1())+'_{}.tiff')
             self.microscope.stack(self.camera, z, save=path)
+
+    @command(category='Video',
+             description='Take a video')
+    def take_video(self):
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(caption='Save video', directory = os.path.expanduser('~/holypipette/'),
+                                                         filter='Movies (*.mp4)',
+                                                         options=QtWidgets.QFileDialog.DontUseNativeDialog)
+        if len(fname):
+            pass

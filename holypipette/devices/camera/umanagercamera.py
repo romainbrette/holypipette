@@ -67,7 +67,7 @@ class uManagerCamera(Camera):
     def raw_snap(self):
         self.lock.acquire()
         while not self.new_frame():
-            sleep(0.05)
+            sleep(0.005)
             print("no image available, waiting for 5ms")
         try:
             frame = self.cam.getLastImage()  # What happens if there is no new frame?

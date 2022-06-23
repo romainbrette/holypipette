@@ -75,8 +75,11 @@ class AutomatedMicroscopeGui(CameraGui):
                                  self.interface.set_floor)
         self.register_key_action(Qt.Key_G, None,
                                  self.interface.go_to_floor)
+
         self.register_key_action(Qt.Key_S, None,
                                  self.interface.take_stack)
+        self.register_key_action(Qt.Key_V, None,
+                                 self.interface.take_video)
 
         # Show configuration pane
         self.register_key_action(Qt.Key_P, None,
