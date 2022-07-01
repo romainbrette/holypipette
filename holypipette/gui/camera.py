@@ -2,6 +2,12 @@
 from __future__ import absolute_import
 
 import collections
+# Support older versions of Python
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
+
 import functools
 import logging
 import datetime
@@ -396,13 +402,13 @@ class CameraGui(QtWidgets.QMainWindow):
         self.display_edit_funcs = []
         if display_edit is None:
             display_edit = []
-        if isinstance(display_edit, collections.abc.Sequence):
+        if isinstance(display_edit, Sequence):
             self.display_edit_funcs.extend(display_edit)
         else:
             self.display_edit_funcs.append(display_edit)
 
         self.image_edit_funcs = []
-        if isinstance(image_edit, collections.abc.Sequence):
+        if isinstance(image_edit, Sequence):
             self.image_edit_funcs.extend(image_edit)
         elif image_edit is not None:
             self.image_edit_funcs.append(image_edit)
