@@ -33,11 +33,28 @@ class FileWriteThread(threading.Thread): # saves frames individually
         self.directory = kwds.pop('directory')
         self.file_prefix = kwds.pop('file_prefix')
         threading.Thread.__init__(self, *args, **kwds)
+        self.first_frame = None
         self.running = True
+
+    def write_frame(self):
+        frame_number, elapsed_time, frame = self.queue.popleft()
+        if frame_number is None:
+            # Marker for end of recording
+            return False
+        
+        # Make all frame numbers relative to the first frame
+        if self.first_frame is None:
+            self.first_frame = frame_number
+        frame_number -= self.first_frame
+        fname = os.path.join(self.directory, f'{self.file_prefix}_{frame_number:05d}.tiff')
+        imageio.imwrite(fname, frame)
+        time.sleep(self.debug_write_delay)
+        if frame_number % 20 == 0:
+            print('Finished writing {}.'.format(fname))
+        return True
 
     def run(self):
         self.running = True
-        first_frame = None
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
         
@@ -45,26 +62,18 @@ class FileWriteThread(threading.Thread): # saves frames individually
             try:
                 if len(self.queue) > self.queue.maxlen // 2:
                     print(f'WARNING: FileWriteThread queue is getting full ({len(self.queue)}/{self.queue.maxlen})')
-                frame_number, elapsed_time, frame = self.queue.popleft()
-                if frame_number is None:
-                    # Marker for end of recording
+                if not self.write_frame():
                     break
-                
-                # Make all frame numbers relative to the first frame
-                if first_frame is None:
-                    first_frame = frame_number
-                frame_number -= first_frame
-
-                fname = os.path.join(self.directory, f'{self.file_prefix}_{frame_number:05d}.tiff')
-                imageio.imwrite(fname, frame)
-                time.sleep(self.debug_write_delay)
-                if frame_number % 20 == 0:
-                    print('Finished writing {}.'.format(fname))
             except IndexError:
                 # queue is emtpy, wait
                 time.sleep(0.01)
                 # TODO: Store image metadata to file as well?
 
+        if len(self.queue):
+            print(f'Still need to write {len(self.queue)} images to disk.')
+            while True:
+                if not self.write_frame():
+                    break
 
 
 class AcquisitionThread(threading.Thread):
@@ -78,13 +87,13 @@ class AcquisitionThread(threading.Thread):
     def run(self):
         self.running = True
 
-        elapsed_time = 0.0
+        start_time = time.time()
         last_frame = 0
         while self.running:
             frame = self.camera.raw_snap()
             # Put image into queues for disk storage and display
             for queue in self.queues:
-                queue.append((last_frame, elapsed_time, frame))
+                queue.append((last_frame, time.time() - start_time, frame))
             last_frame += 1
         
         # Put the end marker into the queues
@@ -93,6 +102,11 @@ class AcquisitionThread(threading.Thread):
 
 
 class Camera(object):
+    """
+    Base class for all camera devices. At the end of the initialization, derived classes need to
+    call self.start_acquisition() to start the thread that continously acquires images from the
+    camera.
+    """
     def __init__(self):
         super(Camera, self).__init__()
         self._file_queue = collections.deque(maxlen=1000)
@@ -156,7 +170,14 @@ class Camera(object):
         '''
         Get the last snapped frame.
         '''
-        return self.preprocess(self._last_frame_queue[0][-1])
+        try:
+            return self.preprocess(self._last_frame_queue[0][-1])
+        except IndexError:  # no frame (yet)
+            return None
+
+    def close(self):
+        """Shut down the camera device, free resources, etc."""
+        pass
 
     def set_exposure(self, value):
         print('Setting exposure time not supported for this camera')
@@ -211,6 +232,7 @@ class FakeParamecium(object):
 
 class FakeCamera(Camera):
     def __init__(self, manipulator=None, image_z=0, paramecium=False):
+        super(FakeCamera, self).__init__()
         self.width = 1024
         self.height = 768
         self.exposure_time = 30
@@ -223,7 +245,8 @@ class FakeCamera(Camera):
         else:
             self.paramecium = None
         self.frame = np.array(np.clip(gaussian_filter(np.random.randn(self.width * 2, self.height * 2)*0.5, 10)*50 + 128, 0, 255), dtype=np.uint8)
-        super(FakeCamera, self).__init__()
+        
+        self.start_acquisition()
 
     def set_exposure(self, value):
         if 0 < value <= 200:
@@ -358,27 +381,29 @@ class RecordedVideoCamera(Camera):
         super(RecordedVideoCamera, self).__init__()
         self.file_name = file_name
         self.video = cv2.VideoCapture(file_name)
+        self.video.open(self.file_name)
         self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.pixel_per_um = pixel_per_um
-        # counter to repeatedly return the same image in case of slowdown
-        self._counter = 0
-        self._frame = None
-        self.slowdon = slowdown
+        self.frame_rate = self.video.get(cv2.CAP_PROP_FPS)
+        self.time_between_frames = 1/self.frame_rate * slowdown
+        self._last_frame_time = None
+        self.start_acquisition()
 
     def raw_snap(self):
-        self._counter += 1
-        if self._frame is None or self._counter >= self.slowdon:
-            success, frame = self.video.read()
-            self._frame = frame
-            self._counter = 0
-            if not success:
-                # Reopen the file
-                self.video.open(self.file_name)
-                success, frame = self.video.read()
-                if not success:
-                    raise ValueError(
-                        'Cannot read from file %s.' % self.file_name)
-        else:
-            return self._frame
+        if self._last_frame_time is not None:
+            if time.time() - self._last_frame_time < self.time_between_frames:
+                # We are too fast, sleep a bit before returning the frame
+                sleep_time = self.time_between_frames - (time.time() - self._last_frame_time)
+                time.sleep(sleep_time)
+        success, frame = self.video.read()
+        self._last_frame_time = time.time()        
+        
+        if not success and self._acquisition_thread.running:
+            raise ValueError('Cannot read from file %s.' % self.file_name)
+        
         return frame
+
+    def close(self):
+        self.video.release()
+        super(RecordedVideoCamera, self).close()

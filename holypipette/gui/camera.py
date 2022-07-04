@@ -546,6 +546,7 @@ class CameraGui(QtWidgets.QMainWindow):
 
     def closeEvent(self, evt):
        self.close()
+       return super(CameraGui, self).closeEvent(evt)
 
     @command(category='General',
              description='Exit the application')
@@ -587,7 +588,7 @@ class CameraGui(QtWidgets.QMainWindow):
                                                 'Increase/decrease exposure by 2.5ms')
         self.register_key_action(Qt.Key_I, None,
                                  self.camera_interface.save_image)
-        self.register_key_action(Qt.Key_R, None,
+        self.register_key_action(Qt.Key_I, Qt.SHIFT,
                                  self.toggle_recording)
 
     def close(self):
@@ -596,8 +597,9 @@ class CameraGui(QtWidgets.QMainWindow):
         '''
         if self.camera:
             print('closing GUI')
-            self.camera.stop_recording()
             self.camera.stop_acquisition()
+            self.camera.stop_recording()
+            self.camera.close()
             self.camera = None
         super(CameraGui, self).close()
 
