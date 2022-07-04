@@ -441,7 +441,8 @@ class CameraGui(QtWidgets.QMainWindow):
         self.record_button.setIcon(qta.icon('fa.video-camera'))
         self.record_button.setCheckable(True)
         self.record_button.setToolTip('Toggle video recording')
-
+        self.record_button.setStyleSheet('QToolButton:checked {background-color: red;}'
+        )
         self.autoexposure_button = QtWidgets.QToolButton(clicked=self.camera_interface.auto_exposure)
         self.autoexposure_button.setIcon(qta.icon('fa.camera'))
         self.autoexposure_button.setToolTip('Use automatic exposure')
@@ -592,10 +593,11 @@ class CameraGui(QtWidgets.QMainWindow):
         '''
         Close the GUI.
         '''
-        print('closing GUI')
-        self.camera.stop_recording()
-        self.camera.stop_acquisition()
-        del self.camera
+        if self.camera:
+            print('closing GUI')
+            self.camera.stop_recording()
+            self.camera.stop_acquisition()
+            self.camera = None
         super(CameraGui, self).close()
 
     def register_mouse_action(self, click_type, modifier, command,
