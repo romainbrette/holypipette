@@ -54,11 +54,10 @@ class LiveFeedQt(QtWidgets.QLabel):
     @QtCore.pyqtSlot()
     def update_image(self):
         try:
-            # get data and display
-            queue = self.camera.queue
-            if not len(queue):
-                return  # nothing in the queue yet
-            _, _, _, frame = queue[-1]
+            # get last frame from camera
+            _, _, _, frame = self.camera.last_frame()
+            if frame is None:
+                return  # Frame acquisition thread has stopped
 
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager

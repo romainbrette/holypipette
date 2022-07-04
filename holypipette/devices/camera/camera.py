@@ -12,6 +12,7 @@ import threading
 import imageio
 
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage import fourier_gaussian
 import warnings
@@ -28,6 +29,7 @@ __all__ = ['Camera', 'FakeCamera', 'RecordedVideoCamera']
 class FileWriteThread(threading.Thread): # saves frames individually
     def __init__(self, *args, **kwds):
         self.queue = kwds.pop('queue')
+        self.debug_write_delay = kwds.pop('debug_write_delay', 0)
         threading.Thread.__init__(self, *args, **kwds)
         self.running = True
 
@@ -35,25 +37,16 @@ class FileWriteThread(threading.Thread): # saves frames individually
         self.running = True
         frames_read = 0
         while self.running:
-            # wait until something is in the queue
             try:
-                fname, frame_number, elapsed_time, frame = self.queue[-1]
-
+                if len(self.queue) > self.queue.maxlen // 2:
+                    print(f'WARNING: FileWriteThread queue is getting full ({len(self.queue)}/{self.queue.maxlen})')
+                fname, frame_number, elapsed_time, frame = self.queue.popleft()
                 if frame_number is None:
                     # Marker for end of recording
-                    # Go through everything in the queue to make sure we haven't missed any
-                    for fname, frame_number, elapsed_time, frame in self.queue:
-                        if frame_number is None or frame_number <= frames_read:
-                            continue
-                        frames_read = frame_number
-                        imageio.imwrite(fname, frame)
                     break
-                idx = 1
-                while frame_number is None or frame_number <= frames_read:
-                    fname, frame_number, elapsed_time, frame = self.queue[idx]
-                    idx += 1
-                frames_read = frame_number
+
                 imageio.imwrite(fname, frame)
+                time.sleep(self.debug_write_delay)
                 if frame_number % 20 == 0:
                     print('Finished writing {}.'.format(fname))
             except IndexError:
@@ -96,7 +89,7 @@ class AcquisitionThread(threading.Thread):
             os.mkdir(self.directory)
         self.file_prefix = kwds.pop('file_prefix')
         self.camera = kwds.pop('camera')
-        self.queue = kwds.pop('queue')
+        self.queues = kwds.pop('queues')
         kwds['name'] = 'image_acquire_thread'
         self.running = True
         self.delay = kwds.pop('delay', 0.)
@@ -113,27 +106,33 @@ class AcquisitionThread(threading.Thread):
             image_fname = os.path.join(self.directory,
                                         'image_{}_{:03d}.tiff'.format(self.file_prefix,
                                                                 last_frame))
-            # Put image into queue for disk storage
-            self.queue.append((image_fname, last_frame, elapsed_time, frame))
+            # Put image into queues for disk storage and display
+            for queue in self.queues:
+                queue.append((image_fname, last_frame, elapsed_time, frame))
             last_frame += 1
-        # Put the end marker into the queue
-        self.queue.append((None, None, None, None))
+        
+        # Put the end marker into the queues
+        for queue in self.queues:
+            queue.append((None, None, None, None))
 
 
 class Camera(object):
     def __init__(self):
         super(Camera, self).__init__()
-        self.queue = collections.deque(maxlen=1000)
+        self._file_queue = collections.deque(maxlen=1000)
+        self._last_frame_queue = collections.deque(maxlen=1)
         self.width = 1000
         self.height = 1000
         self.flipped = False # Horizontal flip
 
-    def start_acquisition(self):
-        self.file_thread = FileWriteThread(queue=self.queue)
+    def start_acquisition(self, debug_write_delay=0):
+        self.file_thread = FileWriteThread(queue=self._file_queue,
+                                           debug_write_delay=debug_write_delay)
         self.acquisition_thread = AcquisitionThread(camera=self,
                                                      directory='.',
                                                      file_prefix='',
-                                                     queue=self.queue)
+                                                     queues=[self._file_queue,
+                                                     self._last_frame_queue])
         self.file_thread.start()
         self.acquisition_thread.start()
     
@@ -163,6 +162,12 @@ class Camera(object):
 
     def raw_snap(self):
         return None
+
+    def last_frame(self):
+        '''
+        Get the last snapped frame.
+        '''
+        return self.preprocess(self._last_frame_queue[0])
 
     def set_exposure(self, value):
         print('Setting exposure time not supported for this camera')
@@ -308,6 +313,55 @@ class FakeCamera(Camera):
         return np.array(np.clip(frame*exposure_factor, 0, 255),
                         dtype=np.uint8)
 
+
+def text_phantom(text, size):
+    # Availability is platform dependent
+    font = 'Arial'
+    
+    # Create font
+    pil_font = ImageFont.truetype(font + ".ttf", size=size[0] // len(text),
+                                  encoding="unic")
+    text_width, text_height = pil_font.getsize(text)
+
+    # create a blank canvas with extra space between lines
+    canvas = Image.new('RGB', size, (0, 0, 0))
+
+    # draw the text onto the canvas
+    draw = ImageDraw.Draw(canvas)
+    offset = ((size[0] - text_width) // 2,
+              (size[1] - text_height) // 2)
+    white = "#ffffff"
+    draw.text(offset, text, font=pil_font, fill=white)
+
+    # Convert the canvas into an array with values in [0, 1]
+    frame = np.asarray(canvas)
+    return frame
+
+
+class DebugCamera(Camera):
+    '''A fake camera that shows the frame number'''
+    def __init__(self, frames_per_s=20, write_delay=0):
+        super(DebugCamera, self).__init__()
+        self.width = 1024
+        self.height = 768
+        self.frameno = 0
+        self.last_frame_time = None
+        self.delay = 1/frames_per_s
+        self.start_acquisition(debug_write_delay=write_delay)
+
+    def raw_snap(self):
+        '''
+        Returns the current image.
+        This is a blocking call (wait until next frame is available)
+        '''
+        frame = text_phantom(f'{self.frameno:05d}', (self.width, self.height))
+        self.frameno += 1
+        if self.last_frame_time is not None:
+            if time.time() - self.last_frame_time < self.delay:
+                time.sleep(self.delay - (time.time() - self.last_frame_time))
+        self.last_frame_time = time.time()
+        return frame
+        
 
 class RecordedVideoCamera(Camera):
     def __init__(self, file_name, pixel_per_um, slowdown=1):
