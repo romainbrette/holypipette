@@ -122,7 +122,8 @@ class Camera(object):
         self._file_thread.start()
 
     def stop_recording(self):
-        self._file_thread.running = False
+        if self._file_thread:
+            self._file_thread.running = False
 
     def flip(self):
         self.flipped = not self.flipped

@@ -388,7 +388,7 @@ class CameraGui(QtWidgets.QMainWindow):
         pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
         pen.setWidth(4)
         painter.setPen(pen)
-        c_x, c_y = pixmap.width() / 2, pixmap.height() / 2
+        c_x, c_y = pixmap.width() // 2, pixmap.height() // 2
         painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
         painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
         painter.end()
@@ -425,21 +425,26 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_button = QtWidgets.QToolButton(clicked=self.toggle_help)
         self.help_button.setIcon(qta.icon('fa.question-circle'))
         self.help_button.setCheckable(True)
+        self.help_button.setToolTip('Toggle help window display')
 
         self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip,)
         self.flip_button.setIcon(qta.icon('fa.exchange'))
         self.flip_button.setCheckable(True)
+        self.flip_button.setToolTip('Flip image')
 
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
         self.log_button.setIcon(qta.icon('fa.file'))
         self.log_button.setCheckable(True)
+        self.log_button.setToolTip('Toggle log window display')
 
         self.record_button = QtWidgets.QToolButton(clicked=self.toggle_recording)
         self.record_button.setIcon(qta.icon('fa.video-camera'))
         self.record_button.setCheckable(True)
+        self.record_button.setToolTip('Toggle video recording')
 
         self.autoexposure_button = QtWidgets.QToolButton(clicked=self.camera_interface.auto_exposure)
         self.autoexposure_button.setIcon(qta.icon('fa.camera'))
+        self.autoexposure_button.setToolTip('Use automatic exposure')
 
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.addPermanentWidget(self.log_button)
@@ -469,7 +474,7 @@ class CameraGui(QtWidgets.QMainWindow):
 
         self.display_edit_funcs = []
         if display_edit is None:
-            display_edit = []
+            display_edit = [self.draw_cross]
         if isinstance(display_edit, Sequence):
             self.display_edit_funcs.extend(display_edit)
         else:
@@ -538,6 +543,9 @@ class CameraGui(QtWidgets.QMainWindow):
             image = func(image)
         return image
 
+    def closeEvent(self, evt):
+       self.close()
+
     @command(category='General',
              description='Exit the application')
     def exit(self):
@@ -585,6 +593,7 @@ class CameraGui(QtWidgets.QMainWindow):
         Close the GUI.
         '''
         print('closing GUI')
+        self.camera.stop_recording()
         self.camera.stop_acquisition()
         del self.camera
         super(CameraGui, self).close()
