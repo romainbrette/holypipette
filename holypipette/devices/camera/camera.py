@@ -38,6 +38,9 @@ class FileWriteThread(threading.Thread): # saves frames individually
     def run(self):
         self.running = True
         first_frame = None
+        if not os.path.exists(self.directory):
+            os.makedirs(self.directory)
+        
         while self.running:
             try:
                 if len(self.queue) > self.queue.maxlen // 2:
@@ -52,7 +55,7 @@ class FileWriteThread(threading.Thread): # saves frames individually
                     first_frame = frame_number
                 frame_number -= first_frame
 
-                fname = os.path.join(self.directory, f'image_{self.file_prefix}_{frame_number:05d}.tiff')
+                fname = os.path.join(self.directory, f'{self.file_prefix}_{frame_number:05d}.tiff')
                 imageio.imwrite(fname, frame)
                 time.sleep(self.debug_write_delay)
                 if frame_number % 20 == 0:

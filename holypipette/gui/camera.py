@@ -11,12 +11,16 @@ except ImportError:
 import functools
 import logging
 import datetime
+import os
 import traceback
+import time
 from types import MethodType
 
 import param
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QDialog, QPushButton, QDialogButtonBox, QHBoxLayout, QVBoxLayout,
+                             QLabel, QLineEdit, QStyle, QFileDialog)
 import qtawesome as qta
 
 from holypipette.interface.camera import CameraInterface
@@ -286,6 +290,63 @@ class LogNotifyHandler(logging.Handler):
             message = '{} ({})'.format(record.msg, str(exc))
         self.signal.emit(message)
 
+class RecordingDialog(QDialog):
+    def __init__(self, base_directory, parent=None):
+        super(RecordingDialog, self).__init__(parent=parent)
+
+        self.setWindowTitle('Recording')
+        self.directory_label = QLabel('Directory:')
+        self.directory_edit = QLineEdit()
+        dir_name = time.strftime('%Y%m%d_%H-%M-%S', time.localtime())
+        self.directory_edit.setText(os.path.join(base_directory, dir_name))
+        self.directory_button = QPushButton()
+        icon = self.style().standardIcon(QStyle.SP_DirIcon)
+        self.directory_button.setIcon(icon)
+        self.directory_button.clicked.connect(self.directory_clicked)
+        directory_layout = QHBoxLayout()
+        directory_layout.addWidget(self.directory_label)
+        directory_layout.addWidget(self.directory_edit)
+        directory_layout.addWidget(self.directory_button)
+
+        self.prefix_label = QLabel('Prefix:')
+        self.prefix_edit = QLineEdit()
+        self.prefix_edit.setText('frame')
+        self.prefix_edit.textEdited.connect(self.prefix_edited)
+        prefix_layout = QHBoxLayout()
+        prefix_layout.addWidget(self.prefix_label)
+        prefix_layout.addWidget(self.prefix_edit)
+        self.prefix_preview = QLabel()
+        self.prefix_edited()
+
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        self.layout.addLayout(directory_layout)
+        self.layout.addLayout(prefix_layout)
+        self.layout.addWidget(self.prefix_preview)
+        self.layout.addWidget(btns)
+        self.setLayout(self.layout)
+    
+    def prefix_edited(self):
+        self.prefix_preview.setText(f'<i>{self.prefix_edit.text()}_00000.tiff</i>')
+
+    def directory_clicked(self):
+        folder = self.select_folder()
+        if folder is not None:
+            print(folder, folder)
+            self.directory_edit.setText(folder)
+
+    def select_folder(self):
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly)
+        dialog.setWindowTitle('Select recording directory')
+        dialog.setDirectory(self.directory_edit.text())
+        if dialog.exec_():
+            return dialog.selectedFiles()[0]
+
 
 class CameraGui(QtWidgets.QMainWindow):
     '''
@@ -333,13 +394,13 @@ class CameraGui(QtWidgets.QMainWindow):
         painter.end()
 
     def __init__(self, camera, image_edit=None, display_edit=None,
-                 with_tracking=False):
+                 with_tracking=False, base_directory='.'):
         super(CameraGui, self).__init__()
         self.camera = camera
         self.is_recording = False
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
-
+        self.base_directory = base_directory
         self.show_overlay = True
         self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
@@ -489,8 +550,11 @@ class CameraGui(QtWidgets.QMainWindow):
             self.camera.stop_recording()
             self.is_recording = False
         else:
-            self.camera.start_recording()
-            self.is_recording = True
+            dlg = RecordingDialog(self.base_directory, parent=self)
+            if dlg.exec():
+                directory = os.path.abspath(dlg.directory_edit.text())
+                self.camera.start_recording(directory=directory)
+                self.is_recording = True
         self.record_button.setChecked(self.is_recording)
 
     def register_commands(self):
