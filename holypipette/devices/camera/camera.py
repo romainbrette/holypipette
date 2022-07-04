@@ -30,21 +30,29 @@ class FileWriteThread(threading.Thread): # saves frames individually
     def __init__(self, *args, **kwds):
         self.queue = kwds.pop('queue')
         self.debug_write_delay = kwds.pop('debug_write_delay', 0)
+        self.directory = kwds.pop('directory')
+        self.file_prefix = kwds.pop('file_prefix')
         threading.Thread.__init__(self, *args, **kwds)
         self.running = True
 
     def run(self):
         self.running = True
-        frames_read = 0
+        first_frame = None
         while self.running:
             try:
                 if len(self.queue) > self.queue.maxlen // 2:
                     print(f'WARNING: FileWriteThread queue is getting full ({len(self.queue)}/{self.queue.maxlen})')
-                fname, frame_number, elapsed_time, frame = self.queue.popleft()
+                frame_number, elapsed_time, frame = self.queue.popleft()
                 if frame_number is None:
                     # Marker for end of recording
                     break
+                
+                # Make all frame numbers relative to the first frame
+                if first_frame is None:
+                    first_frame = frame_number
+                frame_number -= first_frame
 
+                fname = os.path.join(self.directory, f'image_{self.file_prefix}_{frame_number:05d}.tiff')
                 imageio.imwrite(fname, frame)
                 time.sleep(self.debug_write_delay)
                 if frame_number % 20 == 0:
@@ -55,46 +63,14 @@ class FileWriteThread(threading.Thread): # saves frames individually
                 # TODO: Store image metadata to file as well?
 
 
-class MovieWriteThread(FileWriteThread): # saves frames to a movie file
-    def __init__(self, *args, **kwds):
-        FileWriteThread.__init__(self, *args, **kwds)
-
-    def run(self):
-        self.running = True
-        while self.running:
-            # wait until something is in the queue
-            try:
-                writer, frame_number, elapsed_time, frame = self.queue.popleft()
-                if writer is None:
-                    # special marker for the end of recording
-                    break
-                writer.append_data(frame)
-                if frame_number % 20 == 0:
-                    print('Finished writing {}.'.format(frame_number))
-            except IndexError:
-                # queue is emtpy, wait
-                time.sleep(0.01)
-                # TODO: Store image metadata to file as well?
-
 
 class AcquisitionThread(threading.Thread):
-    def __init__(self, *args, **kwds):
-        if any(kwd not in kwds for kwd in ['directory',
-                                           'file_prefix', 'camera']):
-            raise ValueError('Need to provide "n_images",'
-                             '"directory", "file_prefix", and "camera" keyword'
-                             'arguments')
-        self.directory = kwds.pop('directory')
-        if not os.path.exists(self.directory):
-            os.mkdir(self.directory)
-        self.file_prefix = kwds.pop('file_prefix')
-        self.camera = kwds.pop('camera')
-        self.queues = kwds.pop('queues')
-        kwds['name'] = 'image_acquire_thread'
+    def __init__(self, camera, queues):
+        self.camera = camera
+        self.queues = queues
         self.running = True
-        self.delay = kwds.pop('delay', 0.)
 
-        threading.Thread.__init__(self, *args, **kwds)
+        threading.Thread.__init__(self, name='image_acquire_thread')
 
     def run(self):
         self.running = True
@@ -103,17 +79,14 @@ class AcquisitionThread(threading.Thread):
         last_frame = 0
         while self.running:
             frame = self.camera.raw_snap()
-            image_fname = os.path.join(self.directory,
-                                        'image_{}_{:03d}.tiff'.format(self.file_prefix,
-                                                                last_frame))
             # Put image into queues for disk storage and display
             for queue in self.queues:
-                queue.append((image_fname, last_frame, elapsed_time, frame))
+                queue.append((last_frame, elapsed_time, frame))
             last_frame += 1
         
         # Put the end marker into the queues
         for queue in self.queues:
-            queue.append((None, None, None, None))
+            queue.append((None, None, None))
 
 
 class Camera(object):
@@ -121,21 +94,33 @@ class Camera(object):
         super(Camera, self).__init__()
         self._file_queue = collections.deque(maxlen=1000)
         self._last_frame_queue = collections.deque(maxlen=1)
+        self._acquisition_thread = None
+        self._file_thread = None
+        self._debug_write_delay = 0
         self.width = 1000
         self.height = 1000
         self.flipped = False # Horizontal flip
 
-    def start_acquisition(self, debug_write_delay=0):
-        self.file_thread = FileWriteThread(queue=self._file_queue,
-                                           debug_write_delay=debug_write_delay)
-        self.acquisition_thread = AcquisitionThread(camera=self,
-                                                     directory='.',
-                                                     file_prefix='',
+    def start_acquisition(self):
+        self._acquisition_thread = AcquisitionThread(camera=self,
                                                      queues=[self._file_queue,
-                                                     self._last_frame_queue])
-        self.file_thread.start()
-        self.acquisition_thread.start()
+                                                             self._last_frame_queue])
+        self._acquisition_thread.start()
     
+    def stop_acquisition(self):
+        self._acquisition_thread.running = False
+
+    def start_recording(self, directory='', file_prefix=''):
+        self._file_queue.clear()
+        self._file_thread = FileWriteThread(queue=self._file_queue,
+                                            directory=directory,
+                                            file_prefix=file_prefix,
+                                            debug_write_delay=self._debug_write_delay)
+        self._file_thread.start()
+
+    def stop_recording(self):
+        self._file_thread.running = False
+
     def flip(self):
         self.flipped = not self.flipped
 
@@ -167,7 +152,7 @@ class Camera(object):
         '''
         Get the last snapped frame.
         '''
-        return self.preprocess(self._last_frame_queue[0])
+        return self.preprocess(self._last_frame_queue[0][-1])
 
     def set_exposure(self, value):
         print('Setting exposure time not supported for this camera')
@@ -347,7 +332,8 @@ class DebugCamera(Camera):
         self.frameno = 0
         self.last_frame_time = None
         self.delay = 1/frames_per_s
-        self.start_acquisition(debug_write_delay=write_delay)
+        self._debug_write_delay=write_delay
+        self.start_acquisition()
 
     def raw_snap(self):
         '''

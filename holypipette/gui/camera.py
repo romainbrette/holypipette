@@ -336,6 +336,7 @@ class CameraGui(QtWidgets.QMainWindow):
                  with_tracking=False):
         super(CameraGui, self).__init__()
         self.camera = camera
+        self.is_recording = False
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
 
@@ -364,12 +365,17 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_button.setIcon(qta.icon('fa.question-circle'))
         self.help_button.setCheckable(True)
 
-        self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip)
+        self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip,)
         self.flip_button.setIcon(qta.icon('fa.exchange'))
+        self.flip_button.setCheckable(True)
 
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
         self.log_button.setIcon(qta.icon('fa.file'))
         self.log_button.setCheckable(True)
+
+        self.record_button = QtWidgets.QToolButton(clicked=self.toggle_recording)
+        self.record_button.setIcon(qta.icon('fa.video-camera'))
+        self.record_button.setCheckable(True)
 
         self.autoexposure_button = QtWidgets.QToolButton(clicked=self.camera_interface.auto_exposure)
         self.autoexposure_button.setIcon(qta.icon('fa.camera'))
@@ -377,6 +383,7 @@ class CameraGui(QtWidgets.QMainWindow):
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.addPermanentWidget(self.log_button)
         self.status_bar.addPermanentWidget(self.flip_button)
+        self.status_bar.addPermanentWidget(self.record_button)
         self.status_bar.addPermanentWidget(self.autoexposure_button)
 
         self.status_bar.setSizeGripEnabled(False)
@@ -475,6 +482,17 @@ class CameraGui(QtWidgets.QMainWindow):
     def exit(self):
         self.close()
 
+    @command(category='Camera',
+             description='Toggle recording image files to disk')
+    def toggle_recording(self, *args):
+        if self.is_recording:
+            self.camera.stop_recording()
+            self.is_recording = False
+        else:
+            self.camera.start_recording()
+            self.is_recording = True
+        self.record_button.setChecked(self.is_recording)
+
     def register_commands(self):
         '''
         Tie keypresses and mouse clicks to commands. Should call
@@ -495,13 +513,15 @@ class CameraGui(QtWidgets.QMainWindow):
                                                 'Increase/decrease exposure by 2.5ms')
         self.register_key_action(Qt.Key_I, None,
                                  self.camera_interface.save_image)
+        self.register_key_action(Qt.Key_R, None,
+                                 self.toggle_recording)
 
     def close(self):
         '''
         Close the GUI.
         '''
         print('closing GUI')
-        self.camera.acquisition_thread.running = False
+        self.camera.stop_acquisition()
         del self.camera
         super(CameraGui, self).close()
 

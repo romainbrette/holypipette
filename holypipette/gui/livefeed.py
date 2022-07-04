@@ -55,7 +55,7 @@ class LiveFeedQt(QtWidgets.QLabel):
     def update_image(self):
         try:
             # get last frame from camera
-            _, _, _, frame = self.camera.last_frame()
+            frame = self.camera.last_frame()
             if frame is None:
                 return  # Frame acquisition thread has stopped
 

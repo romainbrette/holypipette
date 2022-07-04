@@ -80,6 +80,7 @@ class CameraInterface(TaskInterface):
             except (KeyError, IOError):
                 self.exception('Saving image as "%s" failed.' % fname)
 
+
     def show_tracked_objects(self, img):
         from holypipette.gui.movingList import moveList
         del moveList[:]
