@@ -330,7 +330,7 @@ class RecordingDialog(QDialog):
         self.setLayout(self.layout)
     
     def prefix_edited(self):
-        self.prefix_preview.setText(f'<i>{self.prefix_edit.text()}_00000.tiff</i>')
+        self.prefix_preview.setText('<i>{}_00000.tiff</i>'.format(self.prefix_edit.text()))
 
     def directory_clicked(self):
         folder = self.select_folder()

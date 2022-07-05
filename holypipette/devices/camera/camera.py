@@ -46,7 +46,7 @@ class FileWriteThread(threading.Thread): # saves frames individually
         if self.first_frame is None:
             self.first_frame = frame_number
         frame_number -= self.first_frame
-        fname = os.path.join(self.directory, f'{self.file_prefix}_{frame_number:05d}.tiff')
+        fname = os.path.join(self.directory, '{}_{:05d}.tiff'.format(self.file_prefix, frame_number))
         imageio.imwrite(fname, frame)
         time.sleep(self.debug_write_delay)
         if frame_number % 20 == 0:
@@ -61,7 +61,8 @@ class FileWriteThread(threading.Thread): # saves frames individually
         while self.running:
             try:
                 if len(self.queue) > self.queue.maxlen // 2:
-                    print(f'WARNING: FileWriteThread queue is getting full ({len(self.queue)}/{self.queue.maxlen})')
+                    print('WARNING: FileWriteThread queue is getting full ({}/{)'.format(len(self.queue),
+                                                                                         self.queue.maxlen))
                 if not self.write_frame():
                     break
             except IndexError:
@@ -70,7 +71,7 @@ class FileWriteThread(threading.Thread): # saves frames individually
                 # TODO: Store image metadata to file as well?
 
         if len(self.queue):
-            print(f'Still need to write {len(self.queue)} images to disk.')
+            print('Still need to write {} images to disk.'.format(len(self.queue)))
             while True:
                 if not self.write_frame():
                     break
@@ -367,7 +368,7 @@ class DebugCamera(Camera):
         Returns the current image.
         This is a blocking call (wait until next frame is available)
         '''
-        frame = text_phantom(f'{self.frameno:05d}', (self.width, self.height))
+        frame = text_phantom('{:05d}'.format(self.frameno), (self.width, self.height))
         self.frameno += 1
         if self.last_frame_time is not None:
             if time.time() - self.last_frame_time < self.delay:
