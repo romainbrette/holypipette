@@ -561,7 +561,7 @@ class CameraGui(QtWidgets.QMainWindow):
             self.is_recording = False
         else:
             dlg = RecordingDialog(self.base_directory, parent=self)
-            if dlg.exec():
+            if dlg.exec_():
                 directory = os.path.abspath(dlg.directory_edit.text())
                 prefix = dlg.prefix_edit.text()
                 self.camera.start_recording(directory=directory, file_prefix=prefix)
