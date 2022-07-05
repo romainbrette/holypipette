@@ -61,8 +61,8 @@ class FileWriteThread(threading.Thread): # saves frames individually
         while self.running:
             try:
                 if len(self.queue) > self.queue.maxlen // 2:
-                    print('WARNING: FileWriteThread queue is getting full ({}/{)'.format(len(self.queue),
-                                                                                         self.queue.maxlen))
+                    print('WARNING: FileWriteThread queue is getting full ({}/{})'.format(len(self.queue),
+                                                                                          self.queue.maxlen))
                 if not self.write_frame():
                     break
             except IndexError:
