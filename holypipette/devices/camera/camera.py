@@ -32,9 +32,11 @@ class FileWriteThread(threading.Thread): # saves frames individually
         self.debug_write_delay = kwds.pop('debug_write_delay', 0)
         self.directory = kwds.pop('directory')
         self.file_prefix = kwds.pop('file_prefix')
+        self.skip_frames = kwds.pop('skip_frames', 0)
         threading.Thread.__init__(self, *args, **kwds)
         self.first_frame = None
         self.running = True
+        self.skipped = -1
 
     def write_frame(self):
         frame_number, elapsed_time, frame = self.queue.popleft()
@@ -46,11 +48,15 @@ class FileWriteThread(threading.Thread): # saves frames individually
         if self.first_frame is None:
             self.first_frame = frame_number
         frame_number -= self.first_frame
-        fname = os.path.join(self.directory, '{}_{:05d}.tiff'.format(self.file_prefix, frame_number))
-        imageio.imwrite(fname, frame)
-        time.sleep(self.debug_write_delay)
-        if frame_number % 20 == 0:
-            print('Finished writing {}.'.format(fname))
+        # If desired, skip frames
+        self.skipped += 1
+        if self.skipped >= self.skip_frames:
+            self.skipped = -1
+            fname = os.path.join(self.directory, '{}_{:05d}.tiff'.format(self.file_prefix, frame_number))
+            imageio.imwrite(fname, frame)
+            time.sleep(self.debug_write_delay)
+            if (frame_number - self.skip_frames) % (20 * (self.skip_frames + 1)) == 0:
+                print('Finished writing {}.'.format(fname))
         return True
 
     def run(self):
@@ -128,11 +134,12 @@ class Camera(object):
     def stop_acquisition(self):
         self._acquisition_thread.running = False
 
-    def start_recording(self, directory='', file_prefix=''):
+    def start_recording(self, directory='', file_prefix='', skip_frames=0):
         self._file_queue.clear()
         self._file_thread = FileWriteThread(queue=self._file_queue,
                                             directory=directory,
                                             file_prefix=file_prefix,
+                                            skip_frames=skip_frames,
                                             debug_write_delay=self._debug_write_delay)
         self._file_thread.start()
 
@@ -206,6 +213,9 @@ class Camera(object):
             return m-mean_luminance
         exposure = brentq(f, 0.1,100., rtol=0.1)
         self.set_exposure(exposure)
+
+    def get_frame_rate(self):
+        return -1
 
     def reset(self):
         pass
@@ -363,6 +373,9 @@ class DebugCamera(Camera):
         self._debug_write_delay=write_delay
         self.start_acquisition()
 
+    def get_frame_rate(self):
+        return 1/self.delay
+
     def raw_snap(self):
         '''
         Returns the current image.
@@ -390,6 +403,9 @@ class RecordedVideoCamera(Camera):
         self.time_between_frames = 1/self.frame_rate * slowdown
         self._last_frame_time = None
         self.start_acquisition()
+
+    def get_frame_rate(self):
+        return self.frame_rate
 
     def raw_snap(self):
         if self._last_frame_time is not None:

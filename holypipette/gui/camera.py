@@ -20,7 +20,7 @@ import param
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (QDialog, QPushButton, QDialogButtonBox, QHBoxLayout, QVBoxLayout,
-                             QLabel, QLineEdit, QStyle, QFileDialog)
+                             QLabel, QLineEdit, QStyle, QFileDialog, QSpinBox)
 import qtawesome as qta
 
 from holypipette.interface.camera import CameraInterface
@@ -291,8 +291,10 @@ class LogNotifyHandler(logging.Handler):
         self.signal.emit(message)
 
 class RecordingDialog(QDialog):
-    def __init__(self, base_directory, parent=None):
+    def __init__(self, base_directory, frame_rate, parent=None):
         super(RecordingDialog, self).__init__(parent=parent)
+
+        self.frame_rate = frame_rate
 
         self.setWindowTitle('Recording')
         self.directory_label = QLabel('Directory:')
@@ -307,6 +309,16 @@ class RecordingDialog(QDialog):
         directory_layout.addWidget(self.directory_label)
         directory_layout.addWidget(self.directory_edit)
         directory_layout.addWidget(self.directory_button)
+
+        skip_label = QLabel('Skip frames:')
+        self.skip_spin = QSpinBox()
+        self.skip_spin.setRange(0, 10)
+        self.skip_spin.valueChanged.connect(self.skip_edited)
+        skip_layout = QHBoxLayout()
+        skip_layout.addWidget(skip_label)
+        skip_layout.addWidget(self.skip_spin)
+        self.frame_rate_label = QLabel('')
+        self.skip_edited(self.skip_spin.value())
 
         self.prefix_label = QLabel('Prefix:')
         self.prefix_edit = QLineEdit()
@@ -326,11 +338,20 @@ class RecordingDialog(QDialog):
         self.layout.addLayout(directory_layout)
         self.layout.addLayout(prefix_layout)
         self.layout.addWidget(self.prefix_preview)
+        self.layout.addLayout(skip_layout)
+        self.layout.addWidget(self.frame_rate_label)
         self.layout.addWidget(btns)
         self.setLayout(self.layout)
     
     def prefix_edited(self):
         self.prefix_preview.setText('<i>{}_00000.tiff</i>'.format(self.prefix_edit.text()))
+
+    def skip_edited(self, value):
+        if self.frame_rate > 0:
+            rate = '~{:.1f}'.format(self.frame_rate / (value + 1))
+        else:
+            rate = '?'
+        self.frame_rate_label.setText('<i>{} frames per second</i>'.format(rate))
 
     def directory_clicked(self):
         folder = self.select_folder()
@@ -560,11 +581,13 @@ class CameraGui(QtWidgets.QMainWindow):
             self.camera.stop_recording()
             self.is_recording = False
         else:
-            dlg = RecordingDialog(self.base_directory, parent=self)
+            dlg = RecordingDialog(self.base_directory, frame_rate=self.camera.get_frame_rate(),
+                                  parent=self)
             if dlg.exec_():
                 directory = os.path.abspath(dlg.directory_edit.text())
                 prefix = dlg.prefix_edit.text()
-                self.camera.start_recording(directory=directory, file_prefix=prefix)
+                self.camera.start_recording(directory=directory, file_prefix=prefix,
+                                            skip_frames=dlg.skip_spin.value())
                 self.is_recording = True
         self.record_button.setChecked(self.is_recording)
 

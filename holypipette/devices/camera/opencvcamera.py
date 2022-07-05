@@ -30,6 +30,9 @@ class OpenCVCamera(Camera):
     def __del__(self):
         self.video.release()
 
+    def get_frame_rate(self):
+        return self.video.get(cv2.CAP_PROP_FPS)
+
     def reset(self):
         self.video.open(0)
 
