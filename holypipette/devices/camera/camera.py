@@ -35,6 +35,9 @@ class FileWriteThread(threading.Thread): # saves frames individually
         self.skip_frames = kwds.pop('skip_frames', 0)
         threading.Thread.__init__(self, *args, **kwds)
         self.first_frame = None
+        self.start_time = None
+        self.last_report = None
+        self.written_frames = 0
         self.running = True
         self.skipped = -1
 
@@ -47,6 +50,8 @@ class FileWriteThread(threading.Thread): # saves frames individually
         # Make all frame numbers relative to the first frame
         if self.first_frame is None:
             self.first_frame = frame_number
+            self.start_time = time.time()
+            self.last_report = self.start_time
         frame_number -= self.first_frame
         # If desired, skip frames
         self.skipped += 1
@@ -54,9 +59,14 @@ class FileWriteThread(threading.Thread): # saves frames individually
             self.skipped = -1
             fname = os.path.join(self.directory, '{}_{:05d}.tiff'.format(self.file_prefix, frame_number))
             imageio.imwrite(fname, frame)
+            self.written_frames += 1
             time.sleep(self.debug_write_delay)
-            if (frame_number - self.skip_frames) % (20 * (self.skip_frames + 1)) == 0:
-                print('Finished writing {}.'.format(fname))
+            if time.time() - self.last_report > 1:
+                frame_rate = self.written_frames / (time.time() - self.last_report)
+                print('Writing {:.1f} fps (total frames written: {})'.format(frame_rate, frame_number))
+                self.last_report = time.time()
+                self.written_frames = 0
+
         return True
 
     def run(self):
@@ -78,7 +88,7 @@ class FileWriteThread(threading.Thread): # saves frames individually
 
         if len(self.queue):
             print('Still need to write {} images to disk.'.format(len(self.queue)))
-            while True:
+            while len(self.queue):
                 if not self.write_frame():
                     break
 
@@ -95,6 +105,8 @@ class AcquisitionThread(threading.Thread):
         self.running = True
 
         start_time = time.time()
+        last_report = start_time
+        acquired_frames = 0
         last_frame = 0
         while self.running:
             frame = self.camera.raw_snap()
@@ -102,6 +114,12 @@ class AcquisitionThread(threading.Thread):
             for queue in self.queues:
                 queue.append((last_frame, time.time() - start_time, frame))
             last_frame += 1
+            acquired_frames += 1
+            if time.time() - last_report > 1:
+                frame_rate = acquired_frames / (time.time() - last_report)
+                print('Acquiring {:.1f} fps'.format(frame_rate))
+                last_report = time.time()
+                acquired_frames = 0
         
         # Put the end marker into the queues
         for queue in self.queues:
