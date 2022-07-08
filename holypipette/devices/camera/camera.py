@@ -137,7 +137,7 @@ class Camera(object):
     """
     def __init__(self):
         super(Camera, self).__init__()
-        self._file_queue = collections.deque(maxlen=1000)
+        self._file_queue = None
         self._last_frame_queue = collections.deque(maxlen=1)
         self._acquisition_thread = None
         self._file_thread = None
@@ -148,15 +148,17 @@ class Camera(object):
 
     def start_acquisition(self):
         self._acquisition_thread = AcquisitionThread(camera=self,
-                                                     queues=[self._file_queue,
-                                                             self._last_frame_queue])
+                                                     queues=[self._last_frame_queue])
         self._acquisition_thread.start()
     
     def stop_acquisition(self):
         self._acquisition_thread.running = False
 
-    def start_recording(self, directory='', file_prefix='', skip_frames=0):
-        self._file_queue.clear()
+    def start_recording(self, directory='', file_prefix='', skip_frames=0, queue_size=1000):
+        if len(self._acquisition_thread.queues) > 1:
+            del self._acquisition_thread.queues[1]
+        self._file_queue = collections.deque(maxlen=queue_size)
+        self._acquisition_thread.queues.append(self._file_queue)
         self._file_thread = FileWriteThread(queue=self._file_queue,
                                             directory=directory,
                                             file_prefix=file_prefix,

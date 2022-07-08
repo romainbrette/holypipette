@@ -291,10 +291,11 @@ class LogNotifyHandler(logging.Handler):
         self.signal.emit(message)
 
 class RecordingDialog(QDialog):
-    def __init__(self, base_directory, frame_rate, parent=None):
+    def __init__(self, base_directory, frame_rate, pixels, settings, parent=None):
         super(RecordingDialog, self).__init__(parent=parent)
 
         self.frame_rate = frame_rate
+        self.pixels = pixels
 
         self.setWindowTitle('Recording')
         self.directory_label = QLabel('Directory:')
@@ -318,17 +319,29 @@ class RecordingDialog(QDialog):
         skip_layout.addWidget(skip_label)
         skip_layout.addWidget(self.skip_spin)
         self.frame_rate_label = QLabel('')
-        self.skip_edited(self.skip_spin.value())
+        self.skip_spin.setValue(settings.get('skip_frames', 0))
+        self.skip_edited(self.skip_spin.value())  # trigger even for default value
+
+        memory_label = QLabel('Memory for file queue (MB):')
+        self.file_queue_frames = QLabel('')
+        self.memory_spin = QSpinBox()
+        self.memory_spin.setRange(10, 16000)
+        self.memory_spin.valueChanged.connect(self.memory_edited)
+        self.memory_spin.setValue(settings.get('memory', 1000))
+        self.memory_edited(self.memory_spin.value())  # trigger even for default value
+        memory_layout = QHBoxLayout()
+        memory_layout.addWidget(memory_label)
+        memory_layout.addWidget(self.memory_spin)
+        
 
         self.prefix_label = QLabel('Prefix:')
         self.prefix_edit = QLineEdit()
-        self.prefix_edit.setText('frame')
-        self.prefix_edit.textEdited.connect(self.prefix_edited)
+        self.prefix_edit.textChanged.connect(self.prefix_edited)
         prefix_layout = QHBoxLayout()
         prefix_layout.addWidget(self.prefix_label)
         prefix_layout.addWidget(self.prefix_edit)
         self.prefix_preview = QLabel()
-        self.prefix_edited()
+        self.prefix_edit.setText(settings.get('prefix', 'frame'))
 
         btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         btns.accepted.connect(self.accept)
@@ -340,6 +353,8 @@ class RecordingDialog(QDialog):
         self.layout.addWidget(self.prefix_preview)
         self.layout.addLayout(skip_layout)
         self.layout.addWidget(self.frame_rate_label)
+        self.layout.addLayout(memory_layout)
+        self.layout.addWidget(self.file_queue_frames)
         self.layout.addWidget(btns)
         self.setLayout(self.layout)
     
@@ -352,6 +367,9 @@ class RecordingDialog(QDialog):
         else:
             rate = '?'
         self.frame_rate_label.setText('<i>{} frames per second</i>'.format(rate))
+
+    def memory_edited(self, value):
+        self.file_queue_frames.setText('<i>space for ~{} frames in queue'.format(int(value*1e6/self.pixels)))
 
     def directory_clicked(self):
         folder = self.select_folder()
@@ -512,6 +530,7 @@ class CameraGui(QtWidgets.QMainWindow):
                                 image_edit=self.image_edit,
                                 display_edit=self.display_edit,
                                 mouse_handler=self.video_mouse_press)
+        self.recording_settings = {}
         self.setFocus()  # Need this to handle arrow keys, etc.
         self.interface_signals = {self.camera_interface: (self.camera_signal,
                                                           self.camera_reset_signal)}
@@ -582,12 +601,19 @@ class CameraGui(QtWidgets.QMainWindow):
             self.is_recording = False
         else:
             dlg = RecordingDialog(self.base_directory, frame_rate=self.camera.get_frame_rate(),
-                                  parent=self)
+                                  pixels=self.camera.width * self.camera.height,
+                                  settings=self.recording_settings, parent=self)
             if dlg.exec_():
                 directory = os.path.abspath(dlg.directory_edit.text())
                 prefix = dlg.prefix_edit.text()
+                self.recording_settings['prefix'] = prefix
+                memory = dlg.memory_spin.value()
+                self.recording_settings['memory'] = memory
+                skip_frames = dlg.skip_spin.value()
+                self.recording_settings['skip_frames'] = skip_frames
+                queue_size = int(memory*1e6/(self.camera.width * self.camera.height)) + 1
                 self.camera.start_recording(directory=directory, file_prefix=prefix,
-                                            skip_frames=dlg.skip_spin.value())
+                                            skip_frames=skip_frames, queue_size=queue_size)
                 self.is_recording = True
         self.record_button.setChecked(self.is_recording)
 
