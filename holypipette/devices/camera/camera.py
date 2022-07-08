@@ -7,6 +7,7 @@ TODO:
 from __future__ import print_function
 import collections
 import os
+import datetime
 import time
 import threading
 import imageio
@@ -42,7 +43,7 @@ class FileWriteThread(threading.Thread): # saves frames individually
         self.skipped = -1
 
     def write_frame(self):
-        frame_number, elapsed_time, frame = self.queue.popleft()
+        frame_number, creation_time, elapsed_time, frame = self.queue.popleft()
         if frame_number is None:
             # Marker for end of recording
             return False
@@ -58,7 +59,9 @@ class FileWriteThread(threading.Thread): # saves frames individually
         if self.skipped >= self.skip_frames:
             self.skipped = -1
             fname = os.path.join(self.directory, '{}_{:05d}.tiff'.format(self.file_prefix, frame_number))
-            imageio.imwrite(fname, frame)
+            with imageio.get_writer(fname, software='holypipette') as writer:
+                writer.append_data(frame, meta={'datetime': creation_time,
+                                                'description': 'Time since start of recording: {}'.format(repr(elapsed_time))})
             self.written_frames += 1
             time.sleep(self.debug_write_delay)
             if time.time() - self.last_report > 1:
@@ -112,7 +115,7 @@ class AcquisitionThread(threading.Thread):
             frame = self.camera.raw_snap()
             # Put image into queues for disk storage and display
             for queue in self.queues:
-                queue.append((last_frame, time.time() - start_time, frame))
+                queue.append((last_frame, datetime.datetime.now(), time.time() - start_time, frame))
             last_frame += 1
             acquired_frames += 1
             if time.time() - last_report > 1:
@@ -123,7 +126,7 @@ class AcquisitionThread(threading.Thread):
         
         # Put the end marker into the queues
         for queue in self.queues:
-            queue.append((None, None, None))
+            queue.append((None, None, None, None))
 
 
 class Camera(object):
