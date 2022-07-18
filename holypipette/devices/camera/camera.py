@@ -112,16 +112,22 @@ class AcquisitionThread(threading.Thread):
         acquired_frames = 0
         last_frame = 0
         while self.running:
-            frame = self.camera.raw_snap()
+            snap_time = time.time()
+            try:
+                frame = self.camera.raw_snap()
+            except Exception as ex:
+                print('something went wrong acquiring an image, waiting for 100ms: ' + str(ex))
+                time.sleep(.1)
+                continue
             # Put image into queues for disk storage and display
             for queue in self.queues:
-                queue.append((last_frame, datetime.datetime.now(), time.time() - start_time, frame))
+                queue.append((last_frame, datetime.datetime.now(), snap_time - start_time, frame))
             last_frame += 1
             acquired_frames += 1
-            if time.time() - last_report > 1:
-                frame_rate = acquired_frames / (time.time() - last_report)
+            if snap_time - last_report > 1:
+                frame_rate = acquired_frames / (snap_time - last_report)
                 print('Acquiring {:.1f} fps'.format(frame_rate))
-                last_report = time.time()
+                last_report = snap_time
                 acquired_frames = 0
         
         # Put the end marker into the queues
