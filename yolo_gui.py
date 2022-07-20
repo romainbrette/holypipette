@@ -17,6 +17,7 @@ console_logger()  # Log to the standard console as well
 class YoloTracker():
     def __init__(self, yolo_path, weights, device='', conf_thres=0.35, iou_thres=0.45, max_det=1000):
         self.detections = None
+        self.metadata = None
         # Ugly hack, but yolov5 is not packaged properly
         import sys
         sys.path.append(yolo_path)
@@ -61,30 +62,42 @@ class YoloTracker():
         
         # Return bounding boxes of predictions as relative to image size
         h, w = self.imgsz
-        return np.array([[p[0]/w, p[1]/h, (p[2] - p[0])/w, (p[3] - p[1])/h]
-                         for p in pred[0]])
+        
+        boxes = np.array([[p[0]/w, p[1]/h, (p[2] - p[0])/w, (p[3] - p[1])/h]
+                           for p in pred[0]])
+        dist_to_center = np.sqrt((boxes[:, 0] + boxes[:, 2]/2 - 0.5)**2 + (boxes[:, 1] + boxes[:, 3]/2 - 0.5)**2)
+        confidence = np.array(p[4] for p in pred[0])
+        return boxes, {'dist_to_center': dist_to_center, 'confidence': confidence}
 
     def receive_image(self, image):
         # TODO process image
         import time
         start = time.time()
         print('Start processing image')
-        self.detections = self.detect(image)
+        self.detections, self.metadata = self.detect(image)
         took = time.time() - start
         print('Detected {} Paramecia in {:.2f}s'.format(len(self.detections), took))
-        print(self.detections)
 
         return image
 
     def mark_cells(self, pixmap):
         from PyQt5 import QtGui, QtCore
         painter = QtGui.QPainter(pixmap)
+        painter.scale(pixmap.width(), pixmap.height())
+
         pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
         pen.setWidth(2)
         pen.setCosmetic(True)  # width independent of scaling
-        painter.setPen(pen)
-        painter.scale(pixmap.width(), pixmap.height())
-        for d in self.detections:
+        pen_highlight = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
+        pen_highlight.setWidth(2)
+        pen_highlight.setCosmetic(True)  # width independent of scaling
+        distances = self.metadata['dist_to_center']
+        min_idx = np.argmin(distances)
+        for idx, d in enumerate(self.detections):
+            if idx == min_idx:
+                painter.setPen(pen_highlight)
+            else:
+                painter.setPen(pen)
             box = QtCore.QRectF(*d)
             painter.drawRect(box)
         painter.end()
