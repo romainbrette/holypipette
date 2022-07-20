@@ -205,10 +205,15 @@ class Camera(object):
 
     def last_frame(self):
         '''
-        Get the last snapped frame.
+        Get the last snapped frame and its number
+
+        Returns
+        -------
+        (frame_number, frame)
         '''
         try:
-            return self.preprocess(self._last_frame_queue[0][-1])
+            last_entry = self._last_frame_queue[0]
+            return last_entry[0], last_entry[-1]
         except IndexError:  # no frame (yet)
             return None
 

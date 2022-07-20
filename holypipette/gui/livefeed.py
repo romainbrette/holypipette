@@ -30,10 +30,14 @@ class LiveFeedQt(QtWidgets.QLabel):
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
 
-        self.update_image()
-
         self.setMinimumSize(640, 480)
         self.setAlignment(Qt.AlignCenter)
+
+        # Remember the last frame that we displayed, to not unnecessarily
+        # process/show the same frame for slow input sources
+        self._last_frameno = None
+
+        self.update_image()
 
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
@@ -55,10 +59,12 @@ class LiveFeedQt(QtWidgets.QLabel):
     def update_image(self):
         try:
             # get last frame from camera
-            frame = self.camera.last_frame()
+            frameno, frame = self.camera.last_frame()
             if frame is None:
                 return  # Frame acquisition thread has stopped
-
+            if self._last_frameno is not None and self._last_frameno == frameno:
+                return  # Do not process/display the same frame again
+            self._last_frameno = frameno
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
                 if frame.dtype == np.dtype('uint32'):
