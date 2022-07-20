@@ -60,7 +60,7 @@ class YoloTracker():
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, max_det=self.max_det)
         
         # Return bounding boxes of predictions as relative to image size
-        w, h = self.imgsz
+        h, w = self.imgsz
         return np.array([[p[0]/w, p[1]/h, (p[2] - p[0])/w, (p[3] - p[1])/h]
                          for p in pred[0]])
 
