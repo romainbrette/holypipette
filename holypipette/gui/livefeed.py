@@ -36,6 +36,7 @@ class LiveFeedQt(QtWidgets.QLabel):
         # Remember the last frame that we displayed, to not unnecessarily
         # process/show the same frame for slow input sources
         self._last_frameno = None
+        self._last_edited_frame = None
 
         self.update_image()
 
@@ -62,9 +63,15 @@ class LiveFeedQt(QtWidgets.QLabel):
             frameno, frame = self.camera.last_frame()
             if frame is None:
                 return  # Frame acquisition thread has stopped
-            if self._last_frameno is not None and self._last_frameno == frameno:
-                return  # Do not process/display the same frame again
-            self._last_frameno = frameno
+            if self._last_frameno is None or self._last_frameno != frameno:
+                # No need to preprocess a frame again if it has not changed
+                frame = self.image_edit(frame)
+            
+                self._last_edited_frame = frame
+                self._last_frameno = frameno
+            else:
+                frame = self._last_edited_frame
+            
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
                 if frame.dtype == np.dtype('uint32'):
@@ -73,12 +80,11 @@ class LiveFeedQt(QtWidgets.QLabel):
                 else:
                     bytesPerLine = self.width
                     format = QtGui.QImage.Format_Indexed8
-
             else:
                 # Color image via OpenCV
                 bytesPerLine = 3*self.width
                 format = QtGui.QImage.Format_RGB888
-            frame = self.image_edit(frame)
+            
             q_image = QtGui.QImage(frame.data, self.width, self.height,
                                    bytesPerLine, format)
 
