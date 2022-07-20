@@ -10,13 +10,15 @@ import warnings
 from time import sleep, time
 import PIL
 
-from .lucam import Lucam, API, LucamError
 from .camera import *
 
 __all__ = ['LucamCamera']
 
 class LucamCamera(Camera):
     def __init__(self, exposure=None, gain=None, binning=1, x=0, y=0, width=None, height=None, depth=8):
+        # We move the lucam import here, to avoid importing it when it is not needed
+        from .lucam import Lucam, API
+
         super(LucamCamera, self).__init__()
 
         self.cam = Lucam()
