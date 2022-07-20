@@ -889,6 +889,8 @@ class CameraGui(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(int, int)
     def splitter_size_changed(self, pos, index):
+        if not self.config_button:
+            return  # nothing to do
         # If the splitter is moved all the way to the right, get back the focus
         if self.splitter.sizes()[1] == 0:
             self.setFocus()
