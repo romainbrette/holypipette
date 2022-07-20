@@ -3,5 +3,8 @@
 setup_script.py*
 .idea/
 screenshots/
+docs/
+dist/
+*.egg-info/
 
 
