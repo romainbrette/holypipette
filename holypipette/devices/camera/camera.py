@@ -451,7 +451,9 @@ class RecordedVideoCamera(Camera):
         self._last_frame_time = time.time()        
         
         if not success and self._acquisition_thread.running:
-            raise ValueError('Cannot read from file %s.' % self.file_name)
+            print('No more frames, stopping acquisition')
+            self.stop_acquisition()
+            return None
         
         return frame
 
