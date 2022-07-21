@@ -5,6 +5,7 @@ manipulators, pressure controller, etc.)
 import os
 import sys
 
+import numpy as np
 from PyQt5 import QtWidgets
 
 from holypipette.log_utils import console_logger
@@ -59,15 +60,16 @@ class YoloTracker():
         pred = self.model(im, augment=False, visualize=False)
         # NMS
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, max_det=self.max_det)
-        
         # Return bounding boxes of predictions as relative to image size
         h, w = self.imgsz
-        
         boxes = np.array([[p[0]/w, p[1]/h, (p[2] - p[0])/w, (p[3] - p[1])/h]
-                           for p in pred[0]])
-        dist_to_center = np.sqrt((boxes[:, 0] + boxes[:, 2]/2 - 0.5)**2 + (boxes[:, 1] + boxes[:, 3]/2 - 0.5)**2)
-        confidence = np.array(p[4] for p in pred[0])
-        return boxes, {'dist_to_center': dist_to_center, 'confidence': confidence}
+                           for p in pred[0].cpu()])
+        if boxes.size:
+            dist_to_center = np.sqrt((boxes[:, 0] + boxes[:, 2]/2 - 0.5)**2 + (boxes[:, 1] + boxes[:, 3]/2 - 0.5)**2)
+            confidence = np.array(p[4] for p in pred[0])
+            return boxes, {'dist_to_center': dist_to_center, 'confidence': confidence}
+        else:
+            return boxes, {'dist_to_center': np.array([]), 'confidence': np.array([])}
 
     def receive_image(self, image):
         # TODO process image
@@ -82,6 +84,9 @@ class YoloTracker():
 
     def mark_cells(self, pixmap):
         from PyQt5 import QtGui, QtCore
+
+        if not len(self.detections):
+            return
         painter = QtGui.QPainter(pixmap)
         painter.scale(pixmap.width(), pixmap.height())
 
