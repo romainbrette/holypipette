@@ -966,7 +966,7 @@ class ConfigGui(QtWidgets.QWidget):
         self.save_button.setIcon(qta.icon('fa.download'))
         top_row.addWidget(self.save_button)
         layout.addLayout(top_row)
-        all_params = config.params()
+        all_params = config.param.params()
         self.value_widgets = {}
         for category, params in config.categories:
             box = QtWidgets.QGroupBox(category)
@@ -976,17 +976,41 @@ class ConfigGui(QtWidgets.QWidget):
                 row = QtWidgets.QHBoxLayout()
                 label = ElidedLabel(param_obj.doc)
                 label.setToolTip(param_obj.doc)
-                if isinstance(param_obj, param.Number):
-                    value_widget = QtWidgets.QDoubleSpinBox()
-                    value_widget.setMinimum(param_obj.bounds[0])
-                    value_widget.setMaximum(param_obj.bounds[1])
+                if isinstance(param_obj, param.Integer):
+                    value_widget = QtWidgets.QSpinBox()
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(-2147483648)
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0])
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(2147483647)
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1])
                     value_widget.setValue(getattr(config, param_name))
                     value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
-                if isinstance(param_obj, NumberWithUnit):
+                elif isinstance(param_obj, param.Number):
+                    value_widget = QtWidgets.QDoubleSpinBox()
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(float('-inf'))
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0])
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(float('inf'))
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1])
+                    value_widget.setValue(getattr(config, param_name))
+                    value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
+                elif isinstance(param_obj, NumberWithUnit):
                     value_widget = QtWidgets.QDoubleSpinBox()
                     magnitude = param_obj.magnitude
-                    value_widget.setMinimum(param_obj.bounds[0]/magnitude)
-                    value_widget.setMaximum(param_obj.bounds[1]/magnitude)
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(float('-inf'))
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0]/magnitude)
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(float('inf'))
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1]/magnitude)
                     value_widget.setValue(getattr(config, param_name)/magnitude)
                     value_widget.valueChanged.connect(
                         functools.partial(self.set_numerical_value_with_unit, param_name, magnitude))
@@ -1009,7 +1033,7 @@ class ConfigGui(QtWidgets.QWidget):
     def value_changed(self, key, value):
         if key not in self.value_widgets:
             return
-        magnitude = getattr(self.config.params()[key], 'magnitude', 1)
+        magnitude = getattr(self.config.param.params()[key], 'magnitude', 1)
         # We do not update the GUI directly here (that's done in
         # display_changed_value), because it is possible that this is triggered
         # from code running in a different thread
