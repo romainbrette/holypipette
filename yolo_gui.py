@@ -9,7 +9,7 @@ import numpy as np
 from PyQt5 import QtWidgets
 import qtawesome as qta
 
-from holypipette.config import Config, Integer, Boolean
+from holypipette.config import Config, Number, Integer, Boolean, Filename
 from holypipette.log_utils import console_logger
 from holypipette.gui import CameraGui
 
@@ -18,41 +18,54 @@ from setup_script import *
 console_logger()  # Log to the standard console as well
 
 class TrackerConfig(Config):
-    crop = Boolean(default=True, doc='Crop central part of video?')
+    crop = Boolean(default=True, doc='Crop video?')
     crop_x = Integer(1016, bounds=(0, None), doc='x of cropping area')
     crop_y = Integer(848, bounds=(0, None), doc='y of cropping area')
     crop_width = Integer(416, bounds=(0, None), doc='width of cropping area')
     crop_height = Integer(352, bounds=(0, None), doc='height of cropping area')
 
-    categories = [('Image', ['crop', 'crop_x', 'crop_y', 'crop_width', 'crop_height'])]
+    weights = Filename('/home/marcel/programming/Paramecium-deeplearning/best.pt', doc='Filename for trained weights')
+
+    conf_threshold = Number(0.35, bounds=(0, 1), doc='Confidence threshold')
+    iou_threshold = Number(0.45, bounds=(0, 1), doc='IoU threshold')
+    max_detections = Integer(1000, bounds=(0, None), doc='Maximum detections')
+
+    categories = [('Image', ['crop', 'crop_x', 'crop_y', 'crop_width', 'crop_height']),
+                  ('Network', ['weights']),
+                  ('Parameters', ['conf_threshold', 'iou_threshold', 'max_detections'])
+                  ]
 
 
 class YoloTracker():
-    def __init__(self, yolo_path, weights, device='', conf_thres=0.35, iou_thres=0.45, max_det=1000):
+    def __init__(self, yolo_path, device=''):
         self.config = TrackerConfig(name='Tracking')
         self.detections = None
         self.metadata = None
         # Ugly hack, but yolov5 is not packaged properly
         import sys
         sys.path.append(yolo_path)
-
-        from models.common import DetectMultiBackend
-        from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
-        from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
-                                increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
-        from utils.plots import Annotator, colors, save_one_box
-        from utils.torch_utils import select_device, time_sync
+        from utils.torch_utils import select_device
+        self.yolo_path = yolo_path
         # Load model
         self.device = select_device(device)
-        data = os.path.join(yolo_path, 'data/coco128.yaml')
-        self.model = DetectMultiBackend(weights, device=self.device, dnn=False, data=data, fp16=False)
-        self.stride, self.names, self.pt = self.model.stride, self.model.names, self.model.pt
-        self.imgsz = None
-        self.conf_thres = conf_thres
-        self.iou_thres = iou_thres
-        self.max_det = max_det
         self.do_track = False
     
+    def initialize(self, iou_thres=0.45, max_det=1000):
+        from models.common import DetectMultiBackend
+        data = os.path.join(self.yolo_path, 'data/coco128.yaml')
+        self.model = DetectMultiBackend(self.config.weights, device=self.device, dnn=False, data=data, fp16=False)
+        self.stride, self.names, self.pt = self.model.stride, self.model.names, self.model.pt
+        self.imgsz = None
+        self.conf_thres = self.config.conf_threshold
+        self.iou_thres = self.config.iou_threshold
+        self.max_det = max_det
+    
+    def start(self):
+        self.initialize()
+        self.do_track = True
+
+    def stop(self):
+        self.do_track = False
 
     def detect(self, image):
         from utils.general import check_img_size, non_max_suppression
@@ -90,7 +103,7 @@ class YoloTracker():
 
         if boxes.size:
             dist_to_center = np.sqrt((boxes[:, 0] + boxes[:, 2]/2 - 0.5)**2 + (boxes[:, 1] + boxes[:, 3]/2 - 0.5)**2)
-            confidence = np.array(p[4] for p in pred[0])
+            confidence = np.array([p[4] for p in pred[0]])
             meta_data = {'dist_to_center': dist_to_center, 'confidence': confidence, 'crop_rect': crop_rect}
         else:
             meta_data = {'dist_to_center': np.array([]), 'confidence': np.array([]), 'crop_rect': crop_rect}
@@ -103,7 +116,9 @@ class YoloTracker():
         start = time.time()
         self.detections, self.metadata = self.detect(image)
         took = time.time() - start
-        print('Detected {} Paramecia in {:.2f}s'.format(len(self.detections), took))
+        print('Detected {} Paramecia in {:.2f}s (confidence: {})'.format(len(self.detections),
+                                                                         took,
+                                                                         ', '.join('{:.2f}'.format(c) for c in self.metadata['confidence'])))
 
         return image
 
@@ -131,24 +146,29 @@ class YoloTracker():
         if not len(self.detections):
             return
 
-        pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
-        pen.setWidth(2)
-        pen.setCosmetic(True)  # width independent of scaling
-        pen_highlight = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
-        pen_highlight.setWidth(2)
-        pen_highlight.setCosmetic(True)  # width independent of scaling
+        pen_outside = QtGui.QPen(QtGui.QColor(64, 83, 211, 125))
+        pen_outside.setWidth(2)
+        pen_outside.setCosmetic(True)  # width independent of scaling
+        pen_center = QtGui.QPen(QtGui.QColor(221, 179, 16, 125))
+        pen_center.setWidth(2)
+        pen_center.setCosmetic(True)  # width independent of scaling
         distances = self.metadata['dist_to_center']
         min_idx = np.argmin(distances)
         for idx, d in enumerate(self.detections):
             if idx == min_idx:
-                painter.setPen(pen_highlight)
+                pen = pen_center
             else:
-                painter.setPen(pen)
+                pen = pen_outside
+            # Modulate transparency by confidence level → confidence 0 = transparent, confidence 1 = opaque
+            if 'confidence' in self.metadata:
+                c = pen.color()
+                c.setAlpha(round(self.metadata['confidence'][idx]*255))
+            painter.setPen(pen)
             box = QtCore.QRectF(*d)
             painter.drawRect(box)
         painter.end()
 
-yolo_tracker = YoloTracker(yolo_path='/home/marcel/programming/Paramecium-deeplearning/yolov5', weights='/home/marcel/programming/Paramecium-deeplearning/best.pt') 
+yolo_tracker = YoloTracker(yolo_path='/home/marcel/programming/Paramecium-deeplearning/yolov5') 
 
 class TrackerGui(CameraGui):
     def __init__(self, camera, tracker):
@@ -162,9 +182,13 @@ class TrackerGui(CameraGui):
         self.track_button.setCheckable(True)
         self.track_button.setToolTip('Toggle tracking')
         self.status_bar.addPermanentWidget(self.track_button)
+        self.setWindowTitle("Tracking GUI")
     
     def toggle_tracking(self):
-        self.tracker.do_track = self.track_button.isChecked()
+        if self.track_button.isChecked():
+            self.tracker.start()
+        else:
+            self.tracker.stop()
 
 app = QtWidgets.QApplication(sys.argv)
 gui = TrackerGui(camera, yolo_tracker)
