@@ -1018,6 +1018,10 @@ class ConfigGui(QtWidgets.QWidget):
                     value_widget = QtWidgets.QCheckBox()
                     value_widget.setChecked(getattr(config, param_name))
                     value_widget.stateChanged.connect(functools.partial(self.set_boolean_value, param_name, value_widget))
+                elif isinstance(param_obj, (param.Filename, param.Foldername)):
+                    value_widget = QtWidgets.QLineEdit()
+                    value_widget.setText(getattr(config, param_name))
+                    value_widget.editingFinished.connect(functools.partial(self.set_text_value, param_name, value_widget))
                 value_widget.setToolTip(param_obj.doc)
                 self.value_widgets[param_name] = value_widget
                 row.addWidget(label, stretch=1)
@@ -1033,17 +1037,22 @@ class ConfigGui(QtWidgets.QWidget):
     def value_changed(self, key, value):
         if key not in self.value_widgets:
             return
-        magnitude = getattr(self.config.param.params()[key], 'magnitude', 1)
-        # We do not update the GUI directly here (that's done in
-        # display_changed_value), because it is possible that this is triggered
-        # from code running in a different thread
-        self.value_changed_signal.emit(key, value/magnitude)
+        if isinstance(value, str):
+            self.value_changed_signal.emit(key, value)
+        else:
+            magnitude = getattr(self.config.param.params()[key], 'magnitude', 1)
+            # We do not update the GUI directly here (that's done in
+            # display_changed_value), because it is possible that this is triggered
+            # from code running in a different thread
+            self.value_changed_signal.emit(key, value/magnitude)
 
     @QtCore.pyqtSlot('QString', object)
     def display_changed_value(self, key, value):
         widget = self.value_widgets[key]
         if isinstance(widget, QtWidgets.QCheckBox):
             widget.setChecked(value)
+        elif isinstance(widget, QLineEdit):
+            widget.setText(value)
         else:
             widget.setValue(value)
 
@@ -1055,6 +1064,9 @@ class ConfigGui(QtWidgets.QWidget):
 
     def set_boolean_value(self, name, widget):
         setattr(self.config, name, widget.isChecked())
+
+    def set_text_value(self, name, widget):
+        setattr(self.config, name, widget.text())
 
     def save_config(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save configuration",

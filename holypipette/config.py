@@ -8,7 +8,7 @@ except ImportError:
     warnings.warn('Could not import pyyaml, will not be able to save or load configuration files')
 
 import param
-from param import Number, Boolean, Integer  # to make it available for import
+from param import Number, Boolean, Integer, Filename, Foldername  # to make it available for import
 
 class NumberWithUnit(param.Number):
     __slots__ = ['unit', 'magnitude']
