@@ -7,7 +7,9 @@ import sys
 
 import numpy as np
 from PyQt5 import QtWidgets
+import qtawesome as qta
 
+from holypipette.config import Config, Integer, Boolean
 from holypipette.log_utils import console_logger
 from holypipette.gui import CameraGui
 
@@ -15,8 +17,19 @@ from setup_script import *
 
 console_logger()  # Log to the standard console as well
 
+class TrackerConfig(Config):
+    crop = Boolean(default=True, doc='Crop central part of video?')
+    crop_x = Integer(1016, bounds=(0, None), doc='x of cropping area')
+    crop_y = Integer(848, bounds=(0, None), doc='y of cropping area')
+    crop_width = Integer(416, bounds=(0, None), doc='width of cropping area')
+    crop_height = Integer(352, bounds=(0, None), doc='height of cropping area')
+
+    categories = [('Image', ['crop', 'crop_x', 'crop_y', 'crop_width', 'crop_height'])]
+
+
 class YoloTracker():
     def __init__(self, yolo_path, weights, device='', conf_thres=0.35, iou_thres=0.45, max_det=1000):
+        self.config = TrackerConfig(name='Tracking')
         self.detections = None
         self.metadata = None
         # Ugly hack, but yolov5 is not packaged properly
@@ -38,10 +51,20 @@ class YoloTracker():
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres
         self.max_det = max_det
+        self.do_track = False
     
 
     def detect(self, image):
         from utils.general import check_img_size, non_max_suppression
+        if self.config.crop and (image.shape[0] > self.config.crop_height or image.shape[1] > self.config.crop_width):
+            start_row, end_row = self.config.crop_y, self.config.crop_y + self.config.crop_height
+            start_col, end_col = self.config.crop_x, self.config.crop_x + self.config.crop_width
+            # Crop area (x, y, w, h) in relative values
+            crop_rect = np.array([start_col/image.shape[1], start_row/image.shape[0], (end_col-start_col)/image.shape[1], (end_row-start_row)/image.shape[0]])
+            image = image[start_row:end_row, start_col:end_col, :]
+        else:
+            crop_rect = None
+        
         # Convert
         image = image.transpose((2, 0, 1))
         image = np.ascontiguousarray(image)
@@ -64,18 +87,20 @@ class YoloTracker():
         h, w = self.imgsz
         boxes = np.array([[p[0]/w, p[1]/h, (p[2] - p[0])/w, (p[3] - p[1])/h]
                            for p in pred[0].cpu()])
+
         if boxes.size:
             dist_to_center = np.sqrt((boxes[:, 0] + boxes[:, 2]/2 - 0.5)**2 + (boxes[:, 1] + boxes[:, 3]/2 - 0.5)**2)
             confidence = np.array(p[4] for p in pred[0])
-            return boxes, {'dist_to_center': dist_to_center, 'confidence': confidence}
+            meta_data = {'dist_to_center': dist_to_center, 'confidence': confidence, 'crop_rect': crop_rect}
         else:
-            return boxes, {'dist_to_center': np.array([]), 'confidence': np.array([])}
+            meta_data = {'dist_to_center': np.array([]), 'confidence': np.array([]), 'crop_rect': crop_rect}
+        return boxes, meta_data
 
     def receive_image(self, image):
-        # TODO process image
+        if not self.do_track:
+            return image
         import time
         start = time.time()
-        print('Start processing image')
         self.detections, self.metadata = self.detect(image)
         took = time.time() - start
         print('Detected {} Paramecia in {:.2f}s'.format(len(self.detections), took))
@@ -83,12 +108,28 @@ class YoloTracker():
         return image
 
     def mark_cells(self, pixmap):
+        if not self.do_track:
+            return
         from PyQt5 import QtGui, QtCore
+
+        painter = QtGui.QPainter(pixmap)
+        if self.metadata.get('crop_rect', None) is not None:
+            x, y, w, h = self.metadata['crop_rect']
+            # show cropping area
+            pen = QtGui.QPen(QtGui.QColor(0, 0, 0, 50))
+            pen.setWidth(3)
+            painter.setPen(pen)
+            box = QtCore.QRectF(round(pixmap.width()*x), round(pixmap.height()*y), round(pixmap.width()*w), round(pixmap.height()*h))
+            painter.drawRect(box)
+
+            # plot to cropped area
+            painter.translate(round(pixmap.width()*x), round(pixmap.height()*y))
+            painter.scale(round(pixmap.width()*w), round(pixmap.height()*h))
+        else:
+            painter.scale(pixmap.width(), pixmap.height())
 
         if not len(self.detections):
             return
-        painter = QtGui.QPainter(pixmap)
-        painter.scale(pixmap.width(), pixmap.height())
 
         pen = QtGui.QPen(QtGui.QColor(0, 200, 0, 125))
         pen.setWidth(2)
@@ -109,10 +150,24 @@ class YoloTracker():
 
 yolo_tracker = YoloTracker(yolo_path='/home/marcel/programming/Paramecium-deeplearning/yolov5', weights='/home/marcel/programming/Paramecium-deeplearning/best.pt') 
 
+class TrackerGui(CameraGui):
+    def __init__(self, camera, tracker):
+        super(TrackerGui, self).__init__(camera,
+                                         image_edit=tracker.receive_image,
+                                         display_edit=tracker.mark_cells)
+        self.add_config_gui(tracker.config)
+        self.tracker = tracker
+        self.track_button = QtWidgets.QToolButton(clicked=self.toggle_tracking)
+        self.track_button.setIcon(qta.icon('fa.eye'))
+        self.track_button.setCheckable(True)
+        self.track_button.setToolTip('Toggle tracking')
+        self.status_bar.addPermanentWidget(self.track_button)
+    
+    def toggle_tracking(self):
+        self.tracker.do_track = self.track_button.isChecked()
+
 app = QtWidgets.QApplication(sys.argv)
-gui = CameraGui(camera,
-                image_edit=yolo_tracker.receive_image,
-                display_edit=yolo_tracker.mark_cells)
+gui = TrackerGui(camera, yolo_tracker)
 gui.initialize()
 gui.show()
 ret = app.exec_()
