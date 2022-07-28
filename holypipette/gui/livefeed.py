@@ -66,7 +66,6 @@ class LiveFeedQt(QtWidgets.QLabel):
             if self._last_frameno is None or self._last_frameno != frameno:
                 # No need to preprocess a frame again if it has not changed
                 frame = self.image_edit(frame)
-            
                 self._last_edited_frame = frame
                 self._last_frameno = frameno
             else:
@@ -75,17 +74,17 @@ class LiveFeedQt(QtWidgets.QLabel):
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
                 if frame.dtype == np.dtype('uint32'):
-                    bytesPerLine = self.width*4
+                    bytesPerLine = frame.shape[1]*4
                     format = QtGui.QImage.Format_RGB32
                 else:
-                    bytesPerLine = self.width
+                    bytesPerLine = frame.shape[1]
                     format = QtGui.QImage.Format_Indexed8
             else:
                 # Color image via OpenCV
-                bytesPerLine = 3*self.width
+                bytesPerLine = 3*frame.shape[1]
                 format = QtGui.QImage.Format_RGB888
             
-            q_image = QtGui.QImage(frame.data, self.width, self.height,
+            q_image = QtGui.QImage(frame.data, frame.shape[1], frame.shape[0],
                                    bytesPerLine, format)
 
             if format == QtGui.QImage.Format_RGB888:
