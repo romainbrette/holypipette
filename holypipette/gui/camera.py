@@ -1044,7 +1044,10 @@ class ConfigGui(QtWidgets.QWidget):
             # We do not update the GUI directly here (that's done in
             # display_changed_value), because it is possible that this is triggered
             # from code running in a different thread
-            self.value_changed_signal.emit(key, value/magnitude)
+            if magnitude != 1:
+                self.value_changed_signal.emit(key, value/magnitude)
+            else:
+                self.value_changed_signal.emit(key, value)
 
     @QtCore.pyqtSlot('QString', object)
     def display_changed_value(self, key, value):
@@ -1057,6 +1060,7 @@ class ConfigGui(QtWidgets.QWidget):
             widget.setValue(value)
 
     def set_numerical_value(self, name, value):
+        print('value for', name, 'is', value)
         setattr(self.config, name, value)
 
     def set_numerical_value_with_unit(self, name, magnitude, value):
