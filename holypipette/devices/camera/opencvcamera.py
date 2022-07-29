@@ -25,9 +25,13 @@ class OpenCVCamera(Camera):
             self.video.set(4, height)
         self.width = int(self.video.get(3))
         self.height = int(self.video.get(4))
+        self.start_acquisition()
 
     def __del__(self):
         self.video.release()
+
+    def get_frame_rate(self):
+        return self.video.get(cv2.CAP_PROP_FPS)
 
     def reset(self):
         self.video.open(0)

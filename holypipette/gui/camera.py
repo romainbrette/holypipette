@@ -2,15 +2,25 @@
 from __future__ import absolute_import
 
 import collections
+# Support older versions of Python
+try:
+    from collections.abc import Sequence
+except ImportError:
+    from collections import Sequence
+
 import functools
 import logging
 import datetime
+import os
 import traceback
+import time
 from types import MethodType
 
 import param
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QDialog, QPushButton, QDialogButtonBox, QHBoxLayout, QVBoxLayout,
+                             QLabel, QLineEdit, QStyle, QFileDialog, QSpinBox)
 import qtawesome as qta
 
 from holypipette.interface.camera import CameraInterface
@@ -280,6 +290,102 @@ class LogNotifyHandler(logging.Handler):
             message = '{} ({})'.format(record.msg, str(exc))
         self.signal.emit(message)
 
+class RecordingDialog(QDialog):
+    def __init__(self, base_directory, frame_rate, pixels, settings, parent=None):
+        super(RecordingDialog, self).__init__(parent=parent)
+
+        self.frame_rate = frame_rate
+        self.pixels = pixels
+
+        self.setWindowTitle('Recording')
+        self.directory_label = QLabel('Directory:')
+        self.directory_edit = QLineEdit()
+        dir_name = time.strftime('%Y%m%d_%H-%M-%S', time.localtime())
+        self.directory_edit.setText(os.path.join(base_directory, dir_name))
+        self.directory_button = QPushButton()
+        icon = self.style().standardIcon(QStyle.SP_DirIcon)
+        self.directory_button.setIcon(icon)
+        self.directory_button.clicked.connect(self.directory_clicked)
+        directory_layout = QHBoxLayout()
+        directory_layout.addWidget(self.directory_label)
+        directory_layout.addWidget(self.directory_edit)
+        directory_layout.addWidget(self.directory_button)
+
+        skip_label = QLabel('Skip frames:')
+        self.skip_spin = QSpinBox()
+        self.skip_spin.setRange(0, 10)
+        self.skip_spin.valueChanged.connect(self.skip_edited)
+        skip_layout = QHBoxLayout()
+        skip_layout.addWidget(skip_label)
+        skip_layout.addWidget(self.skip_spin)
+        self.frame_rate_label = QLabel('')
+        self.skip_spin.setValue(settings.get('skip_frames', 0))
+        self.skip_edited(self.skip_spin.value())  # trigger even for default value
+
+        memory_label = QLabel('Memory for file queue (MB):')
+        self.file_queue_frames = QLabel('')
+        self.memory_spin = QSpinBox()
+        self.memory_spin.setRange(10, 16000)
+        self.memory_spin.valueChanged.connect(self.memory_edited)
+        self.memory_spin.setValue(settings.get('memory', 1000))
+        self.memory_edited(self.memory_spin.value())  # trigger even for default value
+        memory_layout = QHBoxLayout()
+        memory_layout.addWidget(memory_label)
+        memory_layout.addWidget(self.memory_spin)
+        
+
+        self.prefix_label = QLabel('Prefix:')
+        self.prefix_edit = QLineEdit()
+        self.prefix_edit.textChanged.connect(self.prefix_edited)
+        prefix_layout = QHBoxLayout()
+        prefix_layout.addWidget(self.prefix_label)
+        prefix_layout.addWidget(self.prefix_edit)
+        self.prefix_preview = QLabel()
+        self.prefix_edit.setText(settings.get('prefix', 'frame'))
+
+        btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+
+        self.layout = QVBoxLayout()
+        self.layout.addLayout(directory_layout)
+        self.layout.addLayout(prefix_layout)
+        self.layout.addWidget(self.prefix_preview)
+        self.layout.addLayout(skip_layout)
+        self.layout.addWidget(self.frame_rate_label)
+        self.layout.addLayout(memory_layout)
+        self.layout.addWidget(self.file_queue_frames)
+        self.layout.addWidget(btns)
+        self.setLayout(self.layout)
+    
+    def prefix_edited(self):
+        self.prefix_preview.setText('<i>{}_00000.tiff</i>'.format(self.prefix_edit.text()))
+
+    def skip_edited(self, value):
+        if self.frame_rate > 0:
+            rate = '~{:.1f}'.format(self.frame_rate / (value + 1))
+        else:
+            rate = '?'
+        self.frame_rate_label.setText('<i>{} frames per second</i>'.format(rate))
+
+    def memory_edited(self, value):
+        self.file_queue_frames.setText('<i>space for ~{} frames in queue'.format(int(value*1e6/self.pixels)))
+
+    def directory_clicked(self):
+        folder = self.select_folder()
+        if folder is not None:
+            print(folder, folder)
+            self.directory_edit.setText(folder)
+
+    def select_folder(self):
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly)
+        dialog.setWindowTitle('Select recording directory')
+        dialog.setDirectory(self.directory_edit.text())
+        if dialog.exec_():
+            return dialog.selectedFiles()[0]
+
 
 class CameraGui(QtWidgets.QMainWindow):
     '''
@@ -321,18 +427,19 @@ class CameraGui(QtWidgets.QMainWindow):
         pen = QtGui.QPen(QtGui.QColor(200, 0, 0, 125))
         pen.setWidth(4)
         painter.setPen(pen)
-        c_x, c_y = pixmap.width() / 2, pixmap.height() / 2
+        c_x, c_y = pixmap.width() // 2, pixmap.height() // 2
         painter.drawLine(c_x - 15, c_y, c_x + 15, c_y)
         painter.drawLine(c_x, c_y - 15, c_x, c_y + 15)
         painter.end()
 
     def __init__(self, camera, image_edit=None, display_edit=None,
-                 with_tracking=False):
+                 with_tracking=False, base_directory='.'):
         super(CameraGui, self).__init__()
         self.camera = camera
+        self.is_recording = False
         self.camera_interface = CameraInterface(camera,
                                                 with_tracking=with_tracking)
-
+        self.base_directory = base_directory
         self.show_overlay = True
         self.with_tracking = with_tracking
         self.status_bar = QtWidgets.QStatusBar()
@@ -357,20 +464,32 @@ class CameraGui(QtWidgets.QMainWindow):
         self.help_button = QtWidgets.QToolButton(clicked=self.toggle_help)
         self.help_button.setIcon(qta.icon('fa.question-circle'))
         self.help_button.setCheckable(True)
+        self.help_button.setToolTip('Toggle help window display')
 
-        self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip)
+        self.flip_button = QtWidgets.QToolButton(clicked=self.camera.flip,)
         self.flip_button.setIcon(qta.icon('fa.exchange'))
+        self.flip_button.setCheckable(True)
+        self.flip_button.setToolTip('Flip image')
 
         self.log_button = QtWidgets.QToolButton(clicked=self.toggle_log)
         self.log_button.setIcon(qta.icon('fa.file'))
         self.log_button.setCheckable(True)
+        self.log_button.setToolTip('Toggle log window display')
 
+        self.record_button = QtWidgets.QToolButton(clicked=self.toggle_recording)
+        self.record_button.setIcon(qta.icon('fa.video-camera'))
+        self.record_button.setCheckable(True)
+        self.record_button.setToolTip('Toggle video recording')
+        self.record_button.setStyleSheet('QToolButton:checked {background-color: red;}'
+        )
         self.autoexposure_button = QtWidgets.QToolButton(clicked=self.camera_interface.auto_exposure)
         self.autoexposure_button.setIcon(qta.icon('fa.camera'))
+        self.autoexposure_button.setToolTip('Use automatic exposure')
 
         self.status_bar.addPermanentWidget(self.help_button)
         self.status_bar.addPermanentWidget(self.log_button)
         self.status_bar.addPermanentWidget(self.flip_button)
+        self.status_bar.addPermanentWidget(self.record_button)
         self.status_bar.addPermanentWidget(self.autoexposure_button)
 
         self.status_bar.setSizeGripEnabled(False)
@@ -395,14 +514,14 @@ class CameraGui(QtWidgets.QMainWindow):
 
         self.display_edit_funcs = []
         if display_edit is None:
-            display_edit = self.draw_cross
-        if isinstance(display_edit, collections.Sequence):
+            display_edit = [self.draw_cross]
+        if isinstance(display_edit, Sequence):
             self.display_edit_funcs.extend(display_edit)
         else:
             self.display_edit_funcs.append(display_edit)
 
         self.image_edit_funcs = []
-        if isinstance(image_edit, collections.Sequence):
+        if isinstance(image_edit, Sequence):
             self.image_edit_funcs.extend(image_edit)
         elif image_edit is not None:
             self.image_edit_funcs.append(image_edit)
@@ -411,6 +530,7 @@ class CameraGui(QtWidgets.QMainWindow):
                                 image_edit=self.image_edit,
                                 display_edit=self.display_edit,
                                 mouse_handler=self.video_mouse_press)
+        self.recording_settings = {}
         self.setFocus()  # Need this to handle arrow keys, etc.
         self.interface_signals = {self.camera_interface: (self.camera_signal,
                                                           self.camera_reset_signal)}
@@ -464,10 +584,38 @@ class CameraGui(QtWidgets.QMainWindow):
             image = func(image)
         return image
 
+    def closeEvent(self, evt):
+       self.close()
+       return super(CameraGui, self).closeEvent(evt)
+
     @command(category='General',
              description='Exit the application')
     def exit(self):
         self.close()
+
+    @command(category='Camera',
+             description='Toggle recording image files to disk')
+    def toggle_recording(self, *args):
+        if self.is_recording:
+            self.camera.stop_recording()
+            self.is_recording = False
+        else:
+            dlg = RecordingDialog(self.base_directory, frame_rate=self.camera.get_frame_rate(),
+                                  pixels=self.camera.width * self.camera.height,
+                                  settings=self.recording_settings, parent=self)
+            if dlg.exec_():
+                directory = os.path.abspath(dlg.directory_edit.text())
+                prefix = dlg.prefix_edit.text()
+                self.recording_settings['prefix'] = prefix
+                memory = dlg.memory_spin.value()
+                self.recording_settings['memory'] = memory
+                skip_frames = dlg.skip_spin.value()
+                self.recording_settings['skip_frames'] = skip_frames
+                queue_size = int(memory*1e6/(self.camera.width * self.camera.height)) + 1
+                self.camera.start_recording(directory=directory, file_prefix=prefix,
+                                            skip_frames=skip_frames, queue_size=queue_size)
+                self.is_recording = True
+        self.record_button.setChecked(self.is_recording)
 
     def register_commands(self):
         '''
@@ -489,12 +637,19 @@ class CameraGui(QtWidgets.QMainWindow):
                                                 'Increase/decrease exposure by 2.5ms')
         self.register_key_action(Qt.Key_I, None,
                                  self.camera_interface.save_image)
+        self.register_key_action(Qt.Key_I, Qt.SHIFT,
+                                 self.toggle_recording)
 
     def close(self):
         '''
         Close the GUI.
         '''
-        del self.camera
+        if self.camera:
+            print('closing GUI')
+            self.camera.stop_acquisition()
+            self.camera.stop_recording()
+            self.camera.close()
+            self.camera = None
         super(CameraGui, self).close()
 
     def register_mouse_action(self, click_type, modifier, command,
@@ -734,6 +889,8 @@ class CameraGui(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(int, int)
     def splitter_size_changed(self, pos, index):
+        if not self.config_button:
+            return  # nothing to do
         # If the splitter is moved all the way to the right, get back the focus
         if self.splitter.sizes()[1] == 0:
             self.setFocus()

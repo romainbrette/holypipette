@@ -30,10 +30,15 @@ class LiveFeedQt(QtWidgets.QLabel):
         self.camera = camera
         self.width, self.height = self.camera.width, self.camera.height
 
-        self.update_image()
-
         self.setMinimumSize(640, 480)
         self.setAlignment(Qt.AlignCenter)
+
+        # Remember the last frame that we displayed, to not unnecessarily
+        # process/show the same frame for slow input sources
+        self._last_frameno = None
+        self._last_edited_frame = None
+
+        self.update_image()
 
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_image)
@@ -54,10 +59,19 @@ class LiveFeedQt(QtWidgets.QLabel):
     @QtCore.pyqtSlot()
     def update_image(self):
         try:
-            if not self.camera.new_frame():
-                return
-            # get data and display
-            frame = self.camera.snap()
+            # get last frame from camera
+            frameno, frame = self.camera.last_frame()
+            if frame is None:
+                return  # Frame acquisition thread has stopped
+            if self._last_frameno is None or self._last_frameno != frameno:
+                # No need to preprocess a frame again if it has not changed
+                frame = self.image_edit(frame)
+            
+                self._last_edited_frame = frame
+                self._last_frameno = frameno
+            else:
+                frame = self._last_edited_frame
+            
             if len(frame.shape) == 2:
                 # Grayscale image via MicroManager
                 if frame.dtype == np.dtype('uint32'):
@@ -66,13 +80,11 @@ class LiveFeedQt(QtWidgets.QLabel):
                 else:
                     bytesPerLine = self.width
                     format = QtGui.QImage.Format_Indexed8
-
             else:
                 # Color image via OpenCV
                 bytesPerLine = 3*self.width
                 format = QtGui.QImage.Format_RGB888
-
-            frame = self.image_edit(frame)
+            
             q_image = QtGui.QImage(frame.data, self.width, self.height,
                                    bytesPerLine, format)
 

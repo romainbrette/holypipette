@@ -31,7 +31,6 @@ __all__ = ['uManagerCamera', 'Hamamatsu', 'Lumenera']
 class uManagerCamera(Camera):
     def __init__(self, brand, name, exposure):
         super(uManagerCamera, self).__init__()
-
         self.lock = threading.RLock()
         self.cam = MMCorePy.CMMCore()
         self.cam.loadDevice('Camera', brand, name)
@@ -53,6 +52,8 @@ class uManagerCamera(Camera):
         # Keep an old frame around to detect a frozen image
         self.comparison_time = None
         self.comparison_frame = None
+
+        self.start_acquisition()
 
     def __del__(self):
         self.cam.stopSequenceAcquisition()
