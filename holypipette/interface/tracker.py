@@ -73,12 +73,16 @@ class YoloTracker(object):
             start_col, end_col = self.config.crop_x, self.config.crop_x + self.config.crop_width
             # Crop area (x, y, w, h) in relative values
             crop_rect = np.array([start_col/image.shape[1], start_row/image.shape[0], (end_col-start_col)/image.shape[1], (end_row-start_row)/image.shape[0]])
-            image = image[start_row:end_row, start_col:end_col, :]
+            image = image[start_row:end_row, start_col:end_col]
         else:
             crop_rect = None
         
         # Convert
-        image = image.transpose((2, 0, 1))
+        if image.ndim == 3:
+            image = image.transpose((2, 0, 1))
+        else:
+            # weights were trained on color images, so repeat the values for RGB
+            image = np.tile(image[None, :, :], (3, 1, 1))
         image = np.ascontiguousarray(image)
 
         if self.imgsz is None:  # first run
@@ -136,7 +140,7 @@ class YoloTracker(object):
                                                                          took,
                                                                          ', '.join('{:.2f}'.format(c) for c in self.metadata['confidence'])))
         if self.config.only_show_cropped:
-            return np.array(image[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width, :])
+            return np.array(image[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width])
         else:
             return image
 
