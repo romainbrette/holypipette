@@ -18,7 +18,7 @@ class TrackerConfig(Config):
     move_stage = Boolean(default=False, doc='Move stage to track?')
     max_displacement = Integer(default=10, bounds=(0, None), doc='Max displacement in pixel')
 
-    weights = Filename('/home/marcel/programming/Paramecium-deeplearning/best.pt', doc='Filename for trained weights')
+    weights = Filename(None, doc='Filename for trained weights')
 
     conf_threshold = Number(0.35, bounds=(0, 1), doc='Confidence threshold')
     iou_threshold = Number(0.45, bounds=(0, 1), doc='IoU threshold')
@@ -34,6 +34,10 @@ class TrackerConfig(Config):
 class YoloTracker(object):
     def __init__(self, yolo_path, device=''):
         self.config = TrackerConfig(name='Tracking')
+        # Little hack to have a default file name
+        default_weights = os.path.join(yolo_path, '..', 'best.pt')
+        if os.path.exists(default_weights):
+            self.config.weights = default_weights
         self.detections = None
         self.metadata = None
         # Ugly hack, but yolov5 is not packaged properly
