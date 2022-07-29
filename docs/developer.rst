@@ -265,3 +265,36 @@ adding a method annotated with `@command <.command>` or
 `@blocking_command <.blocking_command>` (see :ref:`interface_classes`). Finally,
 this method can then be linked to a keypress or a mouse click in the GUI (see
 :ref:`gui_functionality`).
+
+
+.. _image_acquisition:
+
+Image acquisition
+-----------------
+
+Devices that provide images need to inherit from the `.Camera` class. This
+includes classes that add support for microscopes (e.g. `~.LucamCamera`) as well as
+classes that provide images for testing (e.g. `~.RecordedVideoCamera`). At the
+end of the ``__init__`` method, a `.Camera` subclass has to call the
+`.Camera.start_acquisition` method. This will create a thread that constantly
+acquires new images from the device using its `Camera.snap` method. This
+`~.AcquisitionThread` puts each image into a number of thread-safe queues (Python's
+`deque` class) for use by other threads. By default, it puts the image into a
+single queue of size 1 (i.e., the queue data structure is only used for thread
+safety). This queue therefore always contains the last acquired image, and can be
+used for all applications where it does not matter whether every frame has been
+processed or not. In particular, this queue is used to display the camera image
+on screen (`.LiveFeedQt`). For convenience, the image in this queue can be
+accessed via the `.Camera.last_frame` method which returns the frame number and
+the frame itself. The frame number can be used to check whether the image has
+changed since the last call. For example, `.LiveFeedQt` updates its display
+every 50ms, but will only call the ``image_edit`` functions
+(see :ref:`above <image_edit_funcs>`) if the frame number changed.
+
+The `.Camera.start_recording` method starts an additional thread
+(`~.FileWriteThread`), and creates a new queue with a configurable size. The
+`~.FileWriteThread` will take and remove frames from one end of the queue and
+write them to disk, while the `~.AcquisitionThread` adds new images on the
+other end. This way, the `~.FileWriteThread` will not skip any image, even
+if it is not always fast enough to write the image to disk before a new image
+is acquired.
