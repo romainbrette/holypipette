@@ -126,6 +126,8 @@ class YoloTracker():
         import time
         start = time.time()
         self.detections, self.metadata = self.detect(image)
+        # Make sure that the "stage move" does not invalidate our detection coordinates
+        crop_x, crop_y, crop_width, crop_height = self.config.crop_x, self.config.crop_y, self.config.crop_width, self.config.crop_height
         if len(self.detections) and self.config.move_stage:
             distances = self.metadata['dist_to_center']
             min_idx = np.argmin(distances)
@@ -134,15 +136,13 @@ class YoloTracker():
             self.config.crop_x = int(np.clip(self.config.crop_x + move_x, 0, image.shape[1]-self.config.crop_width))
             move_y = min(int((self.detections[min_idx, 1] - 0.5) * self.config.crop_height), self.config.max_displacement)
             self.config.crop_y = int(np.clip(self.config.crop_y + move_y, 0, image.shape[0]-self.config.crop_height))
-        
+            
         took = time.time() - start
         print('Detected {} Paramecia in {:.2f}s (confidence: {})'.format(len(self.detections),
                                                                          took,
                                                                          ', '.join('{:.2f}'.format(c) for c in self.metadata['confidence'])))
         if self.config.only_show_cropped:
-            return np.array(image[self.config.crop_y:self.config.crop_y+self.config.crop_height,
-                                  self.config.crop_x:self.config.crop_x+self.config.crop_width,
-                                  :])
+            return np.array(image[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width, :])
         else:
             return image
 
