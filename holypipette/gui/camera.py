@@ -1027,6 +1027,29 @@ class ConfigGui(QtWidgets.QWidget):
                 self.value_widgets[param_name] = value_widget
                 row.addWidget(label, stretch=1)
                 row.addWidget(value_widget)
+                if isinstance(param_obj, (param.Filename, param.Foldername)):
+                    # Add button to open File/Folder Dialog
+                    button = QtWidgets.QToolButton()
+                    if isinstance(param_obj, param.Filename):
+                        button.setIcon(qta.icon('fa.file'))
+                        def set_from_dialog(param_name):
+                            filename = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                                             all_params[param_name].doc,
+                                                                             os.path.dirname(getattr(config, param_name)))
+
+                            if (filename):
+                                setattr(config, param_name, filename[0])
+                        button.clicked.connect(functools.partial(set_from_dialog, param_name))
+                    else:
+                        button.setIcon(qta.icon('fa.folder'))
+                        def set_from_dialog(param_name):
+                            foldername = QtWidgets.QFileDialog.getExistingDirectory(self,
+                                                                                    all_params[param_name].doc,
+                                                                                    os.path.dirname(getattr(config, param_name)))
+                            if (foldername):
+                                setattr(config, param_name, foldername[0])
+                        button.clicked.connect(functools.partial(set_from_dialog, param_name))
+                    row.addWidget(button)
                 rows.addLayout(row)
             box.setLayout(rows)
             layout.addWidget(box)
