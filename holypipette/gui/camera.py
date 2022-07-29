@@ -988,18 +988,6 @@ class ConfigGui(QtWidgets.QWidget):
                         value_widget.setMaximum(param_obj.bounds[1])
                     value_widget.setValue(getattr(config, param_name))
                     value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
-                elif isinstance(param_obj, param.Number):
-                    value_widget = QtWidgets.QDoubleSpinBox()
-                    if param_obj.bounds[0] is None:
-                        value_widget.setMinimum(float('-inf'))
-                    else:
-                        value_widget.setMinimum(param_obj.bounds[0])
-                    if param_obj.bounds[1] is None:
-                        value_widget.setMaximum(float('inf'))
-                    else:
-                        value_widget.setMaximum(param_obj.bounds[1])
-                    value_widget.setValue(getattr(config, param_name))
-                    value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
                 elif isinstance(param_obj, NumberWithUnit):
                     value_widget = QtWidgets.QDoubleSpinBox()
                     magnitude = param_obj.magnitude
@@ -1012,8 +1000,21 @@ class ConfigGui(QtWidgets.QWidget):
                     else:
                         value_widget.setMaximum(param_obj.bounds[1]/magnitude)
                     value_widget.setValue(getattr(config, param_name)/magnitude)
+                    value_widget.setSuffix(u"\u2009" + param_obj.unit)  # thin space before unit
                     value_widget.valueChanged.connect(
                         functools.partial(self.set_numerical_value_with_unit, param_name, magnitude))
+                elif isinstance(param_obj, param.Number):
+                    value_widget = QtWidgets.QDoubleSpinBox()
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(float('-inf'))
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0])
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(float('inf'))
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1])
+                    value_widget.setValue(getattr(config, param_name))
+                    value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
                 elif isinstance(param_obj, param.Boolean):
                     value_widget = QtWidgets.QCheckBox()
                     value_widget.setChecked(getattr(config, param_name))
@@ -1026,9 +1027,6 @@ class ConfigGui(QtWidgets.QWidget):
                 self.value_widgets[param_name] = value_widget
                 row.addWidget(label, stretch=1)
                 row.addWidget(value_widget)
-                if isinstance(param_obj, NumberWithUnit):
-                    unit_label = QtWidgets.QLabel(param_obj.unit)
-                    row.addWidget(unit_label)
                 rows.addLayout(row)
             box.setLayout(rows)
             layout.addWidget(box)
@@ -1060,7 +1058,6 @@ class ConfigGui(QtWidgets.QWidget):
             widget.setValue(value)
 
     def set_numerical_value(self, name, value):
-        print('value for', name, 'is', value)
         setattr(self.config, name, value)
 
     def set_numerical_value_with_unit(self, name, magnitude, value):
