@@ -14,7 +14,7 @@ from setup_script import *
 
 console_logger()  # Log to the standard console as well
 
-yolo_tracker = YoloTracker(yolo_path='/home/marcel/programming/Paramecium-deeplearning/yolov5') 
+yolo_tracker = YoloTracker(yolo_path=yolo_path)
 
 
 app = QtWidgets.QApplication(sys.argv)
