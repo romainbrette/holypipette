@@ -12,7 +12,7 @@
         }
     ],
 
-    "license": " GPL-3.0-only",
+    "license": "GPL-3.0-or-later",
 
     "title": "holypipette: A Python package for automated patch-clamp experiments",
 
