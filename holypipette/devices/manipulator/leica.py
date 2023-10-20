@@ -10,8 +10,9 @@ import time
 sys.path.append('C:\\Program Files\\Micro-Manager-2.0gamma')
 try:
     import MMCorePy
-except ImportError: # Micromanager not installed
+except (ImportError, TypeError): # Micromanager not installed
     warnings.warn('Micromanager is not installed, cannot use the Leica class.')
+    del sys.path[-1]
 
 __all__ = ['Leica']
 

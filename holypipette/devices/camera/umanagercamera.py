@@ -25,6 +25,7 @@ try:
     import MMCorePy
 except ImportError:
     warnings.warn('Micromanager is not installed.')
+    del sys.path[-1]
 
 __all__ = ['uManagerCamera', 'Hamamatsu', 'Lumenera']
 

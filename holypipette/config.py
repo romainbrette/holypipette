@@ -8,7 +8,7 @@ except ImportError:
     warnings.warn('Could not import pyyaml, will not be able to save or load configuration files')
 
 import param
-from param import Number, Boolean  # to make it available for import
+from param import Number, Boolean, Integer, Filename, Foldername  # to make it available for import
 
 class NumberWithUnit(param.Number):
     __slots__ = ['unit', 'magnitude']
@@ -30,7 +30,7 @@ class Config(param.Parameterized):
             self._value_changed(key, value)
 
     def to_dict(self):
-        return {name: getattr(self, name) for name in self.params()
+        return {name: getattr(self, name) for name in self.param.params()
                 if name != 'name'}
 
     def from_dict(self, config_dict):

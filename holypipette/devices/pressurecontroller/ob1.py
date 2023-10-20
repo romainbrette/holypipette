@@ -17,8 +17,10 @@ sys.path.append(os.path.expanduser(r'~\Elveflow SDK V3_01_04\python_64').encode(
 
 try:
     from Elveflow64 import *
-except ImportError:
+except (ImportError, TypeError):
     warnings.warn('Cannot use Elveflow OB1')
+    del sys.path[-1]
+    del sys.path[-1]
 
 __all__ = ['OB1']
 

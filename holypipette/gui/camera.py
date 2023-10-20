@@ -966,7 +966,7 @@ class ConfigGui(QtWidgets.QWidget):
         self.save_button.setIcon(qta.icon('fa.download'))
         top_row.addWidget(self.save_button)
         layout.addLayout(top_row)
-        all_params = config.params()
+        all_params = config.param.params()
         self.value_widgets = {}
         for category, params in config.categories:
             box = QtWidgets.QGroupBox(category)
@@ -976,31 +976,84 @@ class ConfigGui(QtWidgets.QWidget):
                 row = QtWidgets.QHBoxLayout()
                 label = ElidedLabel(param_obj.doc)
                 label.setToolTip(param_obj.doc)
-                if isinstance(param_obj, param.Number):
-                    value_widget = QtWidgets.QDoubleSpinBox()
-                    value_widget.setMinimum(param_obj.bounds[0])
-                    value_widget.setMaximum(param_obj.bounds[1])
+                if isinstance(param_obj, param.Integer):
+                    value_widget = QtWidgets.QSpinBox()
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(-2147483648)
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0])
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(2147483647)
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1])
                     value_widget.setValue(getattr(config, param_name))
                     value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
-                if isinstance(param_obj, NumberWithUnit):
+                elif isinstance(param_obj, NumberWithUnit):
                     value_widget = QtWidgets.QDoubleSpinBox()
                     magnitude = param_obj.magnitude
-                    value_widget.setMinimum(param_obj.bounds[0]/magnitude)
-                    value_widget.setMaximum(param_obj.bounds[1]/magnitude)
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(float('-inf'))
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0]/magnitude)
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(float('inf'))
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1]/magnitude)
                     value_widget.setValue(getattr(config, param_name)/magnitude)
+                    value_widget.setSuffix(u"\u2009" + param_obj.unit)  # thin space before unit
                     value_widget.valueChanged.connect(
                         functools.partial(self.set_numerical_value_with_unit, param_name, magnitude))
+                elif isinstance(param_obj, param.Number):
+                    value_widget = QtWidgets.QDoubleSpinBox()
+                    if param_obj.bounds[0] is None:
+                        value_widget.setMinimum(float('-inf'))
+                    else:
+                        value_widget.setMinimum(param_obj.bounds[0])
+                    if param_obj.bounds[1] is None:
+                        value_widget.setMaximum(float('inf'))
+                    else:
+                        value_widget.setMaximum(param_obj.bounds[1])
+                    value_widget.setValue(getattr(config, param_name))
+                    value_widget.valueChanged.connect(functools.partial(self.set_numerical_value, param_name))
                 elif isinstance(param_obj, param.Boolean):
                     value_widget = QtWidgets.QCheckBox()
                     value_widget.setChecked(getattr(config, param_name))
                     value_widget.stateChanged.connect(functools.partial(self.set_boolean_value, param_name, value_widget))
+                elif isinstance(param_obj, (param.Filename, param.Foldername)):
+                    value_widget = QtWidgets.QLineEdit()
+                    value_widget.setText(getattr(config, param_name))
+                    value_widget.editingFinished.connect(functools.partial(self.set_text_value, param_name, value_widget))
                 value_widget.setToolTip(param_obj.doc)
                 self.value_widgets[param_name] = value_widget
                 row.addWidget(label, stretch=1)
                 row.addWidget(value_widget)
-                if isinstance(param_obj, NumberWithUnit):
-                    unit_label = QtWidgets.QLabel(param_obj.unit)
-                    row.addWidget(unit_label)
+                if isinstance(param_obj, (param.Filename, param.Foldername)):
+                    # Add button to open File/Folder Dialog
+                    button = QtWidgets.QToolButton()
+                    if getattr(config, param_name):
+                        start_dir = os.path.dirname(getattr(config, param_name))
+                    else:
+                        start_dir = os.path.expanduser("~")
+                    if isinstance(param_obj, param.Filename):
+                        button.setIcon(qta.icon('fa.file'))
+                        def set_from_dialog(param_name):
+                            filename = QtWidgets.QFileDialog.getOpenFileName(self,
+                                                                             all_params[param_name].doc,
+                                                                             start_dir)
+
+                            if (filename):
+                                setattr(config, param_name, filename[0])
+                        button.clicked.connect(functools.partial(set_from_dialog, param_name))
+                    else:
+                        button.setIcon(qta.icon('fa.folder'))
+                        def set_from_dialog(param_name):
+                            foldername = QtWidgets.QFileDialog.getExistingDirectory(self,
+                                                                                    all_params[param_name].doc,
+                                                                                    start_dir)
+                            if (foldername):
+                                setattr(config, param_name, foldername[0])
+                        button.clicked.connect(functools.partial(set_from_dialog, param_name))
+                    row.addWidget(button)
                 rows.addLayout(row)
             box.setLayout(rows)
             layout.addWidget(box)
@@ -1009,17 +1062,25 @@ class ConfigGui(QtWidgets.QWidget):
     def value_changed(self, key, value):
         if key not in self.value_widgets:
             return
-        magnitude = getattr(self.config.params()[key], 'magnitude', 1)
-        # We do not update the GUI directly here (that's done in
-        # display_changed_value), because it is possible that this is triggered
-        # from code running in a different thread
-        self.value_changed_signal.emit(key, value/magnitude)
+        if isinstance(value, str):
+            self.value_changed_signal.emit(key, value)
+        else:
+            magnitude = getattr(self.config.param.params()[key], 'magnitude', 1)
+            # We do not update the GUI directly here (that's done in
+            # display_changed_value), because it is possible that this is triggered
+            # from code running in a different thread
+            if magnitude != 1:
+                self.value_changed_signal.emit(key, value/magnitude)
+            else:
+                self.value_changed_signal.emit(key, value)
 
     @QtCore.pyqtSlot('QString', object)
     def display_changed_value(self, key, value):
         widget = self.value_widgets[key]
         if isinstance(widget, QtWidgets.QCheckBox):
             widget.setChecked(value)
+        elif isinstance(widget, QLineEdit):
+            widget.setText(value)
         else:
             widget.setValue(value)
 
@@ -1031,6 +1092,9 @@ class ConfigGui(QtWidgets.QWidget):
 
     def set_boolean_value(self, name, widget):
         setattr(self.config, name, widget.isChecked())
+
+    def set_text_value(self, name, widget):
+        setattr(self.config, name, widget.text())
 
     def save_config(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save configuration",

@@ -425,7 +425,7 @@ class DebugCamera(Camera):
         
 
 class RecordedVideoCamera(Camera):
-    def __init__(self, file_name, pixel_per_um, slowdown=1):
+    def __init__(self, file_name, pixel_per_um, slowdown=1, loop=True):
         super(RecordedVideoCamera, self).__init__()
         self.file_name = file_name
         self.video = cv2.VideoCapture(file_name)
@@ -435,6 +435,7 @@ class RecordedVideoCamera(Camera):
         self.pixel_per_um = pixel_per_um
         self.frame_rate = self.video.get(cv2.CAP_PROP_FPS)
         self.time_between_frames = 1/self.frame_rate * slowdown
+        self.loop = loop
         self._last_frame_time = None
         self.start_acquisition()
 
@@ -451,7 +452,15 @@ class RecordedVideoCamera(Camera):
         self._last_frame_time = time.time()        
         
         if not success and self._acquisition_thread.running:
-            raise ValueError('Cannot read from file %s.' % self.file_name)
+            if self.loop:
+                print('No more frames, restarting video')
+                self.video.open(self.file_name)
+                _, frame = self.video.read()
+                self._last_frame_time = time.time() 
+            else:
+                print('No more frames, stopping acquisition')
+                self.stop_acquisition()
+                return None
         
         return frame
 
